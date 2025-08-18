@@ -2033,8 +2033,7 @@ def import_personnel():
                     if not personnel:
                         # Create new personnel only if doesn't exist
                         personnel = Personnel()
-                        if personnel_id and not pd.isna(personnel_id):
-                            personnel.id = int(personnel_id)
+                        # Don't force ID assignment - let database auto-assign to prevent conflicts
                         is_new_user = True
                     
                     # Set basic fields
