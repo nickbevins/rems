@@ -1558,14 +1558,14 @@ def import_data():
                 imported_count = 0
                 updated_count = 0
                 skipped_count = 0
-                for _, row in df.iterrows():
-                    # Skip empty rows - check if equipment class is empty or missing
-                    eq_class = row.get('Equipment Class') or row.get('eq_class')
-                    if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
-                        skipped_count += 1
-                        continue
-                    
-                    # Check if equipment with this ID already exists
+                for index, row in df.iterrows():
+                    try:
+                        # Skip completely empty rows
+                        if row.isna().all():
+                            skipped_count += 1
+                            continue
+                        
+                        # Check if equipment with this ID already exists
                     eq_id = row.get('eq_id')
                     if pd.notna(eq_id) and eq_id != '':
                         try:
@@ -1731,15 +1731,21 @@ def import_data():
                             except:
                                 pass
                     
-                    equipment.eq_acrsite = row.get('eq_acrsite')
-                    equipment.eq_acrunit = row.get('eq_acrunit')
-                    equipment.eq_notes = row.get('eq_notes')
+                        equipment.eq_acrsite = row.get('eq_acrsite')
+                        equipment.eq_acrunit = row.get('eq_acrunit')
+                        equipment.eq_notes = row.get('eq_notes')
+                        
+                        if not is_update:
+                            db.session.add(equipment)
+                            imported_count += 1
+                        else:
+                            updated_count += 1
                     
-                    if not is_update:
-                        db.session.add(equipment)
-                        imported_count += 1
-                    else:
-                        updated_count += 1
+                    except Exception as row_error:
+                        # Log the specific row error and continue processing
+                        print(f"Error processing row {index + 1}: {row_error}")
+                        skipped_count += 1
+                        continue
                 
                 db.session.commit()
                 
