@@ -648,6 +648,7 @@ def create_default_admin():
             # Only create admin if database is completely empty
             if Personnel.query.count() == 0:
                 admin_user = Personnel(
+                    id=0,
                     name='Admin User',
                     email='admin@rems.com',
                     username='admin',
@@ -658,7 +659,7 @@ def create_default_admin():
                 admin_user.set_password('password123')
                 db.session.add(admin_user)
                 db.session.commit()
-                print("Default admin user created: admin/password123")
+                print("Default admin user created with ID 0: admin/password123")
             else:
                 print("Personnel exist - skipping default admin creation")
     except Exception as e:
@@ -2033,7 +2034,9 @@ def import_personnel():
                     if not personnel:
                         # Create new personnel only if doesn't exist
                         personnel = Personnel()
-                        # Don't force ID assignment - let database auto-assign to prevent conflicts
+                        # Set ID if provided in CSV (but skip ID 0 which is reserved for admin)
+                        if personnel_id and not pd.isna(personnel_id) and int(personnel_id) != 0:
+                            personnel.id = int(personnel_id)
                         is_new_user = True
                     
                     # Set basic fields
@@ -2159,7 +2162,7 @@ def import_compliance():
                 
                 # Expected columns
                 required_columns = ['eq_id', 'test_type', 'test_date']
-                optional_columns = ['test_id', 'report_date', 'performed_by_id', 'reviewed_by_id', 'notes']
+                optional_columns = ['test_id', 'report_date', 'performed_by', 'reviewed_by', 'notes']
                 
                 # Check required columns
                 missing_columns = [col for col in required_columns if col not in df.columns]
@@ -2262,10 +2265,11 @@ def import_compliance():
                         
                         if not test_id or pd.isna(test_id):
                             db.session.add(test)
-                            imported_count += 1
+                        imported_count += 1
                         
                     except Exception as e:
                         error_count += 1
+                        print(f"Error processing row {index + 1}: {str(e)}")
                         continue
                 
                 # Commit all changes
