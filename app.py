@@ -2386,7 +2386,11 @@ def import_facilities():
                         # Set fields
                         facility.name = name
                         facility.address = row.get('address', '')
-                        facility.is_active = True if row.get('is_active', 'TRUE').upper() == 'TRUE' else False
+                        is_active_val = row.get('is_active', 'TRUE')
+                        if isinstance(is_active_val, bool):
+                            facility.is_active = is_active_val
+                        else:
+                            facility.is_active = str(is_active_val).upper() in ['TRUE', 'T', '1', 'YES']
                         
                         if is_new:
                             db.session.add(facility)
