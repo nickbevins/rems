@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-cog"></i> {{ title }}</h1>
+            <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+        
+        <form method="POST" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.class_id.label(class="form-label") }}
+                                {{ form.class_id(class="form-control") }}
+                                {% for error in form.class_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.subclass_id.label(class="form-label") }}
+                                {{ form.subclass_id(class="form-control") }}
+                                {% for error in form.subclass_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.manufacturer_id.label(class="form-label") }}
+                                {{ form.manufacturer_id(class="form-control") }}
+                                {% for error in form.manufacturer_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.eq_mod.label(class="form-label") }}
+                                {{ form.eq_mod(class="form-control") }}
+                                {% for error in form.eq_mod.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-map-marker-alt"></i> Location Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.department_id.label(class="form-label") }}
+                                {{ form.department_id(class="form-control") }}
+                                {% for error in form.department_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_rm.label(class="form-label") }}
+                                {{ form.eq_rm(class="form-control") }}
+                                {% for error in form.eq_rm.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.facility_id.label(class="form-label") }}
+                                {{ form.facility_id(class="form-control") }}
+                                {% for error in form.facility_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <!-- Asset Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-barcode"></i> Asset Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.eq_assetid.label(class="form-label") }}
+                                {{ form.eq_assetid(class="form-control") }}
+                                {% for error in form.eq_assetid.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.eq_sn.label(class="form-label") }}
+                                {{ form.eq_sn(class="form-control") }}
+                                {% for error in form.eq_sn.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_mefac.label(class="form-label") }}
+                                {{ form.eq_mefac(class="form-control") }}
+                                {% for error in form.eq_mefac.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_mereg.label(class="form-label") }}
+                                {{ form.eq_mereg(class="form-control") }}
+                                {% for error in form.eq_mereg.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_mefacreg.label(class="form-label") }}
+                                {{ form.eq_mefacreg(class="form-control") }}
+                                {% for error in form.eq_mefacreg.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.eq_manid.label(class="form-label") }}
+                        {{ form.eq_manid(class="form-control") }}
+                        {% for error in form.eq_manid.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dates -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar-alt"></i> Important Dates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.eq_mandt.label(class="form-label") }}
+                                {{ form.eq_mandt(class="form-control") }}
+                                {% for error in form.eq_mandt.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.eq_instdt.label(class="form-label") }}
+                                {{ form.eq_instdt(class="form-control") }}
+                                {% for error in form.eq_instdt.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_eoldate.label(class="form-label") }}
+                                {{ form.eq_eoldate(class="form-control") }}
+                                {% for error in form.eq_eoldate.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_eeoldate.label(class="form-label") }}
+                                {{ form.eq_eeoldate(class="form-control") }}
+                                {% for error in form.eq_eeoldate.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_retdate.label(class="form-label") }}
+                                {{ form.eq_retdate(class="form-control") }}
+                                {% for error in form.eq_retdate.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check">
+                        {{ form.eq_retired(class="form-check-input") }}
+                        {{ form.eq_retired.label(class="form-check-label") }}
+                        {% for error in form.eq_retired.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compliance & Technical Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Compliance & Technical Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_auditfreq.label(class="form-label") }}
+                                {{ form.eq_auditfreq(class="form-control") }}
+                                {% for error in form.eq_auditfreq.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_acrsite.label(class="form-label") }}
+                                {{ form.eq_acrsite(class="form-control") }}
+                                {% for error in form.eq_acrsite.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_acrunit.label(class="form-label") }}
+                                {{ form.eq_acrunit(class="form-control") }}
+                                {% for error in form.eq_acrunit.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_radcap.label(class="form-label") }}
+                                {{ form.eq_radcap(class="form-control") }}
+                                {% for error in form.eq_radcap.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_capcat.label(class="form-label") }}
+                                {{ form.eq_capcat(class="form-control") }}
+                                {% for error in form.eq_capcat.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_capcst.label(class="form-label") }}
+                                {{ form.eq_capcst(class="form-control") }}
+                                {% for error in form.eq_capcst.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-address-book"></i> Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.contact_id.label(class="form-label") }}
+                                {{ form.contact_id(class="form-control") }}
+                                {% for error in form.contact_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.supervisor_id.label(class="form-label") }}
+                                {{ form.supervisor_id(class="form-control") }}
+                                {% for error in form.supervisor_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.physician_id.label(class="form-label") }}
+                                {{ form.physician_id(class="form-control") }}
+                                {% for error in form.physician_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-sticky-note"></i> Notes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form.eq_notes.label(class="form-label") }}
+                        {{ form.eq_notes(class="form-control", rows="4") }}
+                        {% for error in form.eq_notes.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Equipment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const facilitySelect = document.getElementById('facility_id');
+    const addressTextarea = document.getElementById('eq_address');
+    
+    console.log('Facility select:', facilitySelect);
+    console.log('Address textarea:', addressTextarea);
+    
+    if (facilitySelect && addressTextarea) {
+        facilitySelect.addEventListener('change', function() {
+            const facilityId = this.value;
+            console.log('Facility changed to:', facilityId);
+            
+            if (facilityId) {
+                // Fetch facility address from API
+                console.log('Fetching address for facility:', facilityId);
+                fetch(`/api/facility/${facilityId}/address`)
+                    .then(response => {
+                        console.log('API response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('API response data:', data);
+                        if (data.address !== undefined) {
+                            addressTextarea.value = data.address || '';
+                            console.log('Address updated to:', data.address);
+                        } else {
+                            console.warn('No address field in response');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching facility address:', error);
+                        // Show user-friendly error
+                        addressTextarea.placeholder = 'Error loading facility address';
+                    });
+            } else {
+                // Clear address if no facility selected
+                addressTextarea.value = '';
+                addressTextarea.placeholder = 'Address will be automatically populated when facility is selected';
+                console.log('Facility cleared, address cleared');
+            }
+        });
+    } else {
+        console.error('Could not find facility select or address textarea elements');
+    }
+});
+</script>
+{% endblock %}

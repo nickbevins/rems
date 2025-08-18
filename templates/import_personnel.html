@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Import Personnel - REMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-file-import"></i> Import Personnel Data</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Required columns:</strong> name, email</li>
+                        <li><strong>Optional columns:</strong> phone, roles</li>
+                        <li><strong>Roles:</strong> Comma-separated list (contact, supervisor, physician, physicist, physics_assistant, qa_technologist)</li>
+                        <li><strong>Example:</strong> "John Doe","john@example.com","555-1234","contact, physicist"</li>
+                    </ul>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.csv_file.label(class="form-label") }}
+                        {{ form.csv_file(class="form-control", accept=".csv") }}
+                        {% if form.csv_file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.csv_file.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('personnel_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Personnel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Import Personnel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Sample CSV Template</h5>
+            </div>
+            <div class="card-body">
+                <p>Download a sample CSV template to get started:</p>
+                <div class="bg-light p-3 rounded">
+                    <code>
+                        name,email,phone,roles<br>
+                        "John Doe","john@example.com","555-1234","contact, physicist"<br>
+                        "Jane Smith","jane@example.com","555-5678","physician, supervisor"<br>
+                        "Mike Johnson","mike@example.com","","qa_technologist"
+                    </code>
+                </div>
+                <button class="btn btn-outline-primary mt-2" onclick="downloadTemplate()">
+                    <i class="fas fa-download"></i> Download Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadTemplate() {
+    const csvContent = "name,email,phone,roles\n\"John Doe\",\"john@example.com\",\"555-1234\",\"contact, physicist\"\n\"Jane Smith\",\"jane@example.com\",\"555-5678\",\"physician, supervisor\"\n\"Mike Johnson\",\"mike@example.com\",\"\",\"qa_technologist\"";
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'personnel_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

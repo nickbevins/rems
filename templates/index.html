@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-radiation text-warning"></i> 
+            Radiology Equipment Management System
+        </h1>
+        
+        <!-- Compliance Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-clipboard-check"></i> Compliance Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-check fa-2x mb-2"></i>
+                                <h3>{{ compliant_count }}</h3>
+                                <p class="mb-0">Compliant</p>
+                                <small>Tests current & up-to-date</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body text-center">
+                                <i class="fas fa-clock fa-2x mb-2"></i>
+                                <h3>{{ upcoming_count }}</h3>
+                                <p class="mb-0">Upcoming</p>
+                                <small>Due within 90 days</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                                <h3>{{ overdue_count }}</h3>
+                                <p class="mb-0">Overdue</p>
+                                <small>Require immediate attention</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-question fa-2x mb-2"></i>
+                                <h3>{{ no_frequency_count }}</h3>
+                                <p class="mb-0">No Frequency</p>
+                                <small>No testing schedule set</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="progress" style="height: 30px;">
+                            {% set total_active = compliant_count + upcoming_count + overdue_count + no_frequency_count %}
+                            {% if total_active > 0 %}
+                                {% set compliant_pct = (compliant_count / total_active * 100)|round(1) %}
+                                {% set upcoming_pct = (upcoming_count / total_active * 100)|round(1) %}
+                                {% set overdue_pct = (overdue_count / total_active * 100)|round(1) %}
+                                {% set no_freq_pct = (no_frequency_count / total_active * 100)|round(1) %}
+                                
+                                <div class="progress-bar bg-success" style="width: {{ compliant_pct }}%" title="Compliant: {{ compliant_pct }}%">
+                                    {% if compliant_pct >= 10 %}{{ compliant_pct }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-warning text-dark" style="width: {{ upcoming_pct }}%" title="Upcoming: {{ upcoming_pct }}%">
+                                    {% if upcoming_pct >= 10 %}{{ upcoming_pct }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-danger" style="width: {{ overdue_pct }}%" title="Overdue: {{ overdue_pct }}%">
+                                    {% if overdue_pct >= 10 %}{{ overdue_pct }}%{% endif %}
+                                </div>
+                                <div class="progress-bar bg-secondary" style="width: {{ no_freq_pct }}%" title="No Frequency: {{ no_freq_pct }}%">
+                                    {% if no_freq_pct >= 10 %}{{ no_freq_pct }}%{% endif %}
+                                </div>
+                            {% else %}
+                                <div class="progress-bar bg-light text-dark" style="width: 100%">No active equipment</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Items -->
+        {% if overdue_count > 0 or upcoming_count > 0 %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle text-danger"></i> Action Required</h5>
+            </div>
+            <div class="card-body">
+                {% if overdue_count > 0 %}
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Immediate Attention Required</h6>
+                    <p class="mb-2">{{ overdue_count }} equipment item{{ 's' if overdue_count != 1 else '' }} ha{{ 's' if overdue_count == 1 else 've' }} overdue compliance tests.</p>
+                    <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-danger">
+                        <i class="fas fa-eye"></i> View Overdue Tests
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if upcoming_count > 0 %}
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-clock"></i> Plan Ahead</h6>
+                    <p class="mb-2">{{ upcoming_count }} equipment item{{ 's' if upcoming_count != 1 else '' }} ha{{ 's' if upcoming_count == 1 else 've' }} compliance tests due within 90 days.</p>
+                    <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-warning">
+                        <i class="fas fa-calendar"></i> View Upcoming Tests
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- System Navigation -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-compass"></i> System Navigation</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="{{ url_for('equipment_list') }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-cogs fa-2x d-block mb-2"></i>
+                                <strong>Equipment List</strong><br>
+                                <small>View & manage all equipment</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-outline-warning btn-lg">
+                                <i class="fas fa-clipboard-check fa-2x d-block mb-2"></i>
+                                <strong>Compliance Dashboard</strong><br>
+                                <small>Monitor testing requirements</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="{{ url_for('personnel_list') }}" class="btn btn-outline-info btn-lg">
+                                <i class="fas fa-users fa-2x d-block mb-2"></i>
+                                <strong>Personnel</strong><br>
+                                <small>Manage staff & contacts</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,425 @@
+/* Custom styles for Physics Database */
+
+/* Global styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #1a1a1a;
+    color: #e9ecef;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+/* Cards */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+    border: 1px solid #404040;
+    margin-bottom: 1rem;
+    background-color: #2d2d2d;
+    color: #e9ecef;
+}
+
+.card-header {
+    background-color: #404040;
+    border-bottom: 1px solid #555;
+    font-weight: 500;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: #e9ecef;
+}
+
+/* Tables */
+.table {
+    color: #e9ecef;
+    --bs-table-striped-bg: #333333;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: #333333;
+    color: #e9ecef;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd):hover > td,
+.table-striped > tbody > tr:nth-of-type(even):hover > td {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    color: #e9ecef !important;
+}
+
+.table-hover tbody tr:hover,
+.table-hover tbody tr:hover td {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    color: #e9ecef !important;
+}
+
+.table thead th {
+    background-color: #404040;
+    border-bottom: 2px solid #555;
+    font-weight: 600;
+    color: #e9ecef;
+}
+
+.table td, .table th {
+    border-color: #404040;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.8em;
+    padding: 0.35em 0.65em;
+}
+
+/* Buttons */
+.btn-group .btn {
+    margin-right: 0;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-outline-warning:hover,
+.btn-outline-info:hover {
+    color: #fff;
+}
+
+/* Forms */
+.form-label {
+    font-weight: 500;
+    color: #e9ecef;
+}
+
+.form-control {
+    background-color: #404040;
+    border-color: #555;
+    color: #e9ecef;
+}
+
+.form-control:focus {
+    background-color: #404040;
+    border-color: #80bdff;
+    color: #e9ecef;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-select {
+    background-color: #404040;
+    border-color: #555;
+    color: #e9ecef;
+}
+
+.form-select:focus {
+    background-color: #404040;
+    border-color: #80bdff;
+    color: #e9ecef;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    transition: transform 0.2s;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Equipment Status */
+.status-active {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-retired {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.status-overdue {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.status-upcoming {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+/* Compliance indicators */
+.compliance-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.compliance-up-to-date {
+    background-color: #28a745;
+}
+
+.compliance-due-soon {
+    background-color: #ffc107;
+}
+
+.compliance-overdue {
+    background-color: #dc3545;
+}
+
+/* Filters */
+.filter-section {
+    background-color: #fff;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 1rem;
+}
+
+.page-link {
+    color: #007bff;
+}
+
+.page-link:hover {
+    color: #0056b3;
+}
+
+/* Alerts */
+.alert {
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.25rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .pagination,
+    .card-header,
+    .alert {
+        display: none !important;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: none;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+}
+
+/* Equipment detail view */
+.equipment-detail-table th {
+    width: 40%;
+    font-weight: 500;
+    color: #495057;
+    border-top: none;
+}
+
+.equipment-detail-table td {
+    border-top: none;
+}
+
+/* Modal adjustments */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 1rem;
+}
+
+/* Quick actions */
+.quick-actions .btn {
+    text-align: center;
+    padding: 1rem;
+}
+
+.quick-actions .btn i {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+}
+
+/* Compliance dashboard */
+.compliance-stats {
+    text-align: center;
+    padding: 2rem;
+}
+
+.compliance-stats h2 {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+/* Form validation */
+.was-validated .form-control:invalid {
+    border-color: #dc3545;
+}
+
+.was-validated .form-control:valid {
+    border-color: #28a745;
+}
+
+/* Custom utilities */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bg-light-blue {
+    background-color: #e3f2fd;
+}
+
+.text-primary-dark {
+    color: #0d47a1;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Sortable table headers */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.sortable:hover {
+    background-color: #555;
+}
+
+.sortable i {
+    color: #6c757d;
+    font-size: 0.8em;
+    margin-left: 0.25rem;
+}
+
+.sortable:hover i {
+    color: #495057;
+}
+
+/* Table row hover */
+.equipment-row:hover,
+.personnel-row:hover {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+}
+
+.equipment-row:hover td,
+.personnel-row:hover td {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    color: #e9ecef !important;
+}
+
+.equipment-row,
+.personnel-row {
+    transition: background-color 0.2s;
+}
+
+/* Search input styling */
+#search {
+    border-left: 3px solid #007bff;
+}
+
+#search:focus {
+    border-left-color: #0056b3;
+}
+
+/* Less prominent retired equipment checkbox */
+.form-check-label.text-muted {
+    font-size: 0.9rem;
+}
+
+/* Retired equipment styling */
+.table-secondary {
+    background-color: #495057 !important;
+    color: #212529 !important;
+}
+
+.table-secondary td {
+    color: #212529 !important;
+}
+
+.table-secondary:hover {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+}
+
+.table-secondary:hover td {
+    background-color: rgba(0, 123, 255, 0.15) !important;
+    color: #212529 !important;
+}

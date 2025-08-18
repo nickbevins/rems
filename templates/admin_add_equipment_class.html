@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Add Equipment Class - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-plus"></i> Add Equipment Class</h1>
+            <a href="{{ url_for('admin_equipment_classes') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Classes
+            </a>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Class Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required maxlength="100">
+                        <div class="form-text">Enter a unique equipment class name</div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_equipment_classes') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Add Class
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

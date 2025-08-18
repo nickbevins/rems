@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Import Data - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-file-import"></i> Import Equipment Data
+        </h1>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-upload"></i> Upload CSV File</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Select CSV file</label>
+                                <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                                <div class="form-text">
+                                    Upload a CSV file containing equipment data. The file should match the expected format shown below.
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> Import Data
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> Import Instructions</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Before importing:</h6>
+                        <ul>
+                            <li>Ensure your CSV file has the correct column headers</li>
+                            <li>Date fields should be in YYYY-MM-DD format</li>
+                            <li>Boolean fields should use TRUE/FALSE values</li>
+                            <li>Numeric fields should contain only numbers</li>
+                        </ul>
+                        
+                        <h6>Import process:</h6>
+                        <ol>
+                            <li>Select your CSV file using the file input above</li>
+                            <li>Click "Import Data" to begin the process</li>
+                            <li>The system will validate and import your data</li>
+                            <li>You'll receive a confirmation message with the number of records imported</li>
+                        </ol>
+                        
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Important:</strong> This will add new equipment records to the database. 
+                            Make sure your data is properly formatted to avoid errors.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-table"></i> Expected CSV Format</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Required columns:</strong></p>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Column Name</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>eq_class</td><td>Text</td></tr>
+                                    <tr><td>eq_subclass</td><td>Text</td></tr>
+                                    <tr><td>eq_manu</td><td>Text</td></tr>
+                                    <tr><td>eq_mod</td><td>Text</td></tr>
+                                    <tr><td>eq_dept</td><td>Text</td></tr>
+                                    <tr><td>eq_rm</td><td>Text</td></tr>
+                                    <tr><td>eq_fac</td><td>Text</td></tr>
+                                    <tr><td>eq_address</td><td>Text</td></tr>
+                                    <tr><td>eq_contact</td><td>Text</td></tr>
+                                    <tr><td>eq_contactinfo</td><td>Text</td></tr>
+                                    <tr><td>eq_sup</td><td>Text</td></tr>
+                                    <tr><td>eq_supinfo</td><td>Text</td></tr>
+                                    <tr><td>eq_physician</td><td>Text</td></tr>
+                                    <tr><td>eq_physicianinfo</td><td>Text</td></tr>
+                                    <tr><td>eq_assetid</td><td>Text</td></tr>
+                                    <tr><td>eq_sn</td><td>Text</td></tr>
+                                    <tr><td>eq_mefac</td><td>Text</td></tr>
+                                    <tr><td>eq_mereg</td><td>Text</td></tr>
+                                    <tr><td>eq_mefacreg</td><td>Text</td></tr>
+                                    <tr><td>eq_manid</td><td>Text</td></tr>
+                                    <tr><td>eq_mandt</td><td>Date</td></tr>
+                                    <tr><td>eq_instdt</td><td>Date</td></tr>
+                                    <tr><td>eq_eoldate</td><td>Date</td></tr>
+                                    <tr><td>eq_eeoldate</td><td>Date</td></tr>
+                                    <tr><td>eq_retdate</td><td>Date</td></tr>
+                                    <tr><td>eq_retired</td><td>Boolean</td></tr>
+                                    <tr><td>eq_auditfreq</td><td>Number</td></tr>
+                                    <tr><td>eq_acrsite</td><td>Text</td></tr>
+                                    <tr><td>eq_acrunit</td><td>Text</td></tr>
+                                    <tr><td>eq_radcap</td><td>Number</td></tr>
+                                    <tr><td>eq_capcat</td><td>Number</td></tr>
+                                    <tr><td>eq_capcst</td><td>Number</td></tr>
+                                    <tr><td>eq_notes</td><td>Text</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <a href="{{ url_for('static', filename='sample_import.csv') }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Download Sample CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-question-circle"></i> Need Help?</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>If you encounter issues with the import process:</p>
+                        <ul>
+                            <li>Check that your CSV file has the correct column headers</li>
+                            <li>Verify date formats are YYYY-MM-DD</li>
+                            <li>Ensure numeric fields contain only numbers</li>
+                            <li>Make sure boolean fields use TRUE/FALSE</li>
+                        </ul>
+                        <p>For technical support, contact your system administrator.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

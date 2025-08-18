@@ -1,0 +1,301 @@
+﻿eq_id,eq_class,eq_subclass,eq_manu,eq_mod,eq_dept,eq_rm,eq_fac,eq_address,eq_contact,eq_contactinfo,eq_sup,eq_supinfo,eq_physician,eq_physicianinfo,eq_assetid,eq_sn,eq_mefac,eq_mereg,eq_mefacreg,eq_manid,eq_mandt,eq_instdt,eq_acrsite,eq_acrunit,eq_auditfreq,eq_servlogin,eq_servpwd,eq_eoldate,eq_eeoldate,eq_retdate,eq_retired,eq_notes,eq_radcap,eq_capcat,eq_capcst,eq_cls_id,eq_cls_subid,eq_manu_id,eq_fac_id,eq_dept_id
+1,Mammography,DBT,Hologic,Selenia Dimensions,Mammography,B314 (M-1),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,70931,81003178033,MAM1402,MGM4610,1402-4610,81003178033,,4/14/2017,MAP05869,05 | 06,12,,,,4/11/2029,,FALSE,,1,2,520,9,18,9,1,7
+2,CT,40 mm,GE,Revolution HD,Radiology,CT Scanning,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,67809,207662RCT2,HOS17,XRM4430,17-4430,,,2/29/2016,,,12,,,,2/26/2026,,FALSE,,1,2,1800,4,9,7,7,16
+3,C-arm,Mobile,Philips,Veradius Unity,Radiology,Endo C-arm 4,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,77333,1856,HOS17,XRM5801,17-5801,,,7/23/2019,,,12,,,12/30/2032,7/19/2033,,FALSE,,1,1,200,3,5,11,7,16
+4,X-ray,Fixed,Philips,Digital Diagnost,Radiology,Room 3,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,S443,402570/SN0802420,HOS17,XRM149,17-149,,,1/26/2010,,,12,,,12/30/2026,1/22/2028,10/1/2024,TRUE,,1,2,550,14,1,11,7,16
+5,X-ray,Portable,GE,AMX4 Plus,Radiology,Portable,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,S024,951500WK8,HOS17,XRM143,17-143,,,3/31/2000,,,12,,,3/31/2024,3/27/2018,5/1/2025,TRUE,,1,1,180,14,2,7,7,16
+6,C-arm,Mobile,Philips,BV Pulsera,Radiology,Ortho Trauma C-arm 19,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,65965,2342,HOS17,XRM4779,17-4779,,,3/5/2012,,,12,,,12/30/2032,3/2/2026,2/21/2025,TRUE,,0,0,200,3,5,11,7,16
+7,R/F,Remote,Siemens,Luminos Agile Max,Radiology,Room 5,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,66310,61659,HOS17,XRM4577,17-4577,,,1/23/2017,,,12,,,,1/20/2030,,FALSE,,1,2,1200,12,7,14,7,16
+8,X-ray,Fixed,Philips,Digital Diagnost,Radiology,G018 (Room 4),Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,65565,18862011,HOS17,XRM4984,17-4984,,,5/7/2019,,,12,,,,5/2/2037,,FALSE,,1,2,550,14,1,11,7,16
+9,C-arm,Single Plane,Siemens,Artis Zee MP,IR,B427/B447(Room 3),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63558,146886,HOS76,XRM723,76-723,,,3/23/2011,,,12,,,6/30/2025,3/20/2023,,FALSE,,1,2,2300,3,3,14,1,6
+10,C-arm,Single Plane,Siemens,Artis Zee MP,IR,B450 (Room 2),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63582,147167,HOS76,XRM3629,76-3629,,,5/30/2012,,,12,,,6/30/2025,5/27/2024,,FALSE,,1,2,2300,3,3,14,1,6
+11,C-arm,Bi-Plane,Siemens,Artis Zee MP,IR,B446 (Room 1),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63571,1289,HOS76,XRM722,76-722,,,10/27/2011,,,12,,,6/30/2025,10/24/2023,,FALSE,,1,3,2800,3,4,14,1,6
+12,CT,40 mm,GE,Lightspeed VCT,IR,Main CT,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,S301,00000378587CN0,HOS76,XRM649,76-649,,,10/10/2005,,,12,,,12/31/2025,10/8/2015,,FALSE,,1,2,1800,4,9,7,1,6
+13,CT,40 mm,GE,Revolution GSI,Emergency,B740 (Room 2),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,65930,441499CNI,HOS76,XRM4907,76-4907,,,6/18/2015,,,12,,,,6/15/2025,,FALSE,,1,2,1800,4,9,7,1,3
+14,CT,160 mm,GE,Revolution CT,Emergency,B738 (Room 1),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,71404,REVVX1800048CN,HOS76,XRM4215,76-4215,,,6/19/2018,,,12,,,,6/16/2028,,FALSE,,1,3,2600,4,10,7,1,3
+15,X-ray,Fixed,Philips,Trauma Diagnost,Emergency,ED Trauma 3 and 4,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63303,8000397,HOS76,XRM682,76-682,,,10/31/2008,,,12,,,12/31/2025,10/27/2026,,FALSE,,1,2,550,14,1,11,1,3
+16,X-ray,Fixed,Philips,Trauma Diagnost,Emergency,ED Trauma 1 and 2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63304,8000387,HOS76,XRM681,76-681,,,10/31/2008,,,12,,,12/31/2025,10/27/2026,,FALSE,,1,2,550,14,1,11,1,3
+17,C-arm,Mini,Hologic,Insight FD,Emergency,EDHallway,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,77356,30-0519-18M,HOS76,XRM5239,76-5239,,,8/7/2019,,,12,,,,8/3/2033,,FALSE,,0,0,80,3,6,9,1,3
+18,X-ray,Fixed,Philips,Digital Diagnost C90,Emergency,B747 (ED Rad Room 1),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,87733,23860369,HOS76,XRM6363,76-6363,,,10/19/2023,,,12,,,,10/14/2041,,FALSE,,1,2,550,14,1,11,1,3
+19,C-arm,Single Plane,GE,Innova 2100IQ,Cardiology,Cath Lab 1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,62139,207662CL1,HOS76,XRM2168,76-2168,,,9/23/2010,,,12,,,12/31/2023,9/20/2022,6/15/2024,TRUE,,0,0,2300,3,3,7,1,1
+20,C-arm,Single Plane,GE,Innova 2100C,Cardiology,Cath Lab 3,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,S417,207662CL3,HOS76,XRM680,76-680,,,9/23/2008,,,12,,,12/31/2023,9/20/2020,6/15/2024,TRUE,,0,0,2300,3,3,7,1,1
+21,C-arm,Single Plane,GE,Innova,Cardiology,Cath Lab 2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,S356,207662CL2,HOS76,XRM703,76-703,,,10/22/2009,,,12,,,12/31/2023,10/19/2021,6/15/2024,TRUE,,0,0,2300,3,3,7,1,1
+22,C-arm,Single Plane,Philips,Allura Xper FD10,Cardiology,R9 EP Lab,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,S383,884,HOS76,XRM662,76-662,,,11/15/2007,,,12,,,12/30/2024,11/12/2019,6/15/2024,TRUE,,0,0,2300,3,3,11,1,1
+23,C-arm,Bi-Plane,Philips,Allura Xper FD10/10,Cardiology,Cath Lab 6,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,66072,58,HOS76,XRM720,76-720,,,9/29/2010,,,12,,,12/31/2026,9/26/2022,6/15/2024,TRUE,,0,0,2800,3,4,11,1,1
+24,C-arm,Bi-Plane,Philips,Allura Xper FD10/10,Cardiology,Cath Lab 5,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,66060,33,HOS76,XRM717,76-717,,,9/29/2010,,,12,,,12/31/2025,9/26/2022,6/15/2024,TRUE,,0,0,2800,3,4,11,1,1
+25,C-arm,Single Plane,GE,Innova IGS530,Cardiology,Cath Lab 4,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,68697,207662CL530,HOS76,XRM4433,76-4433,,,4/25/2016,,,12,,,,4/22/2028,6/15/2024,TRUE,,0,0,2300,3,3,7,1,1
+26,C-arm,Mobile,Philips,Zenition 70,OR,OR C-arm 5,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,81610,912,HOS76,XRM5486,76-5486,,,9/8/2020,,,12,,,12/30/2030,9/5/2034,,FALSE,,1,1,200,3,5,11,1,11
+27,Dental,Handheld,Aribex,Nomad,OR,OR,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,60647,AX-021709-05,HOS76,XRM687,76-687,,,4/2/2009,,,12,,,,3/29/2024,6/20/2024,TRUE,,0,0,40,5,27,1,1,11
+28,C-arm,Single Plane,GE,Discovery 730 IGS,OR,OR2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,68521,Various,HOS76,XRM4495,76-4495,,,8/10/2016,,,12,,,,8/7/2028,,FALSE,,0,0,2300,3,3,7,1,11
+29,C-arm,Single Plane,Philips,Azurion 7 M20,OR,OR11,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,81800,722079-1005,HOS76,XRM5586,76-5586,,,1/18/2021,,,12,,,12/30/2034,1/15/2033,,FALSE,,0,0,2300,3,3,11,1,11
+30,C-arm,Mobile,Medtronic,O-Arm,OR,OR O-arm,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,82803,C2834,HOS76,XRM5733,76-5733,,,7/26/2021,,,12,,,,7/23/2035,,FALSE,,0,0,200,3,5,10,1,11
+31,C-arm,Single Plane,Philips,Azurion 7 M20,OR,OR17,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,84038,100229760,HOS76,XRM5777,76-5777,,,11/9/2021,,,12,,,12/30/2035,11/6/2033,,FALSE,,0,0,2300,3,3,11,1,11
+32,C-arm,Mini,Hologic,Insight FD,OR,OR Mini C-arm,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,86069,30-1222-21M,HOS76,XRM6184,76-6184,,,2/21/2023,,,12,,,,2/17/2037,,FALSE,,0,0,80,3,6,9,1,11
+33,CT,160 mm,GE,Revolution CT,Radiation Oncology,B516,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,76050,REVVX1800105CN,HOS76,XRM5019,76-5019,,,4/5/2019,,,12,,,,4/2/2029,,FALSE,,1,3,2600,4,10,7,1,15
+34,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 15,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,S457,1607,HOS76,XRM718,76-718,,,7/26/2010,,,12,,,12/30/2032,7/22/2024,,FALSE,,1,1,200,3,5,11,1,11
+35,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 12,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,65964,2341,HOS76,XRM709,76-709,,,3/5/2012,,,12,,,12/30/2032,3/2/2026,2/21/2025,TRUE,,1,1,200,3,5,11,1,11
+36,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 13,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,67738,1967,HOS76,XRM710,76-710,,,5/19/2011,,,12,,,12/30/2032,5/15/2025,2/21/2025,TRUE,,1,1,200,3,5,11,1,11
+37,C-arm,Mobile,Philips,BV Pulsera,OR,SCU C-arm 10,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,76345,FS00027,HOS76,XRM686,76-686,,,6/3/2008,,,12,,,12/30/2032,5/31/2022,,FALSE,,1,1,200,3,5,11,1,11
+38,R/F,Remote,Philips,EasyDiagnost Eleva,Fluoro,B400 (Room 5),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63544,463672/SN10000101,HOS76,XRM714,76-714,,,1/7/2011,,,12,,,12/31/2029,1/4/2024,,FALSE,,1,2,1200,12,7,11,1,5
+39,R/F,Remote,Philips,EasyDiagnost Eleva,Fluoro,B401 (Room 6),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,63545,463488/SN10000099,HOS76,XRM715,76-715,,,1/7/2011,,,12,,,12/31/2029,1/4/2024,,FALSE,,1,2,1200,12,7,11,1,5
+40,X-ray,Portable,GE,AMX4 Plus,Radiology,OR Portable 11,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,S382,1013022WK7,HOS76,XRM653,76-653,,,9/18/2007,,,12,,,3/31/2024,9/13/2025,5/1/2025,TRUE,,1,1,180,14,2,7,1,16
+41,R/F,Remote,Siemens,Artis Zee MP,Fluoro,ERCP Room 1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,43864,1098,HOS76,XRM3627,76-3627,,,6/10/2013,,,12,,,6/30/2025,6/7/2026,,FALSE,,1,2,1200,12,7,14,1,5
+42,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 18,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,65919,3557,HOS76,XRM842,76-842,,,5/18/2015,,,12,,,12/30/2032,5/14/2029,,FALSE,,1,1,200,3,5,11,1,11
+43,C-arm,Mobile,Philips,BV Pulsera 12,OR,OR C-arm 21,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,48687,3520,HOS76,XRM4289,76-4289,,,9/25/2015,,,12,,,12/30/2032,9/21/2029,,FALSE,,1,1,200,3,5,11,1,11
+44,C-arm,Mobile,Philips,BV Pulsera 12,OR,OR C-arm 22,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,48686,3519,MED1941,XRM6614,1941-6614,,,9/25/2015,,,12,,,12/30/2032,9/21/2029,,FALSE,,1,1,200,3,5,11,5,11
+45,C-arm,Mobile,Philips,BV Pulsera 12,OR,OR C-arm 23,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,,,HOS76,XRM4201,76-4201,,,7/1/2015,,,12,,,,6/27/2029,,FALSE,,1,1,200,3,5,11,1,11
+46,X-ray,Portable,Philips,Mobil Diagnost,Radiology,,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,49721,16100042,HOS17,XRM6702,17-6702,,,3/28/2016,,,12,,,12/30/2026,3/24/2034,,FALSE,,1,1,180,14,2,11,7,16
+47,X-ray,Portable,Fujifilm,FDR-GO 2,Radiology,East Tower Radiology,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,70939,41F168B73002,HOS76,XRM4622,76-4622,,,3/31/2017,,,12,,,,3/27/2035,5/1/2025,TRUE,,1,1,180,14,2,6,1,16
+48,C-arm,Mobile,Philips,BV Pulsera,Orthopedics,OR C-arm 24,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,71190,4742,HOS17,XRM6881,17-6881,,,5/22/2017,,,12,,,12/30/2032,5/19/2031,,FALSE,,1,1,200,3,5,11,7,12
+49,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 26,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,71226,4757,HOS76,XRM4654,76-4654,,,6/5/2017,,,12,,,12/30/2032,6/2/2031,,FALSE,,1,1,200,3,5,11,1,11
+50,X-ray,Portable,Fujifilm,FDR GO PLUS E,Radiology,East Tower Radiology,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,79220,MQ0001284008,HOS76,XRM4913,76-4913,,,6/20/2018,,,12,,,,6/15/2036,,FALSE,,1,1,180,14,2,6,1,16
+51,X-ray,Portable,Fujifilm,FDR GO PLUS E,Radiology,East Tower Radiology,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,73760,MQ0001284014,HOS76,XRM4912,76-4912,,,6/20/2018,,,12,,,,6/15/2036,,FALSE,,1,1,180,14,2,6,1,16
+52,X-ray,Portable,Fujifilm,FDR GO PLUS E,OR,Bean 2 OR,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,74949,MQ0001288039,HOS76,XRM5076,76-5076,,,1/17/2019,,,12,,,,1/12/2037,,FALSE,,1,1,180,14,2,6,1,11
+53,C-arm,Mobile,Philips,Veradius Unity,OR,OR C-arm 1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,76347,1645,HOS76,XRM5120,76-5120,,,3/5/2019,,,12,,,12/30/2032,3/1/2033,,FALSE,,1,1,200,3,5,11,1,11
+54,C-arm,Mobile,Philips,Veradius Unity,OR,OR C-arm 2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,76340,1683,HOS76,XRM5122,76-5122,,,3/11/2019,,,12,,,12/30/2032,3/7/2033,,FALSE,,1,1,200,3,5,11,1,11
+55,C-arm,Mobile,Philips,Veradius Unity,OR,OR C-arm 3,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,77348,1893,HOS76,XRM5238,76-5238,,,8/7/2019,,,12,,,12/30/2032,8/3/2033,,FALSE,,1,1,200,3,5,11,1,11
+56,X-ray,Portable,Fujifilm,FDR GO PLUS E,Emergency,ED,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,79203,MQ00012A1002,HOS76,XRM5414,76-5414,,,5/15/2020,,,12,,,,5/11/2038,,FALSE,,1,1,180,14,2,6,1,3
+57,X-ray,Portable,Fujifilm,FDR GO PLUS E,Radiology,Rad - CFT,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,67992,MQ00012A4015,HOS76,XRM5430,76-5430,,,5/15/2020,,,12,,,,5/11/2038,,FALSE,,1,1,180,14,2,6,1,16
+58,X-ray,Portable,Fujifilm,FDR GO PLUS E,Radiology,Rad - CFT,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,67993,MQ00012A4011,HOS76,XRM5429,76-5429,,,5/15/2020,,,12,,,,5/11/2038,,FALSE,,1,1,180,14,2,6,1,16
+59,R/F,Remote,Siemens,Artis Zee,Fluoro,ERCP Room 2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,84751,159177,HOS76,XRM6046,76-6046,,,11/25/2022,,,12,,,,11/22/2035,,FALSE,,1,2,1200,12,7,14,1,5
+60,X-ray,Fixed,Philips,Digital DiagnostC90,Emergency,B746 (ED Rad Room 2),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,86457,22860157,HOS76,XRM6163,76-6163,,,2/27/2023,,,12,,,,2/22/2041,,FALSE,,1,2,550,14,1,11,1,3
+61,X-ray,Portable,GE,AMX4 PLUS,Radiology,Portable,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,S219,966143WK0,MED1941,XRM5487,1941-5487,,,9/26/2002,,,12,,,3/31/2024,9/21/2020,12/31/2024,TRUE,,1,1,180,14,2,7,5,16
+62,X-ray,Fixed,Philips,Digital Diagnost,Radiology,B104 (Room 1),Falmouth Diagnostic Center,"5 Bucknam Rd.; Falmouth, ME 04105",,,,,,,67806,497058/12000030,MED1324,XRM2908,1324-2908,,,3/14/2012,,,12,,,12/31/2027,3/10/2030,,FALSE,,1,2,550,14,1,11,8,16
+63,X-ray,Fixed,Philips,Digital Diagnost,Radiology,B106 (Room 2),Falmouth Diagnostic Center,"5 Bucknam Rd.; Falmouth, ME 04105",,,,,,,67864,SN12000066,MED1324,XRM2907,1324-2907,,,4/23/2012,,,12,,,12/31/2027,4/19/2030,,FALSE,,1,2,550,14,1,11,8,16
+64,X-ray,Fixed,Philips,Digital Diagnost,Radiology,B109 (Room 3),Falmouth Diagnostic Center,"5 Bucknam Rd.; Falmouth, ME 04105",,,,,,,83460,22860031,MED1324,XRM5964,1324-5964,,,,,,12,,,,12/26/1917,,FALSE,,1,2,550,14,1,11,8,16
+65,Mammography,DBT,Hologic,Selenia Dimensions,Mammography,MFAL Mammography,Falmouth Diagnostic Center,"5 Bucknam Rd.; Falmouth, ME 04105","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,67863,81002166268,MAM1433,MGM4431,1433-4431,81002166268,,4/15/2016,MAP01576,04 | 05,12,,,,4/12/2028,,FALSE,,1,2,520,9,18,9,8,7
+66,DXA,None,Hologic,Horizon A,Endocrinology,,Endocrinology & Diabetes Center,"175 US Route 1; Scarborough, ME 04074",,,,,,,75400-MMP,301310M,MED1610,XRM4921,1610-4921,,,7/16/2018,,,12,,,,7/12/2034,,FALSE,,0,0,100,6,24,9,9,4
+67,DXA,None,Hologic,Horizon C,Endocrinology,,Endocrinology & Diabetes Center,"175 US Route 1; Scarborough, ME 04074",,,,,,,44137-MMP,303188M,MED1610,XRM5305,1610-5305,,,12/9/2019,,,12,,,,12/5/2035,,FALSE,,0,0,100,6,24,9,9,4
+68,C-arm,Mobile,Philips,BV Pulsera,Neurosurgery,1507,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074",,,,,,,67803,342,MED1848,XRM5693,1848-5693,,,1/9/2012,,,12,,,,1/5/2026,,TRUE,,0,0,200,3,5,11,4,9
+69,C-arm,Mobile,Siemens,Arcadis Varic,Pain,Maine Neuro,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074",,,,,,,87026,400-402030,MED1848,XRM1044,1848-1044,,,12/12/2011,,,12,,,,12/8/2025,,TRUE,,0,0,200,3,5,14,4,13
+70,X-ray,Fixed,Philips,Digital Diagnost,Neurosurgery,,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074",,,,,,,83163,10001108,MED1848,XRM5785,1848-5785,,,12/2/2021,,,12,,,,11/28/2039,,FALSE,,0,0,550,14,1,11,4,9
+71,X-ray,Fixed,Philips,Digital Diagnost,Orthopedics,Room 304,Sports Orthopedics Gannett,"119 Gannett Dr.; South Portland, ME 04106",,,,,,,45893,1500174,MED179,XRM4230,179-4230,,,7/10/2015,,,12,,,,7/5/2033,,FALSE,,0,0,550,14,1,11,13,12
+72,X-ray,Fixed,Fujifilm,D-EVO Suite II,Orthopedics,Room 307,Sports Orthopedics Gannett,"119 Gannett Dr.; South Portland, ME 04106",,,,,,,72185,3612,MED179,XRM4943,179-4943,,,8/20/2018,,,12,,,,8/15/2036,,FALSE,,0,0,550,14,1,6,13,12
+73,C-arm,Mobile,Philips,Zenition 70,Orthopedics,,Sports Orthopedics Gannett,"119 Gannett Dr.; South Portland, ME 04106",,,,,,,76902-MMP,4008,MED179,XRM6328,179-6328,,,7/26/2023,,,12,,,12/30/2033,7/22/2037,,FALSE,,0,0,200,3,5,11,13,12
+74,X-ray,Fixed,Fujifilm,D-EVO Suite FSx,Orthopedics,Room 123 (X-ray),Sports Orthopedics Windham,"584 Roosevelt Trl.; Windham, ME 04062",,,,,,,75594-MMP,03147-1220-W,MED2616,XRM5619,2616-5619,,,3/14/2021,,,12,,,,3/10/2039,,FALSE,,0,0,550,14,1,6,14,12
+75,X-ray,Fixed,GE,Proteus,Radiology,Room 249,Family Primary Care,"272 Congress St.; Portland, ME 04101",,,,,,,S441,00000054307HL4,MED1727,XRM597,1727-597,,,8/25/2008,,,12,,,,8/21/2026,,FALSE,,0,0,550,14,1,7,12,16
+76,C-arm,Mobile,Philips,BV Pulsera,Urology,Procedure Room 2,Urology,"100 Brickhill Ave.; South Portland, ME 04106",,,,,,,44070,3196,MED2387,XRM3994,2387-3994,,,6/4/2014,,,12,,,12/30/2032,5/31/2028,,FALSE,,0,0,200,3,5,11,15,19
+77,C-arm,Mobile,Philips,BV Pulsera,Pain,C-arm 16,Falmouth Diagnostic Center,"5 Bucknam Rd.; Falmouth, ME 04105",,,,,,,67859,1968,MED1324,XRM5773,1324-5773,,,5/13/2011,,,12,,,12/30/2032,5/9/2025,,FALSE,,1,1,200,3,5,11,8,13
+78,Breast Biopsy,Upright,Hologic,Affirm Upright,Mammography,Room 1,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,79791,82003161477,,,-,,,8/9/2022,,,12,,,,8/6/2032,,FALSE,,1,1,150,1,20,9,2,7
+79,CT,160 mm,GE,Revolution,Radiology,Room 543,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,"Johnson, Vicky",vicky.johnson@mainehealth.org; 207-662-2250,,,78298,REVVX1900123CN,MED1389,XRM5341,1389-5341,,,1/14/2020,,,12,,,,1/11/2030,,FALSE,,1,3,2600,4,10,7,2,16
+80,CT,RT Sim,GE,Lightspeed RT16,Radiation Oncology,171 CT/Sim,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074",,,,,,,S332,422422CN6,MED1389,XRM3053,1389-3053,207885RT16,,3/28/2011,,,12,,,3/31/2022,3/25/2021,1/1/2025,TRUE,,0,0,1800,4,12,7,2,15
+81,Mammography,DBT,Hologic,Selenia Dimensions,Mammography,D-3,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,49092,81002166206,MAM1407,MGM4375,1407-4375,81002166206,,12/13/2016,MAP01572,10 | 13,12,,,,12/10/2028,,FALSE,,1,2,520,9,18,9,2,7
+82,Mammography,DBT,Hologic,Selenia Dimensions,Mammography,D-1,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,49059,81003166341,MAM1407,MGM4458,1407-4458,81003166341,,4/1/2016,MAP01572,11 | 14,12,,,,3/29/2028,,FALSE,,1,2,520,9,18,9,2,7
+83,Mammography,DBT,Hologic,Selenia Dimensions,Mammography,D-2,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,49048,81012167672,MAM1407,MGM4576,1407-4576,81012167672,,1/19/2017,MAP01572,12 | 15,12,,,,1/16/2029,,FALSE,,1,2,520,9,18,9,2,7
+84,Cabinet,Specimen,Hologic,Brevera,Mammography,Specimen Imager,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074",,,,,,,86644,BVA01048,MAM1407,MGM6264,1407-6264,,,5/23/2023,,,12,,,,5/20/2035,,FALSE,,1,1,75,2,32,9,2,7
+85,R/F,Remote,Siemens,Multitom RAX,Radiology,R/F Room,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074",,,,,,,49123,10139,MED1389,XRM4690,1389-4690,,,7/28/2017,,,12,,,,7/25/2030,,FALSE,,1,2,1200,12,7,14,2,16
+86,Breast Biopsy,Prone,Hologic,Affirm Prone,Mammography,Stereotactic Room783,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Chase, Jacalyn",jacalyn.chase@mainehealth.org; 207-396-7779,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Pietras, Elizabeth",elizabeth.pietras@mainehealth.org,73674,APB1100418,MAM1407,MGM4904,1407-4904,,,5/25/2018,,,12,,,,5/22/2028,,FALSE,,1,1,350,1,19,9,2,7
+87,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 25,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,S456,1606,HOS76,XRM6613,76-6613,,,7/16/2010,,,12,,,12/30/2032,7/12/2024,,FALSE,,1,1,200,3,5,11,1,11
+88,C-arm,Mobile,Philips,BV Pulsera,OR,OR C-arm 20,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,60799,3076,MED1941,XRM4774,1941-4774,,,2/25/2014,,,12,,,12/30/2032,2/22/2028,,FALSE,,1,1,200,3,5,11,5,11
+89,C-arm,Mobile,Philips,BV Puslera,OR,OR C-arm 27,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,71382,4765,MED1941,XRM5266,1941-5266,,,6/20/2017,,,12,,,12/30/2032,6/17/2031,,FALSE,,1,1,200,3,5,11,5,11
+90,C-arm,Mini,Hologic,Insight-FD,OR,Surgery,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,78287,30-0419-35M,MED1941,XRM5234,1941-5234,,,8/8/2019,,,12,,,,8/4/2033,,FALSE,,0,0,80,3,6,9,5,11
+91,C-arm,Mini,Hologic,Insight-FD,OR,Surgery,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,78330,30-0121-13M,MED1941,XRM5618,1941-5618,,,1/25/2021,,,12,,,,1/22/2035,,FALSE,,0,0,80,3,6,9,5,11
+92,Cabinet,Specimen,Hologic,Trident HD,OR,Surgery,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,85114,,MED1941,XRM6268,1941-6268,,,5/23/2023,,,12,,,,5/20/2035,,FALSE,,0,0,75,2,32,9,5,11
+93,C-arm,Mobile,Philips,BV Pulsera,OR,Surgery,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,71264,4751,MED1941,,1941-,,,5/31/2017,,,12,,,12/30/2032,5/28/2031,,TRUE,,1,1,200,3,5,11,5,11
+94,Dental,Handheld,Aribex,Nomad,OR,OR1,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,73800,22739,MED1941,XRM4643,1941-4643,,,4/2/2009,,,12,,,,3/29/2024,,FALSE,,0,0,40,5,27,1,5,11
+95,X-ray,Portable,Fujifilm,FDR GO PLUS E,OR,SSC Surgery,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,74028,MQ0001288041,MED1941,XRM5075,1941-5075,,,1/17/2019,,,12,,,,1/12/2037,,FALSE,,1,1,180,14,2,6,5,11
+96,Dental,Handheld,Aribex,Nomad,OR,OR2,Scarborough Surgical Center,"84 Campus Dr.; Scarborough, ME 04074",,,,,,,85139,22727,MED1941,XRM4644,1941-4644,,,10/20/2016,,,12,,,,10/17/2031,,FALSE,,0,0,40,5,27,1,5,11
+97,Gamma Camera,SPECT/CT,Siemens,Intevo,Nuclear Medicine,B337,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,45178,,HOS76,XRM4200,76-4200,,,4/1/2015,,,12,,,,3/28/2030,,FALSE,,1,2,1100,7,22,14,1,10
+98,Gamma Camera,SPECT/CT,Siemens,Symbia T,Nuclear Medicine,B334,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,S325,,HOS76,XRM4087,76-4087,,,6/25/2010,,,12,,,12/31/2024,6/21/2025,11/10/2024,TRUE,,1,2,1100,7,22,14,1,10
+99,Gamma Camera,SPECT/CT,Siemens,Intevo,Nuclear Medicine,Room 557,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,45551,,MED1389,XRM3051,1389-3051,,,6/27/2014,,,12,,,,6/23/2029,,FALSE,,1,2,1100,7,22,14,2,10
+100,Gamma Camera,SPECT,Siemens,Symbia S,Nuclear Medicine,Room 559,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,S324,,,,-,,,6/17/2010,,,12,,,,6/13/2025,,FALSE,,1,2,800,7,21,14,2,10
+101,Gamma Camera,SPECT/CT,Siemens,Intevo Excel,Nuclear Medicine,Room 1069,Cardiology,"96 Campus Dr.; Scarborough, ME 04074",,,,,,,45890,,MED2411,XRM4157,2411-4157,,,1/20/2015,,,12,,,,1/16/2030,,FALSE,,0,0,1100,7,22,14,3,10
+102,Gamma Camera,SPECT,GE,530C,Cardiology,Room 1063,Cardiology,"96 Campus Dr.; Scarborough, ME 04074",,,,,,,78312,,,,-,,,11/26/2019,,,12,,,,11/22/2034,,FALSE,,0,0,800,7,21,7,3,1
+103,PET,PET/CT,GE,Discovery 710 MI,Cardiology,Room 1047,Cardiology,"96 Campus Dr.; Scarborough, ME 04074",,,,,,,77914,,MED2411,XRM5235,2411-5235,,,9/13/2019,,,12,,,,9/9/2033,,FALSE,,0,0,3500,11,23,7,3,1
+104,PET,PET/CT,Siemens,mCT Flow,PET,PET/CT,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,72367,,MED1389,XRM4816,1389-4816,,,3/2/2018,,,12,,,,2/27/2032,,FALSE,,1,3,3500,11,23,14,2,14
+105,MRI,1.5 T,Philips,Ingenia 1.5T,MRI,Bay 1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,73884,84475,,,-,,,6/27/2018,,,12,,,12/30/2030,6/23/2032,,FALSE,,1,3,3000,10,14,11,1,8
+106,MRI,1.5 T,Philips,Ingenia Ambition X 1.5T,MRI,Bay 2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,83947,,,,-,,,12/21/2021,,,12,,,12/30/2030,12/18/2035,,FALSE,,1,3,3000,10,14,11,1,8
+107,MRI,1.5 T,Philips,Ingenia Ambition X 1.5T,MRI,MRI,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,,47233,,,-,,,,,,12,,,,12/27/1913,,FALSE,,0,0,3000,10,14,11,4,8
+108,MRI,1.5 T,Philips,Ingenia Ambition X 1.5T,MRI,MRI,Sports Orthopedics Gannett,"119 Gannett Dr.; South Portland, ME 04106","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,74674-MMP,47098,,,-,,,4/24/2021,,,12,,,12/30/2033,4/21/2035,,FALSE,,0,0,3000,10,14,11,13,8
+109,MRI,1.5 T,Philips,Ingenia Omega HP,MRI,Bay 2,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,71613,84254,,,-,,,12/28/2017,,,12,,,12/30/2030,12/25/2031,,FALSE,,1,3,3000,10,14,11,2,8
+110,MRI,3.0 T,Philips,Ingenia 3T,MRI,Bay 3,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,72985,71828,,,-,,,3/29/2018,,,12,,,12/30/2030,3/25/2032,,FALSE,,1,3,3500,10,15,11,2,8
+111,Cabinet,Specimen,Faxitron,MX-20,Research,G0338,Research Institute,"82 Campus Dr.; Scarborough, ME 04074",,,,,,,,2321A0702,MED1881,XRM390,1881-390,,,,,,12,,,,12/28/1911,,FALSE,,0,0,75,2,32,5,6,17
+112,DXA,None,GE,Lunar Pixi,Research,Procedure Room,Research Institute,"82 Campus Dr.; Scarborough, ME 04074",,,,,,,,51352,MED1881,XRM391,1881-391,,,,,,12,,,,12/27/1915,,FALSE,,0,0,100,6,24,7,6,17
+113,Cabinet,Specimen,Faxitron,UltraFocus,Research,Room 10330,Research Institute,"82 Campus Dr.; Scarborough, ME 04074",,,,,,,,2327A40351,MED1881,XRM5195,1881-5195,,,,,,12,,,,12/28/1911,,FALSE,,0,0,75,2,32,5,6,17
+114,CT,uCT,SCANCO,vivaCT 40,Research,Procedure Room,Research Institute,"82 Campus Dr.; Scarborough, ME 04074",,,,,,,,803052,MED1881,XRM392,1881-392,,,,,,12,,,,12/28/1911,,FALSE,,0,0,200,4,13,13,6,17
+115,CT,RT Sim,GE,Optima 580,Radiation Oncology,Room 120 (CT Sim),Sanford Radiology Oncology,"27 Industrial Av.; Sanford, ME 04073",,,,,,,41669,,HOS1296,XRM4414,1296-4414,,,6/13/2016,,,12,,,,6/11/2026,,FALSE,,0,0,1800,4,12,7,11,15
+116,MRI,1.5 T,Philips,Ingenia Ambition X 1.5T,MRI,Bay 1,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,"Beaulieu, Heather",heather.beaulieu@mainehealth.org; 207-662-3932,,,87293,47726,,,-,,,3/25/2024,,,12,,,,3/22/2038,,FALSE,,1,3,3000,10,14,11,2,8
+117,C-arm,Mobile,Philips,Zenetion 70,Neurosurgery,Room 1507,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074",,,,,,,85174,3114,MED1848,XRM6538,1848-6538,,,2/28/2024,,,12,,,,2/24/2038,,FALSE,,0,0,200,3,5,11,4,9
+118,C-arm,Mobile,Philips,Zenetion 70,Neurosurgery,Room 1500,Neurosurgery & Spine,"92 Campus Dr.; Scarborough, ME 04074",,,,,,,85173,3617,MED1848,XRM6537,1848-6537,,,2/28/2024,,,12,,,,2/24/2038,,FALSE,,0,0,200,3,5,11,4,9
+119,X-ray,Portable,Fujifilm,FDR GO PLUS E,Radiology,Rad - CFT,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,88545,MQ00012D8046,HOS76,XRM6499,76-6499,,,1/19/2024,,,12,,,,1/14/2042,,FALSE,,1,1,180,14,2,6,1,16
+120,Dental,Panoramic,Planmeca,ProMax 3D Plus,Emergency,B746 (ED Rad Room 2),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,82586,NTPV7218232,HOS76,XRM6377,76-6377,,,10/19/2023,,,12,,,,10/15/2038,,FALSE,,1,1,80,5,26,12,1,3
+121,Cabinet,Specimen,Hologic,Brevera,OR,OR,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,87812,TRI2101218,MAM1402,MGM6440,1402-6440,,,12/12/2023,,,12,,,,12/9/2035,,FALSE,,0,0,75,2,32,9,1,11
+122,Ultrasound,General,Philips,Epiq 7,Radiology,Room 547 (Room 2),MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,73013,US418B0305,,,-,,4/9/2018,4/16/2018,,,12,,,,4/13/2030,,FALSE,,1,1,190,13,16,11,2,16
+123,Ultrasound,General,Philips,Epiq 7,Radiology,Room 546 (Room 1),MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,47449,US517B0202,,,-,,5/5/2017,5/15/2017,,,12,,,12/31/2025,5/12/2029,,FALSE,,1,1,190,13,16,11,2,16
+124,Ultrasound,General,Philips,Epiq 7,Radiology,Room 781 (Breast US1),MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,49097,US516B0472,,,-,,5/12/2016,5/20/2016,,,12,,,12/31/2025,5/17/2028,,FALSE,,1,1,190,13,16,11,2,16
+125,Ultrasound,General,Philips,Epiq 7,Radiology,Room 778 (Breast US2),MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,71616,USN17B0850,,,-,,11/15/2017,11/28/2017,,,12,,,,11/25/2029,,FALSE,,1,1,190,13,16,11,2,16
+126,Ultrasound,General,Philips,Epiq 7,Radiology,B473 (Room 1),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,71034,US417B1002,,,-,,4/25/2017,5/5/2017,,,12,,,12/31/2025,5/2/2029,,FALSE,,1,1,190,13,16,11,1,16
+127,Ultrasound,General,Philips,Epiq 7,Radiology,B479 (Consult Room),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,71035,US417B1003,,,-,,4/25/2017,5/5/2017,,,12,,,12/31/2025,5/2/2029,,FALSE,,1,1,190,13,16,11,1,16
+128,Ultrasound,General,Philips,Epiq 7,Radiology,B468 (Room 3),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,74125,US718B0252,,,-,,7/9/2018,7/23/2018,,,12,,,,7/20/2030,,FALSE,,1,1,190,13,16,11,1,16
+129,Ultrasound,General,Philips,Epiq 7,Radiology,B475 (Room 2),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,71033,US417B1004,,,-,,4/25/2017,5/5/2017,,,12,,,12/31/2025,5/2/2029,,FALSE,,1,1,190,13,16,11,1,16
+130,Ultrasound,Doppler,Parks,Flo-Lab 2100,Radiology,B472 (Room 4),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,34814,015051,,,,,6/21/2002,7/1/2002,,,12,,,,6/28/2014,,FALSE,,1,1,145,13,17,16,1,16
+131,Ultrasound,General,Philips,Epiq 7,Emergency,ED US/CT Alcove,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,68358,US516B0487,,,-,,5/13/2016,5/23/2016,,,12,,,12/31/2025,5/20/2028,,FALSE,,1,1,190,13,16,11,1,3
+132,Ultrasound,General,Philips,Epiq 7,Emergency,B737 (ED Ultrasound),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,73713,US418B0558,,,-,,4/12/2018,4/13/2018,,,12,,,,4/10/2030,,FALSE,,1,1,190,13,16,11,1,3
+133,Ultrasound,General,Philips,Epiq 7,Radiology,G016 (Room 1),Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,65562,US417B0398,,,-,,4/1/2017,5/15/2017,,,12,,,12/31/2025,5/12/2029,,FALSE,,1,1,190,13,16,11,7,16
+134,Ultrasound,General,Philips,Epiq 7,Radiology,G043 (Room 2),Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,73635,US318B2488,,,-,,3/1/2018,4/4/2018,,,12,,,,4/1/2030,,FALSE,,1,1,190,13,16,11,7,16
+135,Ultrasound,Doppler,Parks,Flo-Lab 2100,Radiology,,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,,195269,,,-,,6/21/2002,7/1/2012,,,12,,,,6/28/2024,,FALSE,,1,1,145,13,17,16,7,16
+136,Dental,Handheld,Dexis,Nomad Pro 2,OR,OR,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,92311,1025056,HOS76,XRM6628,76-6628,,,6/12/2024,,,12,,,,6/9/2039,,FALSE,,0,0,40,5,27,4,1,11
+137,CT,IR,Stryker,Airo TruCT,OR,"OR 25, 26-29",Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,92334,2320902113,HOS76,XRM6633,76-6633,,,6/28/2024,,,12,,,,6/26/2034,,FALSE,,0,0,1800,4,11,15,1,11
+138,X-ray,Portable,Fujifilm,FDR Go,Radiology,MFT 1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,91008,MQ00012DA004,HOS76,XRM6573,76-6573,,,6/4/2024,,,12,,,,5/31/2042,,FALSE,,1,1,180,14,2,6,1,16
+139,X-ray,Portable,Fujifilm,FDR Go,Radiology,CFT X-ray 3,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,92610,MQ00012DA007,HOS76,XRM6574,76-6574,,,6/18/2024,,,12,,,,6/14/2042,,FALSE,,1,1,180,14,2,6,1,16
+140,X-ray,Fixed,Philips,Diagnost C90,Radiology,Room 3,Brighton Diagnostic Center,"335 Brighton Ave.; Portland, ME 04102",,,,,,,85965,24861083,HOS17,XRM6755,17-6755,,,11/1/2024,,,12,,,,10/28/2042,,FALSE,,1,2,550,14,1,11,7,16
+141,Gamma Camera,SPECT/CT,Siemens,Symbia Pro.specta X3,Radiology,B334,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,"Haar, Kelly",kelly.haar@mainehealth.org; 207-662-4665,,,400-869661,100422,HOS76,XRM6886,76-6886,,12/1/2024,3/15/2025,,,12,,,,3/11/2040,,FALSE,,1,2,1100,7,22,14,1,16
+142,CT,RT Sim,GE,Discovery RT,Radiation Oncology,171 CT/Sim,MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074",,,,,,,94112,,MED1389,XRM6911,1389-6911,207885RTGEN3,,3/21/2025,,,12,,,,3/19/2035,,FALSE,,0,0,1800,4,12,7,2,15
+143,CT,uCT,Bruker,SkyScan 1276,Research,Procedure Room (0338),Research Institute,"82 Campus Dr.; Scarborough, ME 04074",,,,,,,,24|17198,MED1881,XRM6852,1881-6852,,,1/24/2025,,,12,,,,1/21/2037,,FALSE,,0,0,200,4,13,17,6,17
+144,C-arm,Mobile,GE/OEC,OEC Elite CFD 31,OR,C-arm GE1,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93789,FBXXTE03324,HOS76,XRM6876,76-6876,FBXXTE03324,,2/21/2025,,,12,,,,2/18/2039,,FALSE,,1,1,200,3,5,8,1,11
+145,C-arm,Mobile,GE/OEC,OEC Elite CFD 31,OR,C-arm GE2,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93790,FBXXTE03325,HOS76,XRM6877,76-6877,FBXXTE03325,,2/21/2025,,,12,,,,2/18/2039,,FALSE,,1,1,200,3,5,8,1,11
+146,C-arm,Mobile,GE/OEC,OEC Elite CFD 25,OR,C-arm GE3,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93788,FAXXTE01225,HOS76,XRM6875,76-6875,FAXXTE01225,,2/21/2025,,,12,,,,2/18/2039,,FALSE,,1,1,200,3,5,8,1,11
+147,X-ray,Portable,Fujifilm,FDR Go,Radiology,CR8,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93858,MQ00012E5005,HOS76,XRM6916,76-6916,,5/23/2024,3/28/2025,,,12,,,,3/24/2043,,FALSE,,1,1,180,14,2,6,1,16
+148,X-ray,Portable,Fujifilm,FDR Go,Radiology,CR9,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93859,MQ00012E6002,HOS76,XRM6915,76-6915,,6/3/2024,3/28/2025,,,12,,,,3/24/2043,,FALSE,,1,1,180,14,2,6,1,16
+149,X-ray,Portable,Fujifilm,FDR Go,Radiology,NICU,Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,"Gaudet, Jason",jason.gaudet@mainehealth.org; 207-662-2421,,,93857,MQ00012E6003,HOS76,XRM6917,76-6917,,6/3/2024,3/28/2025,,,12,,,,3/24/2043,,FALSE,,1,1,180,14,2,6,1,16
+150,Ultrasound,General,Philips,Epiq Elite,Radiology,Room 551 (Room 3),MaineHealth Radiology - Scarborough,"100 Campus Dr.; Scarborough, ME 04074",,,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,87297,US624B0096,,,-,,6/23/2024,6/25/2024,,,12,,,,6/22/2036,,FALSE,,1,1,190,13,16,11,2,16
+151,C-arm,Single Plane,Philips,Azurion 7 M12,Cardiology,Cath Lab 1 (MFT 43),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91907,944,HOS76,XRM6602,76-6602,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+152,C-arm,Single Plane,Philips,Azurion 7 M12,Cardiology,Cath Lab 2 (MFT 44),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91897,,HOS76,XRM6603,76-6603,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+153,C-arm,Single Plane,Philips,Azurion 7 M12,Cardiology,Cath Lab 3 (MFT 45),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91899,937,HOS76,XRM6604,76-6604,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+154,C-arm,Single Plane,Philips,Azurion 7 M20,Cardiology,Cath Lab 4 (MFT 41),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91909,2247,HOS76,XRM6605,76-6605,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+155,C-arm,Single Plane,Philips,Azurion 7 M20,Cardiology,Cath Lab 5 (MFT 42),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91908,2246,HOS76,XRM6606,76-6606,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+156,C-arm,Single Plane,Philips,Azurion 7 M12,Cardiology,EP 6 (MFT 48),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91905,945,HOS76,XRM6600,76-6600,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+157,C-arm,Single Plane,Philips,Azurion 7 M12,Cardiology,EP 7 (MFT 49),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91906,951,HOS76,XRM6601,76-6601,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,1
+158,C-arm,Bi-Plane,Philips,Azurion 7 B12,Cardiology,EP 11 (MFT 46),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91903,291,HOS76,XRM6621,76-6621,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2800,3,4,11,1,1
+159,C-arm,Bi-Plane,Philips,Azurion 7 B12,Cardiology,EP 12 (MFT 47),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91904,299,HOS76,XRM6608,76-6608,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2800,3,4,11,1,1
+160,C-arm,Single Plane,Philips,Azurion 7 M20,OR,OR 1 (MFT 36),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91895,2229,HOS76,XRM6622,76-6622,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,11
+161,C-arm,Single Plane,Philips,Azurion 7 M20,Vascular,OR 16 (MFT 33),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107",,,,,,,91894,2248,HOS76,XRM6607,76-6607,,,5/15/2024,,,12,,,12/30/2037,5/12/2036,,FALSE,,0,0,2300,3,3,11,1,20
+162,Ultrasound,General,Philips,Epiq Elite,Radiology,B472 (Room 4),Maine Medical Center,"22 Bramhall St.; Portland, ME 04107","Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,"Lalouche, Kathleen",kathleen.lalouche@mainehealth.org; 207-662-2954,,,89243,US324B0780,,,-,US324B0780,3/12/2024,3/15/2024,,,12,,,,3/12/2036,,FALSE,,1,1,190,13,16,11,1,16
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,-,,,,,,,,,,,,,,,,,,,,,

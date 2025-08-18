@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Edit Equipment - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-edit"></i> Bulk Edit Equipment</h1>
+            <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Equipment List
+            </a>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Step 1: Download -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="fas fa-download"></i> Step 1: Download Current Equipment Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Download the current equipment list as a CSV file. You can optionally apply filters to download only specific equipment.</p>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="filter_class" class="form-label">Equipment Class</label>
+                                <select id="filter_class" class="form-select">
+                                    <option value="">All Classes</option>
+                                    <option value="CT">CT</option>
+                                    <option value="MRI">MRI</option>
+                                    <option value="X-ray">X-ray</option>
+                                    <option value="C-arm">C-arm</option>
+                                    <option value="Mammography">Mammography</option>
+                                    <option value="Ultrasound">Ultrasound</option>
+                                    <option value="R/F">R/F</option>
+                                    <option value="PET">PET</option>
+                                    <option value="Gamma Camera">Gamma Camera</option>
+                                    <option value="DXA">DXA</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filter_dept" class="form-label">Department</label>
+                                <select id="filter_dept" class="form-select">
+                                    <option value="">All Departments</option>
+                                    <option value="Radiology">Radiology</option>
+                                    <option value="Cardiology">Cardiology</option>
+                                    <option value="OR">OR</option>
+                                    <option value="Emergency">Emergency</option>
+                                    <option value="IR">IR</option>
+                                    <option value="Nuclear Medicine">Nuclear Medicine</option>
+                                    <option value="Mammography">Mammography</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="filter_facility" class="form-label">Facility</label>
+                                <select id="filter_facility" class="form-select">
+                                    <option value="">All Facilities</option>
+                                    <option value="Maine Medical Center">Maine Medical Center</option>
+                                    <option value="Brighton Diagnostic Center">Brighton Diagnostic Center</option>
+                                    <option value="MaineHealth Radiology - Scarborough">MaineHealth Radiology - Scarborough</option>
+                                    <option value="Scarborough Surgical Center">Scarborough Surgical Center</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Options</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="filter_retired">
+                                    <label class="form-check-label" for="filter_retired">
+                                        Include retired equipment
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button onclick="downloadFiltered()" class="btn btn-success btn-lg">
+                                <i class="fas fa-download"></i> Download Equipment CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Edit -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5><i class="fas fa-table"></i> Step 2: Edit in Spreadsheet Software</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            <li><strong>Open the downloaded CSV file</strong> in Excel, Google Sheets, or similar software</li>
+                            <li><strong>Make your changes</strong> to any fields except <code>eq_id</code> (this identifies each equipment record)</li>
+                            <li><strong>Save as CSV format</strong> when you're done editing</li>
+                        </ol>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Important Notes:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Do not modify the <code>eq_id</code> column</strong> - this is used to identify equipment records</li>
+                                <li><strong>Do not change column headers</strong> - keep them exactly as downloaded</li>
+                                <li><strong>Date format:</strong> Use YYYY-MM-DD format (e.g., 2024-12-25)</li>
+                                <li><strong>Boolean fields:</strong> Use TRUE/FALSE for <code>eq_retired</code></li>
+                                <li><strong>Save as CSV:</strong> Make sure to save in CSV format, not Excel format</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Upload -->
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-upload"></i> Step 3: Upload Updated Equipment Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Select your edited CSV file</label>
+                                <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                                <div class="form-text">
+                                    Upload the CSV file you downloaded and edited. The system will update existing equipment records based on their eq_id.
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>What happens when you upload:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>The system finds each equipment record using the <code>eq_id</code></li>
+                                    <li>All fields (except <code>eq_id</code>) are updated with your changes</li>
+                                    <li>You'll see a summary of how many records were updated</li>
+                                    <li>Any errors will be reported so you can fix them</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-upload"></i> Upload Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Help Panel -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-question-circle"></i> Field Reference</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Common Fields:</h6>
+                        <ul class="small">
+                            <li><strong>eq_class:</strong> Equipment type (CT, MRI, X-ray, etc.)</li>
+                            <li><strong>eq_manu:</strong> Manufacturer name</li>
+                            <li><strong>eq_mod:</strong> Model number</li>
+                            <li><strong>eq_dept:</strong> Department</li>
+                            <li><strong>eq_fac:</strong> Facility name</li>
+                            <li><strong>eq_rm:</strong> Room number/location</li>
+                        </ul>
+                        
+                        <h6>Date Fields:</h6>
+                        <ul class="small">
+                            <li><strong>eq_instdt:</strong> Installation date</li>
+                            <li><strong>eq_eoldate:</strong> End of life date</li>
+                            <li><strong>eq_retdate:</strong> Retirement date</li>
+                            <li><strong>Format:</strong> YYYY-MM-DD</li>
+                        </ul>
+                        
+                        <h6>Special Fields:</h6>
+                        <ul class="small">
+                            <li><strong>eq_retired:</strong> TRUE/FALSE</li>
+                            <li><strong>eq_radcap:</strong> Radiology owned (1=Yes, 0=No)</li>
+                            <li><strong>eq_capcat:</strong> Capital cost category (0=N/A, 1-3)</li>
+                            <li><strong>eq_capcst:</strong> Capital cost in thousands of dollars</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-lightbulb"></i> Tips</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="small">
+                            <li><strong>Filter first:</strong> Use filters to download only the equipment you want to edit</li>
+                            <li><strong>Backup:</strong> Keep a copy of the original file before making changes</li>
+                            <li><strong>Test small:</strong> Try with a few records first to make sure everything works</li>
+                            <li><strong>Excel users:</strong> Be careful with date formatting - Excel sometimes auto-converts dates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function downloadFiltered() {
+        // Build URL with current filter values
+        const params = new URLSearchParams();
+        
+        const classFilter = document.getElementById('filter_class').value;
+        const deptFilter = document.getElementById('filter_dept').value;
+        const facilityFilter = document.getElementById('filter_facility').value;
+        const retiredFilter = document.getElementById('filter_retired').checked;
+        
+        if (classFilter) params.append('eq_class', classFilter);
+        if (deptFilter) params.append('eq_dept', deptFilter);
+        if (facilityFilter) params.append('eq_fac', facilityFilter);
+        if (retiredFilter) params.append('include_retired', 'true');
+        
+        // Redirect to export with filters
+        window.location.href = '/export-equipment?' + params.toString();
+    }
+</script>
+{% endblock %}

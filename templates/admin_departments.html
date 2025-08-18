@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Departments - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-building"></i> Departments</h1>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Admin
+                </a>
+                <a href="{{ url_for('admin_add_department') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Department
+                </a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                {% if departments %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dept in departments %}
+                                <tr>
+                                    <td>{{ dept.name }}</td>
+                                    <td>{{ dept.created_at.strftime('%Y-%m-%d') if dept.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin_edit_department', dept_id=dept.id) }}" class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin_delete_department', dept_id=dept.id) }}" 
+                                              style="display: inline;" 
+                                              onsubmit="return confirm('Are you sure you want to deactivate this department?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i> Deactivate
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-building fa-3x text-muted"></i>
+                        <h4 class="text-muted mt-3">No departments</h4>
+                        <p class="text-muted">
+                            <a href="{{ url_for('admin_add_department') }}">Add the first department</a>
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

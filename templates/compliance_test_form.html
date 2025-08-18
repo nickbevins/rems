@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-check-circle"></i> {{ title }}</h1>
+            {% if redirect_to == 'compliance' %}
+                <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Compliance Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Equipment
+                </a>
+            {% endif %}
+        </div>
+        
+        <!-- Equipment Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Equipment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+                        <strong>Equipment Class:</strong><br>
+                        {{ equipment.eq_class or 'N/A' }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Manufacturer:</strong><br>
+                        {{ equipment.eq_manu or 'N/A' }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Model:</strong><br>
+                        {{ equipment.eq_mod or 'N/A' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Facility:</strong><br>
+                        {{ equipment.eq_fac or 'N/A' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Location:</strong><br>
+                        {{ equipment.eq_dept or 'N/A' }} - {{ equipment.eq_rm or 'N/A' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Form -->
+        <form method="POST" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clipboard-check"></i> Test Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.test_type.label(class="form-label") }}
+                                {{ form.test_type(class="form-control") }}
+                                {% for error in form.test_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.test_date.label(class="form-label") }}
+                                {{ form.test_date(class="form-control") }}
+                                {% for error in form.test_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.report_date.label(class="form-label") }}
+                                <span class="text-muted">(Optional)</span>
+                                {{ form.report_date(class="form-control") }}
+                                {% for error in form.report_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                <small class="form-text text-muted">Date report was submitted/completed (leave blank if not yet reported)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Empty column for spacing -->
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.performed_by_id.label(class="form-label") }}
+                                {{ form.performed_by_id(class="form-control") }}
+                                {% for error in form.performed_by_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.reviewed_by_id.label(class="form-label") }}
+                                {{ form.reviewed_by_id(class="form-control") }}
+                                {% for error in form.reviewed_by_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows="4") }}
+                        {% for error in form.notes.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Audit Information (for existing records only) -->
+            {% if test %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Audit Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Created By:</strong><br>
+                            {% if test.created_by %}
+                                <span class="badge bg-secondary">{{ test.created_by }}</span>
+                                {% if test.created_at %}
+                                    <small class="text-muted d-block">{{ test.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Last Modified By:</strong><br>
+                            {% if test.modified_by %}
+                                <span class="badge bg-secondary">{{ test.modified_by }}</span>
+                                {% if test.updated_at %}
+                                    <small class="text-muted d-block">{{ test.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Form Actions -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        {% if redirect_to == 'compliance' %}
+                            <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Test Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

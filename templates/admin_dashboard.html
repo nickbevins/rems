@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="mb-4">
+            <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
+            <p class="text-muted">Manage standardized options for equipment data entry</p>
+        </div>
+        
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg col-md-4 col-sm-6 mb-3">
+                <div class="card bg-primary text-white h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between flex-grow-1">
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="card-title mb-2">Equipment Classes</h6>
+                                <h3 class="mb-0">{{ classes_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-tags fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg col-md-4 col-sm-6 mb-3">
+                <div class="card bg-secondary text-white h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between flex-grow-1">
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="card-title mb-2">Subclasses</h6>
+                                <h3 class="mb-0">{{ subclasses_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-layer-group fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg col-md-4 col-sm-6 mb-3">
+                <div class="card bg-success text-white h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between flex-grow-1">
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="card-title mb-2">Departments</h6>
+                                <h3 class="mb-0">{{ departments_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-building fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg col-md-4 col-sm-6 mb-3">
+                <div class="card bg-info text-white h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between flex-grow-1">
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="card-title mb-2">Facilities</h6>
+                                <h3 class="mb-0">{{ facilities_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-hospital fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg col-md-4 col-sm-6 mb-3">
+                <div class="card bg-warning text-dark h-100">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between flex-grow-1">
+                            <div class="d-flex flex-column justify-content-center">
+                                <h6 class="card-title mb-2">Manufacturers</h6>
+                                <h3 class="mb-0">{{ manufacturers_count }}</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-industry fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Management Options -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-tags"></i> Equipment Classifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Manage equipment classes and subclasses for consistent categorization.</p>
+                        <a href="{{ url_for('admin_equipment_classes') }}" class="btn btn-primary me-2">
+                            <i class="fas fa-edit"></i> Manage Classes
+                        </a>
+                        <a href="{{ url_for('admin_equipment_subclasses') }}" class="btn btn-secondary">
+                            <i class="fas fa-layer-group"></i> Manage Subclasses
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-building"></i> Departments</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Manage department names for equipment location tracking.</p>
+                        <a href="{{ url_for('admin_departments') }}" class="btn btn-success">
+                            <i class="fas fa-edit"></i> Manage Departments
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-hospital"></i> Facilities</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Manage facility names and addresses for equipment location.</p>
+                        <a href="{{ url_for('admin_facilities') }}" class="btn btn-info">
+                            <i class="fas fa-edit"></i> Manage Facilities
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-industry"></i> Manufacturers</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Manage manufacturer names for equipment tracking.</p>
+                        <a href="{{ url_for('admin_manufacturers') }}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Manage Manufacturers
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

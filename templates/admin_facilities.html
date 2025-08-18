@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Facilities - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-hospital"></i> Facilities</h1>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Admin
+                </a>
+                <a href="{{ url_for('admin_add_facility') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Facility
+                </a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                {% if facilities %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Address</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for facility in facilities %}
+                                <tr>
+                                    <td>{{ facility.name }}</td>
+                                    <td>{{ facility.address or 'N/A' }}</td>
+                                    <td>{{ facility.created_at.strftime('%Y-%m-%d') if facility.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin_edit_facility', facility_id=facility.id) }}" class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin_delete_facility', facility_id=facility.id) }}" 
+                                              style="display: inline;" 
+                                              onsubmit="return confirm('Are you sure you want to deactivate this facility?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i> Deactivate
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-hospital fa-3x text-muted"></i>
+                        <h4 class="text-muted mt-3">No facilities</h4>
+                        <p class="text-muted">
+                            <a href="{{ url_for('admin_add_facility') }}">Add the first facility</a>
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

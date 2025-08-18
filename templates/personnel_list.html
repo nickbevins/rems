@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Personnel - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1><i class="fas fa-users"></i> Personnel</h1>
+            <div>
+                {% if current_user.can_manage_personnel() %}
+                    <a href="{{ url_for('new_personnel') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Personnel
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('export_personnel') }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+                {% if current_user.can_manage_personnel() %}
+                    <a href="{{ url_for('import_personnel') }}" class="btn btn-info">
+                        <i class="fas fa-upload"></i> Import CSV
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Search and Filter Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="search" placeholder="Search by name or email" value="{{ search or '' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="role">
+                            <option value="">All Roles</option>
+                            {% for role in available_roles %}
+                                <option value="{{ role }}" {% if role == role_filter %}selected{% endif %}>{{ role|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{{ url_for('personnel_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Personnel Table -->
+        <div class="card">
+            <div class="card-body">
+                {% if personnel.items %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="personnelTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="name">
+                                        Name <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="email">
+                                        Email <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="phone">
+                                        Phone <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="roles">
+                                        Roles <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for person in personnel.items %}
+                                <tr class="personnel-row" data-id="{{ person.id }}" style="cursor: pointer;">
+                                    <td>{{ person.name }}</td>
+                                    <td>{{ person.email }}</td>
+                                    <td>{{ person.phone or '-' }}</td>
+                                    <td>
+                                        {% if person.roles %}
+                                            {% for role in person.get_roles_list() %}
+                                                <span class="badge bg-secondary me-1">{{ role|title }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('personnel_detail', id=person.id) }}" class="btn btn-sm btn-outline-info btn-icon" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.can_manage_personnel() %}
+                                            <a href="{{ url_for('edit_personnel', id=person.id) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ url_for('delete_personnel', id=person.id) }}" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this personnel record?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if personnel.pages > 1 %}
+                    <nav aria-label="Personnel pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if personnel.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('personnel_list', page=personnel.prev_num, search=search, role=role_filter) }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in personnel.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != personnel.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('personnel_list', page=page_num, search=search, role=role_filter) }}">{{ page_num }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">…</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if personnel.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('personnel_list', page=personnel.next_num, search=search, role=role_filter) }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h4>No Personnel Found</h4>
+                        <p class="text-muted">{% if current_user.can_manage_personnel() %}Start by adding personnel to the database.{% else %}No personnel records are available to view.{% endif %}</p>
+                        {% if current_user.can_manage_personnel() %}
+                            <a href="{{ url_for('new_personnel') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Personnel
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sortable:hover {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+.sortable i {
+    margin-left: 5px;
+    opacity: 0.3;
+}
+.sortable.asc i:before {
+    content: "\f0de";
+    opacity: 1;
+}
+.sortable.desc i:before {
+    content: "\f0dd";
+    opacity: 1;
+}
+.personnel-row {
+    cursor: pointer;
+}
+.btn-icon {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    min-width: 2rem;
+}
+/* Normalize table row heights */
+#personnelTable tbody tr {
+    height: 60px;
+}
+#personnelTable tbody td {
+    vertical-align: middle;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Double-click functionality for personnel rows
+    const personnelRows = document.querySelectorAll('.personnel-row');
+    personnelRows.forEach(row => {
+        row.addEventListener('dblclick', function(e) {
+            // Don't trigger if clicked on a button or link
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('form')) {
+                return;
+            }
+            
+            const personId = this.dataset.id;
+            window.location.href = `/personnel/${personId}`;
+        });
+    });
+    
+    // Table sorting functionality
+    const table = document.getElementById('personnelTable');
+    const headers = table.querySelectorAll('.sortable');
+    
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Determine sort direction
+            const isAsc = this.classList.contains('asc');
+            
+            // Reset all headers
+            headers.forEach(h => h.classList.remove('asc', 'desc'));
+            
+            // Set current header direction
+            this.classList.add(isAsc ? 'desc' : 'asc');
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                let aVal = '';
+                let bVal = '';
+                
+                if (column === 'name') {
+                    aVal = a.querySelector('td:nth-child(1)').textContent.trim();
+                    bVal = b.querySelector('td:nth-child(1)').textContent.trim();
+                } else if (column === 'email') {
+                    aVal = a.querySelector('td:nth-child(2)').textContent.trim();
+                    bVal = b.querySelector('td:nth-child(2)').textContent.trim();
+                } else if (column === 'phone') {
+                    aVal = a.querySelector('td:nth-child(3)').textContent.trim();
+                    bVal = b.querySelector('td:nth-child(3)').textContent.trim();
+                } else if (column === 'roles') {
+                    aVal = a.querySelector('td:nth-child(4)').textContent.trim();
+                    bVal = b.querySelector('td:nth-child(4)').textContent.trim();
+                }
+                
+                if (aVal === '-') aVal = '';
+                if (bVal === '-') bVal = '';
+                
+                const comparison = aVal.localeCompare(bVal);
+                return isAsc ? -comparison : comparison;
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
+</script>
+{% endblock %}

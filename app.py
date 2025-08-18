@@ -1,0 +1,2497 @@
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, make_response, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_wtf import FlaskForm
+from wtforms import StringField, IntegerField, DateField, SelectField, BooleanField, TextAreaField, SelectMultipleField, FileField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo
+from datetime import datetime, timedelta
+import os
+import pandas as pd
+from dotenv import load_dotenv
+import io
+import csv
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+
+load_dotenv()
+
+# Utility functions for auditing
+def extract_personnel_initials(name):
+    """Extract initials from personnel name (e.g., 'Bevins, Nick' -> 'NB')"""
+    if not name:
+        return ''
+    
+    # Handle "Last, First" format by reversing order after comma
+    if ',' in name:
+        parts = [part.strip() for part in name.split(',')]
+        # Reverse order: [Last, First] -> [First, Last]
+        parts = parts[::-1]
+        # Now split each part by spaces to handle multiple first/middle names
+        all_parts = []
+        for part in parts:
+            all_parts.extend(part.split())
+        parts = all_parts
+    else:
+        # Handle other formats (dots, underscores, spaces)
+        parts = name.replace('.', ' ').replace('_', ' ').split()
+    
+    # Extract first character of each part
+    initials = ''.join([part[0].upper() for part in parts if part and len(part) > 0])
+    return initials[:3]  # Limit to 3 characters max
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///physdb.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+# User loader function for Flask-Login
+@login_manager.user_loader
+def load_user(user_id):
+    return Personnel.query.get(int(user_id))
+
+# Database Models
+
+class Equipment(db.Model):
+    __tablename__ = 'equipment'
+    
+    eq_id = db.Column(db.Integer, primary_key=True)
+    
+    # Foreign Key Relationships (replacing text fields)
+    class_id = db.Column(db.Integer, db.ForeignKey('equipment_classes.id'), nullable=False)
+    subclass_id = db.Column(db.Integer, db.ForeignKey('equipment_subclasses.id'), nullable=True)
+    manufacturer_id = db.Column(db.Integer, db.ForeignKey('manufacturers.id'), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    facility_id = db.Column(db.Integer, db.ForeignKey('facilities.id'), nullable=True)
+    
+    # Personnel Foreign Keys
+    contact_id = db.Column(db.Integer, db.ForeignKey('personnel.id'), nullable=True)
+    supervisor_id = db.Column(db.Integer, db.ForeignKey('personnel.id'), nullable=True)
+    physician_id = db.Column(db.Integer, db.ForeignKey('personnel.id'), nullable=True)
+    
+    # Equipment Details (still text fields)
+    eq_mod = db.Column(db.String(200))
+    eq_rm = db.Column(db.String(100))
+    eq_address = db.Column(db.Text)
+    
+    # Note: Personnel contact details are now stored in Personnel table
+    # No additional contact info fields needed - use Personnel.email, phone, etc.
+    
+    # Asset Information
+    eq_assetid = db.Column(db.String(100))
+    eq_sn = db.Column(db.String(200))
+    eq_mefac = db.Column(db.String(100))
+    eq_mereg = db.Column(db.String(100))
+    eq_mefacreg = db.Column(db.String(100))
+    eq_manid = db.Column(db.String(100))
+    
+    # Important Dates
+    eq_mandt = db.Column(db.Date)
+    eq_instdt = db.Column(db.Date)
+    eq_eoldate = db.Column(db.Date)
+    eq_eeoldate = db.Column(db.Date)
+    eq_retdate = db.Column(db.Date)
+    eq_retired = db.Column(db.Boolean, default=False)
+    
+    # Compliance Information
+    eq_auditfreq = db.Column(db.String(50), default='Annual - TJC')
+    eq_acrsite = db.Column(db.String(100))
+    eq_acrunit = db.Column(db.String(100))
+    eq_servlogin = db.Column(db.String(100))
+    eq_servpwd = db.Column(db.String(100))
+    
+    # Technical Specifications
+    eq_radcap = db.Column(db.Integer)
+    eq_capcat = db.Column(db.Integer)
+    eq_capcst = db.Column(db.Integer)
+    
+    # Notes
+    eq_notes = db.Column(db.Text)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    compliance_tests = db.relationship('ComplianceTest', backref='equipment', lazy=True, cascade='all, delete-orphan')
+    
+    # Foreign Key Relationships
+    equipment_class = db.relationship('EquipmentClass', backref='equipment')
+    equipment_subclass = db.relationship('EquipmentSubclass', backref='equipment')
+    manufacturer = db.relationship('Manufacturer', backref='equipment')
+    department = db.relationship('Department', backref='equipment')
+    facility = db.relationship('Facility', backref='equipment')
+    
+    # Personnel Relationships (multiple foreign keys to same table)
+    contact = db.relationship('Personnel', foreign_keys=[contact_id], backref='contact_equipment')
+    supervisor = db.relationship('Personnel', foreign_keys=[supervisor_id], backref='supervised_equipment')
+    physician = db.relationship('Personnel', foreign_keys=[physician_id], backref='physician_equipment')
+    
+    def __repr__(self):
+        class_name = self.equipment_class.name if self.equipment_class else 'Unknown Class'
+        manu_name = self.manufacturer.name if self.manufacturer else 'Unknown Manufacturer'
+        return f'<Equipment {self.eq_id}: {class_name} - {manu_name} {self.eq_mod}>'
+    
+    def get_next_due_date(self):
+        """Get the next due date based on the most recent acceptance or annual test."""
+        from datetime import timedelta
+        from dateutil.relativedelta import relativedelta
+        import calendar
+        
+        # Find the most recent acceptance or annual test
+        latest_test = ComplianceTest.query.filter(
+            ComplianceTest.eq_id == self.eq_id,
+            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
+        ).order_by(ComplianceTest.test_date.desc()).first()
+        
+        if latest_test and self.eq_auditfreq:
+            test_date = latest_test.test_date
+            
+            if self.eq_auditfreq == 'Quarterly':
+                # End of month 3 months from test date
+                next_month = test_date + relativedelta(months=3)
+                last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                return next_month.replace(day=last_day)
+                
+            elif self.eq_auditfreq == 'Semiannual':
+                # End of month 6 months from test date
+                next_month = test_date + relativedelta(months=6)
+                last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                return next_month.replace(day=last_day)
+                
+            elif self.eq_auditfreq == 'Annual - ACR':
+                # 1 year + 2 months from test date
+                return test_date + relativedelta(months=14)
+                
+            elif self.eq_auditfreq == 'Annual - TJC':
+                # 1 year + 30 days from test date
+                return test_date + relativedelta(years=1) + timedelta(days=30)
+                
+            elif self.eq_auditfreq == 'Annual - ME':
+                # End of next calendar year
+                next_year = test_date.year + 1
+                return datetime(next_year, 12, 31).date()
+                
+        # No acceptance or annual test found, or no audit frequency set
+        return None
+    
+    def to_dict(self):
+        return {
+            'eq_id': self.eq_id,
+            'eq_class': self.eq_class,
+            'eq_subclass': self.eq_subclass,
+            'eq_manu': self.eq_manu,
+            'eq_mod': self.eq_mod,
+            'eq_dept': self.eq_dept,
+            'eq_rm': self.eq_rm,
+            'eq_fac': self.eq_fac,
+            'eq_address': self.eq_address,
+            'eq_contact': self.eq_contact,
+            'eq_contactinfo': self.eq_contactinfo,
+            'eq_sup': self.eq_sup,
+            'eq_supinfo': self.eq_supinfo,
+            'eq_physician': self.eq_physician,
+            'eq_physicianinfo': self.eq_physicianinfo,
+            'eq_assetid': self.eq_assetid,
+            'eq_sn': self.eq_sn,
+            'eq_mefac': self.eq_mefac,
+            'eq_mereg': self.eq_mereg,
+            'eq_mefacreg': self.eq_mefacreg,
+            'eq_manid': self.eq_manid,
+            'eq_mandt': self.eq_mandt.isoformat() if self.eq_mandt else None,
+            'eq_instdt': self.eq_instdt.isoformat() if self.eq_instdt else None,
+            'eq_eoldate': self.eq_eoldate.isoformat() if self.eq_eoldate else None,
+            'eq_eeoldate': self.eq_eeoldate.isoformat() if self.eq_eeoldate else None,
+            'eq_retdate': self.eq_retdate.isoformat() if self.eq_retdate else None,
+            'eq_retired': self.eq_retired,
+            'eq_auditfreq': self.eq_auditfreq,
+            'eq_acrsite': self.eq_acrsite,
+            'eq_acrunit': self.eq_acrunit,
+            'eq_radcap': self.eq_radcap,
+            'eq_capcat': self.eq_capcat,
+            'eq_capcst': self.eq_capcst,
+            'eq_notes': self.eq_notes
+        }
+
+class Personnel(UserMixin, db.Model):
+    __tablename__ = 'personnel'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200), nullable=False, unique=True)
+    phone = db.Column(db.String(50))
+    roles = db.Column(db.String(500))  # Comma-separated roles
+    
+    # Authentication fields
+    username = db.Column(db.String(80), unique=True, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    last_login = db.Column(db.DateTime)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Personnel {self.id}: {self.name}>'
+    
+    def get_roles_list(self):
+        """Return roles as a list"""
+        if self.roles and self.roles.strip():
+            return [role.strip() for role in self.roles.split(',') if role.strip()]
+        return []
+    
+    def set_roles_list(self, roles_list):
+        """Set roles from a list"""
+        if roles_list is not None and len(roles_list) > 0:
+            # Filter out empty strings and strip whitespace
+            clean_roles = [role.strip() for role in roles_list if role and role.strip()]
+            self.roles = ', '.join(clean_roles) if clean_roles else ''
+        else:
+            self.roles = ''
+    
+    def set_password(self, password):
+        """Set password hash"""
+        if password:
+            self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        """Check password against hash"""
+        if self.password_hash:
+            return check_password_hash(self.password_hash, password)
+        return False
+    
+    def has_role(self, role):
+        """Check if user has a specific role"""
+        return role in self.get_roles_list() or self.is_admin
+    
+    def can_manage_equipment(self):
+        """Check if user can create/edit/delete equipment"""
+        return self.is_admin or self.has_role('physicist') or self.has_role('physics_assistant')
+    
+    def can_manage_compliance(self):
+        """Check if user can create/edit/delete compliance tests"""
+        return self.is_admin or self.has_role('physicist') or self.has_role('physics_assistant')
+    
+    def can_manage_personnel(self):
+        """Check if user can create/edit/delete personnel records"""
+        return self.is_admin or self.has_role('physicist') or self.has_role('physics_assistant')
+    
+    def can_view_equipment(self):
+        """Check if user can view equipment"""
+        return True  # All authenticated users can view equipment
+    
+    def can_view_personnel(self):
+        """Check if user can view personnel records"""
+        return True  # All authenticated users can view personnel
+    
+    def can_view_compliance(self):
+        """Check if user can view compliance tests"""
+        return True  # All authenticated users can view compliance tests
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'phone': self.phone,
+            'roles': self.roles,
+            'username': self.username,
+            'is_active': self.is_active,
+            'is_admin': self.is_admin
+        }
+
+class ComplianceTest(db.Model):
+    __tablename__ = 'compliance_tests'
+    
+    test_id = db.Column(db.Integer, primary_key=True)
+    eq_id = db.Column(db.Integer, db.ForeignKey('equipment.eq_id'), nullable=False)
+    test_type = db.Column(db.String(100), nullable=False)
+    test_date = db.Column(db.Date, nullable=False)
+    report_date = db.Column(db.Date, nullable=True)
+    performed_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
+    notes = db.Column(db.Text)
+    
+    # Audit fields
+    created_by = db.Column(db.String(10))  # Personnel initials
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_by = db.Column(db.String(10))  # Personnel initials  
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    performed_by = db.relationship('Personnel', foreign_keys=[performed_by_id], backref='tests_performed')
+    reviewed_by = db.relationship('Personnel', foreign_keys=[reviewed_by_id], backref='tests_reviewed')
+    
+    def get_status(self):
+        """Calculate status based on test date"""
+        if self.test_date > datetime.now().date():
+            return 'Scheduled'
+        else:
+            return 'Completed'
+    
+    def get_test_type_display(self):
+        """Get the proper display name for test type"""
+        # Handle both old lowercase and new capitalized formats
+        test_type_mapping = {
+            # Old lowercase format
+            'acceptance': 'Acceptance',
+            'annual': 'Annual',
+            'audit': 'Audit',
+            'other': 'Other',
+            'qc_review': 'QC Review',
+            'retire': 'Retire',
+            'shielding_design': 'Shielding Design',
+            'submission': 'Submission',
+            # New capitalized format (already correct)
+            'Acceptance': 'Acceptance',
+            'Annual': 'Annual',
+            'Audit': 'Audit',
+            'Other': 'Other',
+            'QC Review': 'QC Review',
+            'Retire': 'Retire',
+            'Shielding Design': 'Shielding Design',
+            'Submission': 'Submission'
+        }
+        return test_type_mapping.get(self.test_type, self.test_type)
+    
+    def __repr__(self):
+        return f'<ComplianceTest {self.test_id}: {self.test_type} for Equipment {self.eq_id}>'
+
+# Standardized Options Models
+class EquipmentClass(db.Model):
+    __tablename__ = 'equipment_classes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<EquipmentClass {self.id}: {self.name}>'
+
+class EquipmentSubclass(db.Model):
+    __tablename__ = 'equipment_subclasses'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('equipment_classes.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    equipment_class = db.relationship('EquipmentClass', backref='subclasses')
+    
+    def __repr__(self):
+        return f'<EquipmentSubclass {self.id}: {self.name}>'
+
+class Department(db.Model):
+    __tablename__ = 'departments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Department {self.id}: {self.name}>'
+
+class Facility(db.Model):
+    __tablename__ = 'facilities'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    address = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Facility {self.id}: {self.name}>'
+
+class Manufacturer(db.Model):
+    __tablename__ = 'manufacturers'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Manufacturer {self.id}: {self.name}>'
+
+# Forms
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+
+
+class EquipmentForm(FlaskForm):
+    class_id = SelectField('Equipment Class', choices=[], validators=[DataRequired()])
+    subclass_id = SelectField('Subclass', choices=[], validators=[Optional()])
+    manufacturer_id = SelectField('Manufacturer', choices=[], validators=[Optional()])
+    eq_mod = StringField('Model', validators=[Optional(), Length(max=200)])
+    department_id = SelectField('Department', choices=[], validators=[Optional()])
+    eq_rm = StringField('Room', validators=[Optional(), Length(max=100)])
+    facility_id = SelectField('Facility', choices=[], validators=[Optional()])
+    eq_address = TextAreaField('Address', validators=[Optional()])
+    contact_id = SelectField('Contact Person', choices=[], validators=[Optional()])
+    supervisor_id = SelectField('Supervisor', choices=[], validators=[Optional()])
+    physician_id = SelectField('Physician', choices=[], validators=[Optional()])
+    eq_assetid = StringField('Asset ID', validators=[Optional(), Length(max=100)])
+    eq_sn = StringField('Serial Number', validators=[Optional(), Length(max=200)])
+    eq_mefac = StringField('ME Facility', validators=[Optional(), Length(max=100)])
+    eq_mereg = StringField('ME Registration', validators=[Optional(), Length(max=100)])
+    eq_mefacreg = StringField('ME Facility Registration', validators=[Optional(), Length(max=100)])
+    eq_manid = StringField('Manufacturer ID', validators=[Optional(), Length(max=100)])
+    eq_mandt = DateField('Manufacture Date', validators=[Optional()])
+    eq_instdt = DateField('Installation Date', validators=[Optional()])
+    eq_eoldate = DateField('End of Life Date', validators=[Optional()])
+    eq_eeoldate = DateField('Extended End of Life Date', validators=[Optional()])
+    eq_retdate = DateField('Retirement Date', validators=[Optional()])
+    eq_retired = BooleanField('Retired')
+    eq_auditfreq = SelectField('Audit Frequency', choices=[
+        ('', 'Select Frequency'),
+        ('Quarterly', 'Quarterly'),
+        ('Semiannual', 'Semiannual'), 
+        ('Annual - ACR', 'Annual - ACR'),
+        ('Annual - TJC', 'Annual - TJC'),
+        ('Annual - ME', 'Annual - ME')
+    ], validators=[Optional()])
+    eq_acrsite = StringField('ACR Site', validators=[Optional(), Length(max=100)])
+    eq_acrunit = StringField('ACR Unit', validators=[Optional(), Length(max=100)])
+    eq_radcap = IntegerField('Radiology Owned (1=Yes, 0=No)', validators=[Optional()])
+    eq_capcat = IntegerField('Capital Cost Category (0=N/A, 1-3)', validators=[Optional()])
+    eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
+    eq_notes = TextAreaField('Notes', validators=[Optional()])
+
+class ComplianceTestForm(FlaskForm):
+    test_type = SelectField('Test/Result/Event Type', choices=[
+        ('Acceptance', 'Acceptance'),
+        ('Annual', 'Annual'),
+        ('Audit', 'Audit'),
+        ('Other', 'Other'),
+        ('QC Review', 'QC Review'),
+        ('Retire', 'Retire'),
+        ('Shielding Design', 'Shielding Design'),
+        ('Submission', 'Submission')
+    ], validators=[DataRequired()], default='Annual')
+    test_date = DateField('Test Date', validators=[DataRequired()])
+    report_date = DateField('Report Date', validators=[Optional()])
+    performed_by_id = SelectField('Performed By', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
+    reviewed_by_id = SelectField('Reviewing Physicist', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
+    notes = TextAreaField('Comments', validators=[Optional()])
+
+class PersonnelForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired(), Length(max=200)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(max=200)])
+    phone = StringField('Phone', validators=[Optional(), Length(max=50)])
+    roles = SelectMultipleField('Roles', choices=[
+        ('admin', 'Admin'),
+        ('contact', 'Contact'),
+        ('physician', 'Physician'),
+        ('physicist', 'Physicist'),
+        ('physics_assistant', 'Physics Assistant'),
+        ('qa_technologist', 'QA Technologist'),
+        ('supervisor', 'Supervisor')
+    ], validators=[DataRequired()])
+    username = StringField('Username', validators=[Optional(), Length(max=80)])
+    password = PasswordField('Password', validators=[Optional(), Length(min=6)])
+    is_admin = BooleanField('Admin User')
+    is_active = BooleanField('Active', default=True)
+
+class BulkPersonnelForm(FlaskForm):
+    csv_file = FileField('CSV File', validators=[DataRequired()])
+
+class PasswordChangeForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm New Password', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='Passwords must match')
+    ])
+    submit = SubmitField('Change Password')
+
+# Access Control Decorators
+def admin_required(f):
+    """Decorator for admin-only routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Admin access required.', 'error')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def manage_equipment_required(f):
+    """Decorator for equipment management routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.can_manage_equipment():
+            flash('Equipment management access required.', 'error')
+            return redirect(url_for('equipment_list'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def manage_compliance_required(f):
+    """Decorator for compliance management routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.can_manage_compliance():
+            flash('Compliance management access required.', 'error')
+            return redirect(url_for('compliance_dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def manage_personnel_required(f):
+    """Decorator for personnel management routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.can_manage_personnel():
+            flash('Personnel management access required.', 'error')
+            return redirect(url_for('personnel_list'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Authentication Routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = Personnel.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data) and user.is_active:
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            next_page = request.args.get('next')
+            if not next_page or not next_page.startswith('/'):
+                next_page = url_for('index')
+            return redirect(next_page)
+        else:
+            flash('Invalid username or password.', 'error')
+    
+    return render_template('login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = PasswordChangeForm()
+    
+    if form.validate_on_submit():
+        # Verify current password
+        if not current_user.check_password(form.current_password.data):
+            flash('Current password is incorrect.', 'error')
+            return render_template('change_password.html', form=form)
+        
+        # Update password
+        current_user.set_password(form.new_password.data)
+        
+        try:
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error changing password. Please try again.', 'error')
+    
+    return render_template('change_password.html', form=form)
+
+# Routes
+@app.route('/')
+@login_required
+def index():
+    today = datetime.now().date()
+    
+    # Get active equipment (not retired and not past retirement date)
+    from sqlalchemy import and_, or_
+    active_equipment = Equipment.query.filter(
+        and_(
+            Equipment.eq_retired == False,
+            or_(
+                Equipment.eq_retdate.is_(None),
+                Equipment.eq_retdate > today
+            )
+        )
+    ).all()
+    
+    overdue_count = 0
+    upcoming_count = 0
+    compliant_count = 0
+    no_frequency_count = 0
+    
+    for equipment in active_equipment:
+        next_due = equipment.get_next_due_date()
+        if next_due is None:
+            if equipment.eq_auditfreq:
+                # Has frequency but no tests yet - could be new equipment
+                upcoming_count += 1
+            else:
+                # No frequency set
+                no_frequency_count += 1
+        elif next_due < today:
+            # Overdue
+            overdue_count += 1
+        elif next_due <= today + timedelta(days=90):
+            # Upcoming within 90 days
+            upcoming_count += 1
+        else:
+            # Compliant (next due date is more than 90 days away)
+            compliant_count += 1
+    
+    return render_template('index.html',
+                         overdue_count=overdue_count,
+                         upcoming_count=upcoming_count,
+                         compliant_count=compliant_count,
+                         no_frequency_count=no_frequency_count)
+
+@app.route('/equipment')
+@login_required
+def equipment_list():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Filters
+    search = request.args.get('search', '').strip()
+    eq_class = request.args.get('eq_class')
+    eq_subclass = request.args.get('eq_subclass')
+    eq_manu = request.args.get('eq_manu')
+    eq_dept = request.args.get('eq_dept')
+    eq_fac = request.args.get('eq_fac')
+    include_retired = request.args.get('include_retired', 'false')  # Default to false
+    
+    # Sorting
+    sort_field = request.args.get('sort', 'eq_id')
+    sort_order = request.args.get('order', 'asc')
+    
+    # Build query with proper joins for relational data
+    query = Equipment.query.join(
+        EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
+    ).join(
+        EquipmentSubclass, Equipment.subclass_id == EquipmentSubclass.id, isouter=True
+    ).join(
+        Manufacturer, Equipment.manufacturer_id == Manufacturer.id, isouter=True
+    ).join(
+        Department, Equipment.department_id == Department.id, isouter=True
+    ).join(
+        Facility, Equipment.facility_id == Facility.id, isouter=True
+    ).join(
+        Personnel, Equipment.contact_id == Personnel.id, isouter=True
+    )
+    
+    # Search across multiple fields including relational data
+    if search:
+        from sqlalchemy import or_
+        search_filter = or_(
+            EquipmentClass.name.ilike(f'%{search}%'),
+            EquipmentSubclass.name.ilike(f'%{search}%'),
+            Manufacturer.name.ilike(f'%{search}%'),
+            Equipment.eq_mod.ilike(f'%{search}%'),
+            Department.name.ilike(f'%{search}%'),
+            Equipment.eq_rm.ilike(f'%{search}%'),
+            Facility.name.ilike(f'%{search}%'),
+            Equipment.eq_address.ilike(f'%{search}%'),
+            Equipment.eq_assetid.ilike(f'%{search}%'),
+            Equipment.eq_sn.ilike(f'%{search}%'),
+            Equipment.eq_mefac.ilike(f'%{search}%'),
+            Equipment.eq_mereg.ilike(f'%{search}%'),
+            Equipment.eq_mefacreg.ilike(f'%{search}%'),
+            Equipment.eq_manid.ilike(f'%{search}%'),
+            Equipment.eq_acrsite.ilike(f'%{search}%'),
+            Equipment.eq_acrunit.ilike(f'%{search}%'),
+            Equipment.eq_servlogin.ilike(f'%{search}%'),
+            Equipment.eq_notes.ilike(f'%{search}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Apply filters using relational data
+    if eq_class:
+        query = query.filter(EquipmentClass.name == eq_class)
+    if eq_subclass:
+        query = query.filter(EquipmentSubclass.name == eq_subclass)
+    if eq_manu:
+        query = query.filter(Manufacturer.name == eq_manu)
+    if eq_dept:
+        query = query.filter(Department.name == eq_dept)
+    if eq_fac:
+        query = query.filter(Facility.name == eq_fac)
+    
+    # By default, only show active equipment unless include_retired is checked
+    if include_retired != 'true':
+        from sqlalchemy import and_, or_
+        query = query.filter(
+            and_(
+                Equipment.eq_retired == False,
+                or_(
+                    Equipment.eq_retdate.is_(None),
+                    Equipment.eq_retdate > datetime.now().date()
+                )
+            )
+        )
+    
+    # Apply sorting - map legacy sort fields to relational fields
+    sort_mapping = {
+        'eq_class': EquipmentClass.name,
+        'eq_manu': Manufacturer.name,
+        'eq_dept': Department.name,
+        'eq_fac': Facility.name,
+        'eq_subclass': EquipmentSubclass.name
+    }
+    
+    if sort_field in sort_mapping:
+        sort_column = sort_mapping[sort_field]
+    elif hasattr(Equipment, sort_field):
+        sort_column = getattr(Equipment, sort_field)
+    else:
+        sort_column = Equipment.eq_id  # default
+    
+    if sort_order == 'desc':
+        query = query.order_by(sort_column.desc())
+    else:
+        query = query.order_by(sort_column.asc())
+    
+    equipment = query.paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False,
+        max_per_page=100
+    )
+    
+    # Get values for filters from standardized lists
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    
+    return render_template('equipment_list.html', 
+                         equipment=equipment,
+                         classes=[c.name for c in classes],
+                         subclasses=[s.name for s in subclasses],
+                         manufacturers=[m.name for m in manufacturers],
+                         departments=[d.name for d in departments],
+                         facilities=[f.name for f in facilities],
+                         today=datetime.now().date())
+
+@app.route('/equipment/new', methods=['GET', 'POST'])
+@login_required
+@manage_equipment_required
+def equipment_new():
+    form = EquipmentForm()
+    
+    # Populate choices from standardized lists using IDs
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    form.class_id.choices = [('', 'Select Class')] + [(str(c.id), c.name) for c in classes]
+    
+    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    form.subclass_id.choices = [('', 'Select Subclass')] + [(str(s.id), s.name) for s in subclasses]
+    
+    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    form.manufacturer_id.choices = [('', 'Select Manufacturer')] + [(str(m.id), m.name) for m in manufacturers]
+    
+    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    form.department_id.choices = [('', 'Select Department')] + [(str(d.id), d.name) for d in departments]
+    
+    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    form.facility_id.choices = [('', 'Select Facility')] + [(str(f.id), f.name) for f in facilities]
+    
+    # Populate personnel choices by role
+    contacts = Personnel.query.filter(Personnel.roles.ilike('%contact%')).order_by(Personnel.name).all()
+    form.contact_id.choices = [('', 'Select Contact')] + [(str(p.id), p.name) for p in contacts]
+    
+    supervisors = Personnel.query.filter(Personnel.roles.ilike('%supervisor%')).order_by(Personnel.name).all()
+    form.supervisor_id.choices = [('', 'Select Supervisor')] + [(str(p.id), p.name) for p in supervisors]
+    
+    physicians = Personnel.query.filter(Personnel.roles.ilike('%physician%')).order_by(Personnel.name).all()
+    form.physician_id.choices = [('', 'Select Physician')] + [(str(p.id), p.name) for p in physicians]
+    
+    if form.validate_on_submit():
+        equipment = Equipment()
+        form.populate_obj(equipment)
+        
+        # Convert empty string foreign keys to None
+        if not equipment.class_id:
+            equipment.class_id = None
+        if not equipment.subclass_id:
+            equipment.subclass_id = None
+        if not equipment.manufacturer_id:
+            equipment.manufacturer_id = None
+        if not equipment.department_id:
+            equipment.department_id = None
+        if not equipment.facility_id:
+            equipment.facility_id = None
+        if not equipment.contact_id:
+            equipment.contact_id = None
+        if not equipment.supervisor_id:
+            equipment.supervisor_id = None
+        if not equipment.physician_id:
+            equipment.physician_id = None
+        
+        # If equipment is marked as retired but has no retirement date, set it to today
+        if equipment.eq_retired and not equipment.eq_retdate:
+            equipment.eq_retdate = datetime.now().date()
+            
+        db.session.add(equipment)
+        db.session.commit()
+        flash('Equipment added successfully!', 'success')
+        return redirect(url_for('equipment_list'))
+    
+    return render_template('equipment_form.html', form=form, title='Add New Equipment')
+
+@app.route('/equipment/<int:eq_id>')
+@login_required
+def equipment_detail(eq_id):
+    equipment = Equipment.query.get_or_404(eq_id)
+    tests = ComplianceTest.query.filter_by(eq_id=eq_id).order_by(ComplianceTest.test_date.desc()).all()
+    
+    # Preserve search parameters for back navigation
+    search_params = {
+        'search': request.args.get('search', ''),
+        'eq_class': request.args.get('eq_class', ''),
+        'eq_subclass': request.args.get('eq_subclass', ''),
+        'eq_manu': request.args.get('eq_manu', ''),
+        'eq_dept': request.args.get('eq_dept', ''),
+        'eq_fac': request.args.get('eq_fac', ''),
+        'include_retired': request.args.get('include_retired', ''),
+        'sort': request.args.get('sort', ''),
+        'order': request.args.get('order', ''),
+        'page': request.args.get('page', '')
+    }
+    
+    # Calculate next due test based on equipment's audit frequency (only for active equipment)
+    next_test = None
+    today = datetime.now().date()
+    is_retired = equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)
+    
+    if not is_retired:
+        next_due_date = equipment.get_next_due_date()
+        if next_due_date:
+            # Create a fake test object for template compatibility
+            class FakeTest:
+                def __init__(self):
+                    self.test_type = 'Annual'
+                    self.next_due_date = next_due_date
+                
+                def get_test_type_display(self):
+                    return 'Annual'
+            
+            next_test = FakeTest()
+    
+    return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params)
+
+@app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
+@login_required
+@manage_equipment_required
+def equipment_edit(eq_id):
+    equipment = Equipment.query.get_or_404(eq_id)
+    form = EquipmentForm(obj=equipment)
+    
+    # Populate choices from standardized lists using IDs
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    form.class_id.choices = [('', 'Select Class')] + [(str(c.id), c.name) for c in classes]
+    
+    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    form.subclass_id.choices = [('', 'Select Subclass')] + [(str(s.id), s.name) for s in subclasses]
+    
+    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    form.manufacturer_id.choices = [('', 'Select Manufacturer')] + [(str(m.id), m.name) for m in manufacturers]
+    
+    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    form.department_id.choices = [('', 'Select Department')] + [(str(d.id), d.name) for d in departments]
+    
+    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    form.facility_id.choices = [('', 'Select Facility')] + [(str(f.id), f.name) for f in facilities]
+    
+    # Populate personnel choices by role
+    contacts = Personnel.query.filter(Personnel.roles.ilike('%contact%')).order_by(Personnel.name).all()
+    form.contact_id.choices = [('', 'Select Contact')] + [(str(p.id), p.name) for p in contacts]
+    
+    supervisors = Personnel.query.filter(Personnel.roles.ilike('%supervisor%')).order_by(Personnel.name).all()
+    form.supervisor_id.choices = [('', 'Select Supervisor')] + [(str(p.id), p.name) for p in supervisors]
+    
+    physicians = Personnel.query.filter(Personnel.roles.ilike('%physician%')).order_by(Personnel.name).all()
+    form.physician_id.choices = [('', 'Select Physician')] + [(str(p.id), p.name) for p in physicians]
+    
+    if form.validate_on_submit():
+        form.populate_obj(equipment)
+        
+        # Convert empty string foreign keys to None
+        if not equipment.class_id:
+            equipment.class_id = None
+        if not equipment.subclass_id:
+            equipment.subclass_id = None
+        if not equipment.manufacturer_id:
+            equipment.manufacturer_id = None
+        if not equipment.department_id:
+            equipment.department_id = None
+        if not equipment.facility_id:
+            equipment.facility_id = None
+        if not equipment.contact_id:
+            equipment.contact_id = None
+        if not equipment.supervisor_id:
+            equipment.supervisor_id = None
+        if not equipment.physician_id:
+            equipment.physician_id = None
+        
+        # If equipment is marked as retired but has no retirement date, set it to today
+        if equipment.eq_retired and not equipment.eq_retdate:
+            equipment.eq_retdate = datetime.now().date()
+            
+        db.session.commit()
+        flash('Equipment updated successfully!', 'success')
+        return redirect(url_for('equipment_detail', eq_id=eq_id))
+    
+    return render_template('equipment_form.html', form=form, title='Edit Equipment', equipment=equipment)
+
+@app.route('/compliance')
+@login_required
+def compliance_dashboard():
+    today = datetime.now().date()
+    overdue_tests = []
+    upcoming_tests = []
+    scheduled_tests = []
+    
+    # Get days parameter from query string, default to 90
+    try:
+        days_ahead = int(request.args.get('days', 90))
+        if days_ahead < 1:
+            days_ahead = 90
+    except (ValueError, TypeError):
+        days_ahead = 90
+    
+    # Get all active equipment (not retired and not past retirement date)
+    from sqlalchemy import and_, or_
+    active_equipment = Equipment.query.filter(
+        and_(
+            Equipment.eq_retired == False,
+            or_(
+                Equipment.eq_retdate.is_(None),
+                Equipment.eq_retdate > today
+            )
+        )
+    ).all()
+    
+    # Check for scheduled tests (future test dates in ComplianceTest table)
+    future_compliance_tests = ComplianceTest.query.filter(
+        ComplianceTest.test_date > today,
+        ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
+    ).all()
+    
+    # Add scheduled tests to the scheduled_tests list
+    for test in future_compliance_tests:
+        equipment = Equipment.query.get(test.eq_id)
+        if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
+            scheduled_tests.append((test, equipment))
+    
+    for equipment in active_equipment:
+        next_due = equipment.get_next_due_date()
+        
+        if next_due:
+            # Create a fake test object to maintain template compatibility
+            class FakeComplianceTest:
+                def __init__(self, next_due_date):
+                    self.test_type = 'Annual'
+                    self.next_due_date = next_due_date
+                
+                def get_test_type_display(self):
+                    return 'Annual'
+            
+            fake_test = FakeComplianceTest(next_due)
+            
+            if next_due < today:
+                # Overdue
+                overdue_tests.append((fake_test, equipment))
+            elif next_due <= today + timedelta(days=days_ahead):
+                # Upcoming within specified days
+                upcoming_tests.append((fake_test, equipment))
+    
+    # Sort by due date
+    overdue_tests.sort(key=lambda x: x[0].next_due_date)
+    upcoming_tests.sort(key=lambda x: x[0].next_due_date)
+    scheduled_tests.sort(key=lambda x: x[0].test_date)
+    
+    return render_template('compliance_dashboard.html', 
+                         overdue_tests=overdue_tests,
+                         upcoming_tests=upcoming_tests,
+                         scheduled_tests=scheduled_tests,
+                         today=today,
+                         days_ahead=days_ahead)
+
+@app.route('/compliance/test/<int:eq_id>/new', methods=['GET', 'POST'])
+@login_required
+@manage_compliance_required
+def compliance_test_new(eq_id):
+    equipment = Equipment.query.get_or_404(eq_id)
+    form = ComplianceTestForm()
+    
+    # Get redirect parameter from URL
+    redirect_to = request.args.get('redirect_to', 'equipment')
+    
+    # Populate personnel choices
+    # For performed_by: physics assistant or physicist
+    performed_by_personnel = Personnel.query.filter(
+        Personnel.roles.ilike('%physics_assistant%') | 
+        Personnel.roles.ilike('%physicist%')
+    ).order_by(Personnel.name).all()
+    form.performed_by_id.choices = [('', 'Select...')] + [(p.id, p.name) for p in performed_by_personnel]
+    
+    # For reviewing physicist: physicist only
+    reviewed_by_personnel = Personnel.query.filter(Personnel.roles.ilike('%physicist%')).order_by(Personnel.name).all()
+    form.reviewed_by_id.choices = [('', 'Select...')] + [(p.id, p.name) for p in reviewed_by_personnel]
+    
+    if form.validate_on_submit():
+        test = ComplianceTest()
+        form.populate_obj(test)
+        test.eq_id = eq_id
+        
+        # Personnel IDs are already handled by coerce function
+        # Empty strings are converted to None by the form's coerce parameter
+        
+        # Add audit info
+        if current_user.is_authenticated:
+            user_initials = extract_personnel_initials(current_user.name)
+            test.created_by = user_initials
+            test.modified_by = user_initials
+        
+        db.session.add(test)
+        db.session.commit()
+        flash('Compliance test added successfully!', 'success')
+        
+        # Redirect based on parameter
+        if redirect_to == 'compliance':
+            return redirect(url_for('compliance_dashboard'))
+        else:
+            return redirect(url_for('equipment_detail', eq_id=eq_id))
+    
+    return render_template('compliance_test_form.html', form=form, equipment=equipment, title='Add Compliance Test', redirect_to=redirect_to, test=None)
+
+@app.route('/compliance/test/<int:test_id>/edit', methods=['GET', 'POST'])
+@login_required
+@manage_compliance_required
+def compliance_test_edit(test_id):
+    test = ComplianceTest.query.get_or_404(test_id)
+    equipment = Equipment.query.get_or_404(test.eq_id)
+    form = ComplianceTestForm(obj=test)
+    
+    # Get redirect parameter from URL
+    redirect_to = request.args.get('redirect_to', 'equipment')
+    
+    # Populate personnel choices
+    # For performed_by: physics assistant or physicist
+    performed_by_personnel = Personnel.query.filter(
+        Personnel.roles.ilike('%physics_assistant%') | 
+        Personnel.roles.ilike('%physicist%')
+    ).order_by(Personnel.name).all()
+    form.performed_by_id.choices = [('', 'Select...')] + [(p.id, p.name) for p in performed_by_personnel]
+    
+    # For reviewing physicist: physicist only
+    reviewed_by_personnel = Personnel.query.filter(Personnel.roles.ilike('%physicist%')).order_by(Personnel.name).all()
+    form.reviewed_by_id.choices = [('', 'Select...')] + [(p.id, p.name) for p in reviewed_by_personnel]
+    
+    if form.validate_on_submit():
+        form.populate_obj(test)
+        
+        # Add audit info for modification
+        if current_user.is_authenticated:
+            user_initials = extract_personnel_initials(current_user.name)
+            test.modified_by = user_initials
+        
+        db.session.commit()
+        flash('Compliance test updated successfully!', 'success')
+        
+        # Redirect based on parameter
+        if redirect_to == 'compliance':
+            return redirect(url_for('compliance_dashboard'))
+        else:
+            return redirect(url_for('equipment_detail', eq_id=test.eq_id))
+    
+    return render_template('compliance_test_form.html', form=form, equipment=equipment, title='Edit Compliance Test', redirect_to=redirect_to, test=test)
+
+@app.route('/compliance/test/<int:test_id>/delete', methods=['POST'])
+@login_required
+@manage_compliance_required
+def compliance_test_delete(test_id):
+    test = ComplianceTest.query.get_or_404(test_id)
+    eq_id = test.eq_id
+    
+    # Get redirect parameter from form or URL
+    redirect_to = request.form.get('redirect_to') or request.args.get('redirect_to', 'equipment')
+    
+    db.session.delete(test)
+    db.session.commit()
+    flash('Compliance test deleted successfully!', 'success')
+    
+    # Redirect based on parameter
+    if redirect_to == 'compliance':
+        return redirect(url_for('compliance_dashboard'))
+    else:
+        return redirect(url_for('equipment_detail', eq_id=eq_id))
+
+@app.route('/api/equipment')
+def api_equipment():
+    equipment = Equipment.query.all()
+    return jsonify([eq.to_dict() for eq in equipment])
+
+@app.route('/api/subclasses')
+def api_subclasses():
+    eq_class = request.args.get('eq_class')
+    
+    if eq_class:
+        # Get subclasses for specific class
+        class_obj = EquipmentClass.query.filter_by(name=eq_class).first()
+        if class_obj:
+            subclasses = EquipmentSubclass.query.filter_by(
+                class_id=class_obj.id, is_active=True
+            ).order_by(EquipmentSubclass.name).all()
+        else:
+            subclasses = []
+    else:
+        # Get all subclasses
+        subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    
+    # Return subclass names
+    subclass_list = [s.name for s in subclasses]
+    return jsonify(subclass_list)
+
+@app.route('/api/facility/<int:facility_id>/address')
+def api_facility_address(facility_id):
+    """API endpoint to get facility address by ID"""
+    facility = Facility.query.get(facility_id)
+    if facility:
+        return jsonify({'address': facility.address or ''})
+    return jsonify({'address': ''}), 404
+
+@app.route('/export-equipment')
+def export_equipment():
+    # Get all equipment or apply filters like in equipment_list
+    eq_class = request.args.get('eq_class')
+    eq_manu = request.args.get('eq_manu')
+    eq_dept = request.args.get('eq_dept')
+    eq_fac = request.args.get('eq_fac')
+    include_retired = request.args.get('include_retired', 'false')
+    
+    # Build query with proper joins for relational data (same as equipment_list)
+    query = Equipment.query.join(
+        EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
+    ).join(
+        EquipmentSubclass, Equipment.subclass_id == EquipmentSubclass.id, isouter=True
+    ).join(
+        Manufacturer, Equipment.manufacturer_id == Manufacturer.id, isouter=True
+    ).join(
+        Department, Equipment.department_id == Department.id, isouter=True
+    ).join(
+        Facility, Equipment.facility_id == Facility.id, isouter=True
+    ).join(
+        Personnel, Equipment.contact_id == Personnel.id, isouter=True
+    )
+    
+    # Apply filters using relational data
+    if eq_class:
+        query = query.filter(EquipmentClass.name == eq_class)
+    if eq_manu:
+        query = query.filter(Manufacturer.name == eq_manu)
+    if eq_dept:
+        query = query.filter(Department.name == eq_dept)
+    if eq_fac:
+        query = query.filter(Facility.name == eq_fac)
+    
+    # By default, only show active equipment unless include_retired is checked
+    if include_retired != 'true':
+        from sqlalchemy import and_, or_
+        query = query.filter(
+            and_(
+                Equipment.eq_retired == False,
+                or_(
+                    Equipment.eq_retdate.is_(None),
+                    Equipment.eq_retdate > datetime.now().date()
+                )
+            )
+        )
+    
+    equipment_list = query.all()
+    
+    # Create CSV content
+    from io import StringIO
+    import csv
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header - using relational field names
+    headers = [
+        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'facility', 'facility_address',
+        'contact_person', 'contact_email', 'supervisor', 'supervisor_email', 'physician', 'physician_email',
+        'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
+        'eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
+        'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capcat', 'eq_capcst', 'eq_notes'
+    ]
+    writer.writerow(headers)
+    
+    # Write data - using relational data
+    for eq in equipment_list:
+        row = [
+            eq.eq_id, 
+            eq.equipment_class.name if eq.equipment_class else '',
+            eq.equipment_subclass.name if eq.equipment_subclass else '',
+            eq.manufacturer.name if eq.manufacturer else '',
+            eq.eq_mod or '',
+            eq.department.name if eq.department else '',
+            eq.eq_rm or '',
+            eq.facility.name if eq.facility else '',
+            eq.facility.address if eq.facility else '',
+            eq.contact.name if eq.contact else '',
+            eq.contact.email if eq.contact else '',
+            eq.supervisor.name if eq.supervisor else '',
+            eq.supervisor.email if eq.supervisor else '',
+            eq.physician.name if eq.physician else '',
+            eq.physician.email if eq.physician else '',
+            eq.eq_assetid or '', eq.eq_sn or '', eq.eq_mefac or '', eq.eq_mereg or '', eq.eq_mefacreg or '', eq.eq_manid or '',
+            eq.eq_mandt.strftime('%Y-%m-%d') if eq.eq_mandt else '',
+            eq.eq_instdt.strftime('%Y-%m-%d') if eq.eq_instdt else '',
+            eq.eq_eoldate.strftime('%Y-%m-%d') if eq.eq_eoldate else '',
+            eq.eq_eeoldate.strftime('%Y-%m-%d') if eq.eq_eeoldate else '',
+            eq.eq_retdate.strftime('%Y-%m-%d') if eq.eq_retdate else '',
+            'TRUE' if eq.eq_retired else 'FALSE',
+            eq.eq_auditfreq or '', eq.eq_acrsite or '', eq.eq_acrunit or '', eq.eq_radcap or '', eq.eq_capcat or '', eq.eq_capcst or '', eq.eq_notes or ''
+        ]
+        writer.writerow(row)
+    
+    # Create response
+    from flask import Response
+    csv_content = output.getvalue()
+    output.close()
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'equipment_export_{timestamp}.csv'
+    
+    return Response(
+        csv_content,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+@app.route('/bulk-edit', methods=['GET', 'POST'])
+def bulk_edit():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        if file and file.filename.endswith('.csv'):
+            try:
+                # Read CSV file
+                content = file.read().decode('utf-8')
+                csv_reader = csv.DictReader(StringIO(content))
+                
+                # Update data
+                updated_count = 0
+                error_count = 0
+                errors = []
+                
+                for row in csv_reader:
+                    try:
+                        # Get equipment ID
+                        eq_id = row.get('eq_id')
+                        if not eq_id or eq_id == '':
+                            continue
+                        
+                        # Find existing equipment
+                        equipment = Equipment.query.get(int(eq_id))
+                        if not equipment:
+                            error_count += 1
+                            errors.append(f"Equipment ID {eq_id} not found")
+                            continue
+                        
+                        # Update fields - handle both new and legacy CSV formats
+                        # Equipment Class
+                        eq_class_val = row.get('Equipment Class') or row.get('eq_class')
+                        if eq_class_val and str(eq_class_val).strip():
+                            class_name = str(eq_class_val).strip()
+                            equipment_class = EquipmentClass.query.filter_by(name=class_name).first()
+                            if not equipment_class:
+                                equipment_class = EquipmentClass(name=class_name)
+                                db.session.add(equipment_class)
+                                db.session.flush()
+                            equipment.class_id = equipment_class.id
+                        
+                        # Equipment Subclass
+                        eq_subclass_val = row.get('Equipment Subclass') or row.get('eq_subclass')
+                        if eq_subclass_val and str(eq_subclass_val).strip():
+                            subclass_name = str(eq_subclass_val).strip()
+                            equipment_subclass = EquipmentSubclass.query.filter_by(name=subclass_name).first()
+                            if not equipment_subclass:
+                                equipment_subclass = EquipmentSubclass(name=subclass_name)
+                                db.session.add(equipment_subclass)
+                                db.session.flush()
+                            equipment.subclass_id = equipment_subclass.id
+                        
+                        # Manufacturer
+                        eq_manu_val = row.get('Manufacturer') or row.get('eq_manu')
+                        if eq_manu_val and str(eq_manu_val).strip():
+                            manu_name = str(eq_manu_val).strip()
+                            manufacturer = Manufacturer.query.filter_by(name=manu_name).first()
+                            if not manufacturer:
+                                manufacturer = Manufacturer(name=manu_name)
+                                db.session.add(manufacturer)
+                                db.session.flush()
+                            equipment.manufacturer_id = manufacturer.id
+                        
+                        # Department
+                        eq_dept_val = row.get('Department') or row.get('eq_dept')
+                        if eq_dept_val and str(eq_dept_val).strip():
+                            dept_name = str(eq_dept_val).strip()
+                            department = Department.query.filter_by(name=dept_name).first()
+                            if not department:
+                                department = Department(name=dept_name)
+                                db.session.add(department)
+                                db.session.flush()
+                            equipment.department_id = department.id
+                        
+                        # Facility
+                        eq_fac_val = row.get('Facility') or row.get('eq_fac')
+                        if eq_fac_val and str(eq_fac_val).strip():
+                            fac_name = str(eq_fac_val).strip()
+                            facility = Facility.query.filter_by(name=fac_name).first()
+                            if not facility:
+                                fac_address = row.get('Facility Address') or row.get('eq_address') or ''
+                                facility = Facility(name=fac_name, address=str(fac_address).strip())
+                                db.session.add(facility)
+                                db.session.flush()
+                            equipment.facility_id = facility.id
+                        
+                        # Contact Personnel
+                        contact_val = row.get('Primary Contact') or row.get('eq_contact')
+                        contact_email_val = row.get('Contact Email') or row.get('eq_contactinfo')
+                        if contact_val and str(contact_val).strip():
+                            contact_name = str(contact_val).strip()
+                            contact_email = str(contact_email_val).strip() if contact_email_val else ''
+                            contact = Personnel.query.filter_by(name=contact_name).first()
+                            if not contact:
+                                contact = Personnel(name=contact_name, email=contact_email if contact_email else None)
+                                db.session.add(contact)
+                                db.session.flush()
+                            equipment.contact_id = contact.id
+                        
+                        # Direct fields
+                        equipment.eq_mod = str(row.get('eq_mod', '')).strip()
+                        equipment.eq_rm = str(row.get('eq_rm', '')).strip()
+                        equipment.eq_assetid = str(row.get('eq_assetid', '')).strip()
+                        equipment.eq_sn = str(row.get('eq_sn', '')).strip()
+                        equipment.eq_mefac = str(row.get('eq_mefac', '')).strip()
+                        equipment.eq_mereg = str(row.get('eq_mereg', '')).strip()
+                        equipment.eq_mefacreg = str(row.get('eq_mefacreg', '')).strip()
+                        equipment.eq_manid = str(row.get('eq_manid', '')).strip()
+                        
+                        # Handle dates
+                        date_fields = ['eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate']
+                        for field in date_fields:
+                            date_val = str(row.get(field, '')).strip()
+                            if date_val and date_val != '':
+                                try:
+                                    # Try different date formats
+                                    for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y'):
+                                        try:
+                                            date_obj = datetime.strptime(date_val, fmt).date()
+                                            setattr(equipment, field, date_obj)
+                                            break
+                                        except ValueError:
+                                            continue
+                                except:
+                                    pass
+                            else:
+                                setattr(equipment, field, None)
+                        
+                        # Handle boolean
+                        retired_val = str(row.get('eq_retired', '')).strip().upper()
+                        equipment.eq_retired = retired_val in ('TRUE', 'YES', '1')
+                        
+                        # Handle audit frequency (string field)
+                        audit_freq = str(row.get('eq_auditfreq', '')).strip()
+                        if audit_freq and audit_freq != '':
+                            # Check if it's a valid frequency type
+                            valid_frequencies = ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME']
+                            if audit_freq in valid_frequencies:
+                                equipment.eq_auditfreq = audit_freq
+                            else:
+                                # Try to convert from old integer format
+                                try:
+                                    freq_int = int(float(audit_freq))
+                                    if freq_int <= 3:
+                                        equipment.eq_auditfreq = 'Quarterly'
+                                    elif freq_int <= 6:
+                                        equipment.eq_auditfreq = 'Semiannual'
+                                    elif freq_int == 14:
+                                        equipment.eq_auditfreq = 'Annual - ACR'
+                                    else:
+                                        equipment.eq_auditfreq = 'Annual - TJC'
+                                except:
+                                    equipment.eq_auditfreq = 'Annual - TJC'  # Default
+                        else:
+                            equipment.eq_auditfreq = None
+                        
+                        # Handle integers
+                        int_fields = ['eq_radcap', 'eq_capcat', 'eq_capcst']
+                        for field in int_fields:
+                            val = str(row.get(field, '')).strip()
+                            if val and val != '':
+                                try:
+                                    setattr(equipment, field, int(float(val)))
+                                except:
+                                    setattr(equipment, field, None)
+                            else:
+                                setattr(equipment, field, None)
+                        
+                        equipment.eq_acrsite = str(row.get('eq_acrsite', '')).strip()
+                        equipment.eq_acrunit = str(row.get('eq_acrunit', '')).strip()
+                        equipment.eq_notes = str(row.get('eq_notes', '')).strip()
+                        
+                        updated_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        errors.append(f"Error updating equipment ID {eq_id}: {str(e)}")
+                
+                db.session.commit()
+                
+                success_message = f'Successfully updated {updated_count} equipment records!'
+                if error_count > 0:
+                    success_message += f' ({error_count} errors)'
+                
+                flash(success_message, 'success')
+                
+                if errors:
+                    for error in errors[:5]:  # Show first 5 errors
+                        flash(error, 'warning')
+                    if len(errors) > 5:
+                        flash(f'... and {len(errors) - 5} more errors', 'warning')
+                
+                return redirect(url_for('equipment_list'))
+                
+            except Exception as e:
+                flash(f'Error processing file: {str(e)}', 'error')
+                return redirect(request.url)
+        
+        flash('Please select a CSV file', 'error')
+    
+    return render_template('bulk_edit.html')
+
+@app.route('/import-data', methods=['GET', 'POST'])
+def import_data():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        if file and file.filename.endswith('.csv'):
+            try:
+                # Read CSV file
+                df = pd.read_csv(file)
+                
+                # Import data
+                imported_count = 0
+                updated_count = 0
+                skipped_count = 0
+                for _, row in df.iterrows():
+                    # Skip empty rows - check if equipment class is empty or missing
+                    eq_class = row.get('Equipment Class') or row.get('eq_class')
+                    if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
+                        skipped_count += 1
+                        continue
+                    
+                    # Check if equipment with this ID already exists
+                    eq_id = row.get('eq_id')
+                    if pd.notna(eq_id) and eq_id != '':
+                        try:
+                            equipment = Equipment.query.get(int(eq_id))
+                            if equipment:
+                                # Update existing equipment
+                                is_update = True
+                            else:
+                                # Create new equipment with specified ID
+                                equipment = Equipment()
+                                equipment.eq_id = int(eq_id)
+                                is_update = False
+                        except (ValueError, TypeError):
+                            # Invalid ID, create new equipment
+                            equipment = Equipment()
+                            is_update = False
+                    else:
+                        # No ID provided, create new equipment
+                        equipment = Equipment()
+                        is_update = False
+                    
+                    # Map CSV columns to database fields - handle both new and legacy formats
+                    # Equipment Class
+                    eq_class_val = row.get('Equipment Class') or row.get('eq_class')
+                    if eq_class_val and str(eq_class_val).strip():
+                        class_name = str(eq_class_val).strip()
+                        equipment_class = EquipmentClass.query.filter_by(name=class_name).first()
+                        if not equipment_class:
+                            equipment_class = EquipmentClass(name=class_name)
+                            db.session.add(equipment_class)
+                            db.session.flush()  # Get the ID
+                        equipment.class_id = equipment_class.id
+                    
+                    # Equipment Subclass
+                    eq_subclass_val = row.get('Equipment Subclass') or row.get('eq_subclass')
+                    if eq_subclass_val and str(eq_subclass_val).strip():
+                        subclass_name = str(eq_subclass_val).strip()
+                        equipment_subclass = EquipmentSubclass.query.filter_by(name=subclass_name).first()
+                        if not equipment_subclass:
+                            equipment_subclass = EquipmentSubclass(name=subclass_name)
+                            db.session.add(equipment_subclass)
+                            db.session.flush()
+                        equipment.subclass_id = equipment_subclass.id
+                    
+                    # Manufacturer
+                    eq_manu_val = row.get('Manufacturer') or row.get('eq_manu')
+                    if eq_manu_val and str(eq_manu_val).strip():
+                        manu_name = str(eq_manu_val).strip()
+                        manufacturer = Manufacturer.query.filter_by(name=manu_name).first()
+                        if not manufacturer:
+                            manufacturer = Manufacturer(name=manu_name)
+                            db.session.add(manufacturer)
+                            db.session.flush()
+                        equipment.manufacturer_id = manufacturer.id
+                    
+                    # Department
+                    eq_dept_val = row.get('Department') or row.get('eq_dept')
+                    if eq_dept_val and str(eq_dept_val).strip():
+                        dept_name = str(eq_dept_val).strip()
+                        department = Department.query.filter_by(name=dept_name).first()
+                        if not department:
+                            department = Department(name=dept_name)
+                            db.session.add(department)
+                            db.session.flush()
+                        equipment.department_id = department.id
+                    
+                    # Facility
+                    eq_fac_val = row.get('Facility') or row.get('eq_fac')
+                    if eq_fac_val and str(eq_fac_val).strip():
+                        fac_name = str(eq_fac_val).strip()
+                        facility = Facility.query.filter_by(name=fac_name).first()
+                        if not facility:
+                            # Try to get address from CSV
+                            fac_address = row.get('Facility Address') or row.get('eq_address') or ''
+                            facility = Facility(name=fac_name, address=str(fac_address).strip())
+                            db.session.add(facility)
+                            db.session.flush()
+                        equipment.facility_id = facility.id
+                    
+                    # Contact Personnel
+                    contact_val = row.get('Primary Contact') or row.get('eq_contact')
+                    contact_email_val = row.get('Contact Email') or row.get('eq_contactinfo')
+                    if contact_val and str(contact_val).strip():
+                        contact_name = str(contact_val).strip()
+                        contact_email = str(contact_email_val).strip() if contact_email_val else ''
+                        contact = Personnel.query.filter_by(name=contact_name).first()
+                        if not contact:
+                            contact = Personnel(name=contact_name, email=contact_email if contact_email else None)
+                            db.session.add(contact)
+                            db.session.flush()
+                        equipment.contact_id = contact.id
+                    
+                    # Model and Room - direct fields
+                    equipment.eq_mod = row.get('eq_mod')
+                    equipment.eq_rm = row.get('eq_rm')
+                    equipment.eq_assetid = row.get('eq_assetid')
+                    equipment.eq_sn = row.get('eq_sn')
+                    equipment.eq_mefac = row.get('eq_mefac')
+                    equipment.eq_mereg = row.get('eq_mereg')
+                    equipment.eq_mefacreg = row.get('eq_mefacreg')
+                    equipment.eq_manid = row.get('eq_manid')
+                    
+                    # Handle dates
+                    date_fields = ['eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate']
+                    for field in date_fields:
+                        date_val = row.get(field)
+                        if pd.notna(date_val) and date_val != '':
+                            try:
+                                setattr(equipment, field, pd.to_datetime(date_val).date())
+                            except:
+                                pass
+                    
+                    # Handle boolean
+                    retired_val = row.get('eq_retired')
+                    if pd.notna(retired_val):
+                        # Handle various boolean representations
+                        if isinstance(retired_val, bool):
+                            equipment.eq_retired = retired_val
+                        elif isinstance(retired_val, (int, float)):
+                            # Handle numeric values: 1 = True, 0 = False
+                            equipment.eq_retired = bool(retired_val)
+                        else:
+                            # Handle string values
+                            str_val = str(retired_val).strip().upper()
+                            equipment.eq_retired = str_val in ['TRUE', '1', 'YES', 'Y']
+                    else:
+                        equipment.eq_retired = False
+                    
+                    # If equipment is retired but has no retirement date, set it to today
+                    if equipment.eq_retired and not equipment.eq_retdate:
+                        equipment.eq_retdate = datetime.now().date()
+                    
+                    # Handle audit frequency (string field)
+                    audit_freq = row.get('eq_auditfreq')
+                    if pd.notna(audit_freq) and audit_freq != '':
+                        audit_freq_str = str(audit_freq).strip()
+                        # Check if it's a valid frequency type
+                        valid_frequencies = ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME']
+                        if audit_freq_str in valid_frequencies:
+                            equipment.eq_auditfreq = audit_freq_str
+                        else:
+                            # Try to convert from old integer format
+                            try:
+                                freq_int = int(float(audit_freq_str))
+                                if freq_int <= 3:
+                                    equipment.eq_auditfreq = 'Quarterly'
+                                elif freq_int <= 6:
+                                    equipment.eq_auditfreq = 'Semiannual'
+                                elif freq_int == 14:
+                                    equipment.eq_auditfreq = 'Annual - ACR'
+                                else:
+                                    equipment.eq_auditfreq = 'Annual - TJC'
+                            except:
+                                equipment.eq_auditfreq = 'Annual - TJC'  # Default
+                    
+                    # Handle integers
+                    int_fields = ['eq_radcap', 'eq_capcat', 'eq_capcst']
+                    for field in int_fields:
+                        val = row.get(field)
+                        if pd.notna(val) and val != '':
+                            try:
+                                setattr(equipment, field, int(val))
+                            except:
+                                pass
+                    
+                    equipment.eq_acrsite = row.get('eq_acrsite')
+                    equipment.eq_acrunit = row.get('eq_acrunit')
+                    equipment.eq_notes = row.get('eq_notes')
+                    
+                    if not is_update:
+                        db.session.add(equipment)
+                        imported_count += 1
+                    else:
+                        updated_count += 1
+                
+                db.session.commit()
+                
+                # Build success message
+                messages = []
+                if imported_count > 0:
+                    messages.append(f'imported {imported_count} new equipment records')
+                if updated_count > 0:
+                    messages.append(f'updated {updated_count} existing equipment records')
+                if skipped_count > 0:
+                    messages.append(f'skipped {skipped_count} empty rows')
+                
+                success_message = 'Successfully ' + ', '.join(messages) + '!'
+                flash(success_message, 'success')
+                return redirect(url_for('equipment_list'))
+                
+            except Exception as e:
+                flash(f'Error importing data: {str(e)}', 'error')
+                return redirect(request.url)
+        
+        flash('Please select a CSV file', 'error')
+    
+    return render_template('import_data.html')
+
+@app.route('/personnel')
+@login_required
+def personnel_list():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    # Filters
+    search = request.args.get('search', '').strip()
+    role_filter = request.args.get('role')
+    
+    # Base query
+    query = Personnel.query
+    
+    # Apply filters
+    if search:
+        query = query.filter(Personnel.name.ilike(f'%{search}%') | 
+                           Personnel.email.ilike(f'%{search}%'))
+    
+    if role_filter:
+        query = query.filter(Personnel.roles.ilike(f'%{role_filter}%'))
+    
+    # Pagination
+    personnel = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Get unique roles for filter dropdown
+    all_roles = db.session.query(Personnel.roles).filter(Personnel.roles.isnot(None), Personnel.roles != '').all()
+    role_set = set()
+    for role_row in all_roles:
+        if role_row[0] and role_row[0].strip():
+            roles = [r.strip() for r in role_row[0].split(',')]
+            role_set.update(roles)
+    
+    return render_template('personnel_list.html', 
+                         personnel=personnel, 
+                         search=search, 
+                         role_filter=role_filter,
+                         available_roles=sorted(role_set))
+
+@app.route('/personnel/new', methods=['GET', 'POST'])
+@login_required
+@manage_personnel_required
+def new_personnel():
+    form = PersonnelForm()
+    if form.validate_on_submit():
+        personnel = Personnel(
+            name=form.name.data,
+            email=form.email.data,
+            phone=form.phone.data,
+            username=form.username.data if form.username.data else None,
+            is_admin=form.is_admin.data,
+            is_active=form.is_active.data
+        )
+        personnel.set_roles_list(form.roles.data)
+        
+        # Set password - use provided password or default to "radiology"
+        password = form.password.data if form.password.data else "radiology"
+        if form.username.data:  # Only set password if username is provided
+            personnel.set_password(password)
+        
+        try:
+            db.session.add(personnel)
+            db.session.commit()
+            flash('Personnel added successfully!', 'success')
+            return redirect(url_for('personnel_list'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding personnel. Email or username may already exist.', 'error')
+    
+    return render_template('personnel_form.html', form=form, title='Add Personnel')
+
+@app.route('/personnel/<int:id>')
+@login_required
+def personnel_detail(id):
+    personnel = Personnel.query.get_or_404(id)
+    return render_template('personnel_detail.html', personnel=personnel)
+
+@app.route('/personnel/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+@manage_personnel_required
+def edit_personnel(id):
+    personnel = Personnel.query.get_or_404(id)
+    form = PersonnelForm(obj=personnel)
+    
+    if request.method == 'GET':
+        form.roles.data = personnel.get_roles_list()
+        form.username.data = personnel.username
+        form.is_admin.data = personnel.is_admin
+        form.is_active.data = personnel.is_active
+    
+    if form.validate_on_submit():
+        personnel.name = form.name.data
+        personnel.email = form.email.data
+        personnel.phone = form.phone.data
+        personnel.username = form.username.data if form.username.data else None
+        personnel.is_admin = form.is_admin.data
+        personnel.is_active = form.is_active.data
+        personnel.set_roles_list(form.roles.data)
+        
+        if form.password.data:
+            personnel.set_password(form.password.data)
+        
+        try:
+            db.session.commit()
+            flash('Personnel updated successfully!', 'success')
+            return redirect(url_for('personnel_detail', id=id))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating personnel.', 'error')
+    
+    return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel)
+
+@app.route('/personnel/<int:id>/delete', methods=['POST'])
+@login_required
+@manage_personnel_required
+def delete_personnel(id):
+    personnel = Personnel.query.get_or_404(id)
+    try:
+        db.session.delete(personnel)
+        db.session.commit()
+        flash('Personnel deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting personnel.', 'error')
+    
+    return redirect(url_for('personnel_list'))
+
+
+@app.route('/export-personnel')
+def export_personnel():
+    personnel = Personnel.query.all()
+    
+    # Define all possible roles
+    all_roles = ['admin', 'contact', 'supervisor', 'physician', 'physicist', 'physics_assistant', 'qa_technologist']
+    
+    # Create CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers - basic info plus each role as a column
+    headers = ['id', 'name', 'email', 'phone'] + all_roles
+    writer.writerow(headers)
+    
+    # Write data
+    for person in personnel:
+        # Get person's roles as a list
+        person_roles = person.get_roles_list()
+        
+        # Build row with basic info
+        row = [
+            person.id,
+            person.name,
+            person.email,
+            person.phone
+        ]
+        
+        # Add true/false for each role
+        for role in all_roles:
+            row.append('TRUE' if role in person_roles else 'FALSE')
+        
+        writer.writerow(row)
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers['Content-Disposition'] = 'attachment; filename=personnel.csv'
+    response.headers['Content-Type'] = 'text/csv'
+    
+    return response
+
+@app.route('/import-personnel', methods=['GET', 'POST'])
+def import_personnel():
+    form = BulkPersonnelForm()
+    
+    if form.validate_on_submit():
+        file = form.csv_file.data
+        
+        try:
+            # Read CSV
+            df = pd.read_csv(file)
+            
+            # Expected columns
+            required_columns = ['name', 'email']
+            optional_columns = ['id', 'phone', 'roles']
+            
+            # Check required columns
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+                return render_template('import_personnel.html', form=form)
+            
+            # Process each row
+            imported_count = 0
+            error_count = 0
+            
+            for index, row in df.iterrows():
+                try:
+                    # Check if personnel already exists by ID
+                    personnel_id = row.get('id')
+                    if personnel_id and not pd.isna(personnel_id):
+                        personnel = Personnel.query.get(int(personnel_id))
+                        if not personnel:
+                            # Create new personnel with specified ID
+                            personnel = Personnel()
+                            personnel.id = int(personnel_id)
+                    else:
+                        # Create new personnel (auto-assign ID)
+                        personnel = Personnel()
+                    
+                    # Set basic fields
+                    personnel.name = row['name']
+                    personnel.email = row['email']
+                    personnel.phone = row.get('phone', '')
+                    personnel.roles = row.get('roles', '')
+                    
+                    if not personnel.id or Personnel.query.get(personnel.id) is None:
+                        db.session.add(personnel)
+                    
+                    imported_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    continue
+            
+            # Commit all changes
+            db.session.commit()
+            
+            flash(f'Successfully imported {imported_count} personnel records. {error_count} errors.', 'success')
+            return redirect(url_for('personnel_list'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error processing file: {str(e)}', 'error')
+    
+    return render_template('import_personnel.html', form=form)
+
+@app.route('/export-compliance')
+def export_compliance():
+    compliance_tests = ComplianceTest.query.all()
+    
+    # Create CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'performed_by_id', 'reviewed_by_id', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
+    writer.writerow(headers)
+    
+    # Write data
+    for test in compliance_tests:
+        writer.writerow([
+            test.test_id,
+            test.eq_id,
+            test.test_type,
+            test.test_date.strftime('%Y-%m-%d') if test.test_date else '',
+            test.report_date.strftime('%Y-%m-%d') if test.report_date else '',
+            test.performed_by_id if test.performed_by_id else '',
+            test.reviewed_by_id if test.reviewed_by_id else '',
+            test.notes if test.notes else '',
+            test.created_by if test.created_by else '',
+            test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else '',
+            test.modified_by if test.modified_by else '',
+            test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else ''
+        ])
+    
+    # Create response
+    response = make_response(output.getvalue())
+    # Generate filename with timestamp and audit note
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'compliance_tests_with_audit_{timestamp}.csv'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv'
+    
+    return response
+
+class BulkComplianceForm(FlaskForm):
+    csv_file = FileField('CSV File', validators=[DataRequired()])
+
+@app.route('/import-compliance', methods=['GET', 'POST'])
+@login_required
+def import_compliance():
+    form = BulkComplianceForm()
+    
+    if form.validate_on_submit():
+        file = form.csv_file.data
+        
+        if file and file.filename.endswith('.csv'):
+            try:
+                # Read CSV
+                df = pd.read_csv(file)
+                
+                # Expected columns
+                required_columns = ['eq_id', 'test_type', 'test_date']
+                optional_columns = ['test_id', 'report_date', 'performed_by_id', 'reviewed_by_id', 'notes']
+                
+                # Check required columns
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                if missing_columns:
+                    flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+                    return redirect(request.url)
+                
+                # Process each row
+                imported_count = 0
+                error_count = 0
+                
+                for index, row in df.iterrows():
+                    try:
+                        # Check if updating existing test
+                        test_id = row.get('test_id')
+                        is_update = False
+                        if test_id and not pd.isna(test_id):
+                            test = ComplianceTest.query.get(int(test_id))
+                            if not test:
+                                # Create new test
+                                test = ComplianceTest()
+                            else:
+                                is_update = True
+                        else:
+                            # Create new test
+                            test = ComplianceTest()
+                        
+                        # Set fields
+                        eq_id = int(row['eq_id'])
+                        if not Equipment.query.get(eq_id):
+                            error_count += 1
+                            print(f"Error: Equipment ID {eq_id} not found")
+                            continue
+                        
+                        test.eq_id = eq_id
+                        test.test_type = row['test_type']
+                        test.test_date = pd.to_datetime(row['test_date']).date()
+                        
+                        # Handle optional report_date
+                        if 'report_date' in row and not pd.isna(row['report_date']) and row['report_date']:
+                            test.report_date = pd.to_datetime(row['report_date']).date()
+                        else:
+                            test.report_date = None
+                        
+                        if 'performed_by_id' in row and not pd.isna(row['performed_by_id']):
+                            performed_by_id = int(row['performed_by_id'])
+                            if Personnel.query.get(performed_by_id):
+                                test.performed_by_id = performed_by_id
+                            else:
+                                print(f"Warning: Personnel ID {performed_by_id} not found for performed_by")
+                        
+                        if 'reviewed_by_id' in row and not pd.isna(row['reviewed_by_id']):
+                            reviewed_by_id = int(row['reviewed_by_id'])
+                            if Personnel.query.get(reviewed_by_id):
+                                test.reviewed_by_id = reviewed_by_id
+                            else:
+                                print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by")
+                        
+                        if 'notes' in row and not pd.isna(row['notes']):
+                            test.notes = row['notes']
+                        
+                        # Add audit info based on current user
+                        if current_user.is_authenticated:
+                            user_initials = extract_personnel_initials(current_user.name)
+                            if not is_update:
+                                # New record
+                                test.created_by = user_initials
+                                test.modified_by = user_initials
+                            else:
+                                # Updating existing record
+                                test.modified_by = user_initials
+                        
+                        if not test_id or pd.isna(test_id):
+                            db.session.add(test)
+                        
+                        imported_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        continue
+                
+                # Commit all changes
+                db.session.commit()
+                
+                flash(f'Successfully imported {imported_count} compliance tests. {error_count} errors.', 'success')
+                return redirect(url_for('compliance_dashboard'))
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error processing file: {str(e)}', 'error')
+        else:
+            flash('Please select a CSV file', 'error')
+    
+    # Get personnel for help text
+    performed_by_personnel = Personnel.query.filter(
+        Personnel.roles.ilike('%physics_assistant%') | 
+        Personnel.roles.ilike('%physicist%')
+    ).order_by(Personnel.name).all()
+    
+    reviewed_by_personnel = Personnel.query.filter(Personnel.roles.ilike('%physicist%')).order_by(Personnel.name).all()
+    
+    return render_template('import_compliance.html', 
+                         form=form,
+                         performed_by_personnel=performed_by_personnel,
+                         reviewed_by_personnel=reviewed_by_personnel)
+
+# Admin Routes
+@app.route('/admin')
+@login_required
+@admin_required
+def admin_dashboard():
+    # Get counts for each standardized list
+    classes_count = EquipmentClass.query.filter_by(is_active=True).count()
+    subclasses_count = EquipmentSubclass.query.filter_by(is_active=True).count()
+    departments_count = Department.query.filter_by(is_active=True).count()
+    facilities_count = Facility.query.filter_by(is_active=True).count()
+    manufacturers_count = Manufacturer.query.filter_by(is_active=True).count()
+    
+    return render_template('admin_dashboard.html',
+                         classes_count=classes_count,
+                         subclasses_count=subclasses_count,
+                         departments_count=departments_count,
+                         facilities_count=facilities_count,
+                         manufacturers_count=manufacturers_count)
+
+@app.route('/admin/equipment-classes')
+@login_required
+@admin_required
+def admin_equipment_classes():
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    return render_template('admin_equipment_classes.html', classes=classes)
+
+@app.route('/admin/equipment-classes/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_equipment_class():
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name:
+            # Check if already exists
+            existing = EquipmentClass.query.filter_by(name=name).first()
+            if existing:
+                if existing.is_active:
+                    flash('Equipment class already exists', 'error')
+                else:
+                    # Reactivate existing
+                    existing.is_active = True
+                    db.session.commit()
+                    flash('Equipment class reactivated', 'success')
+            else:
+                new_class = EquipmentClass(name=name)
+                db.session.add(new_class)
+                db.session.commit()
+                flash('Equipment class added', 'success')
+        return redirect(url_for('admin_equipment_classes'))
+    
+    return render_template('admin_add_equipment_class.html')
+
+@app.route('/admin/equipment-classes/<int:class_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_equipment_class(class_id):
+    eq_class = EquipmentClass.query.get_or_404(class_id)
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name and name != eq_class.name:
+            # Check if new name already exists
+            existing = EquipmentClass.query.filter_by(name=name).first()
+            if existing and existing.id != class_id:
+                flash('Equipment class name already exists', 'error')
+            else:
+                eq_class.name = name
+                db.session.commit()
+                flash('Equipment class updated', 'success')
+                return redirect(url_for('admin_equipment_classes'))
+        elif name == eq_class.name:
+            flash('No changes made', 'info')
+            return redirect(url_for('admin_equipment_classes'))
+    
+    return render_template('admin_edit_equipment_class.html', eq_class=eq_class)
+
+@app.route('/admin/equipment-classes/<int:class_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_equipment_class(class_id):
+    eq_class = EquipmentClass.query.get_or_404(class_id)
+    eq_class.is_active = False
+    db.session.commit()
+    flash('Equipment class deactivated', 'success')
+    return redirect(url_for('admin_equipment_classes'))
+
+@app.route('/admin/equipment-subclasses')
+@login_required
+@admin_required
+def admin_equipment_subclasses():
+    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    return render_template('admin_equipment_subclasses.html', subclasses=subclasses)
+
+@app.route('/admin/equipment-subclasses/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_equipment_subclass():
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        class_id = request.form.get('equipment_class_id')
+        
+        if name and class_id:
+            try:
+                class_id = int(class_id)
+                # Check if already exists for this class
+                existing = EquipmentSubclass.query.filter_by(name=name, class_id=class_id).first()
+                if existing:
+                    if existing.is_active:
+                        flash('Subclass already exists for this class', 'error')
+                    else:
+                        existing.is_active = True
+                        db.session.commit()
+                        flash('Subclass reactivated', 'success')
+                else:
+                    new_subclass = EquipmentSubclass(name=name, class_id=class_id)
+                    db.session.add(new_subclass)
+                    db.session.commit()
+                    flash('Subclass added', 'success')
+            except ValueError:
+                flash('Invalid class selection', 'error')
+        return redirect(url_for('admin_equipment_subclasses'))
+    
+    return render_template('admin_add_equipment_subclass.html', classes=classes)
+
+@app.route('/admin/equipment-subclasses/<int:subclass_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_equipment_subclass(subclass_id):
+    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        class_id = request.form.get('equipment_class_id')
+        
+        if name and class_id:
+            try:
+                class_id = int(class_id)
+                # Check if new combination already exists
+                existing = EquipmentSubclass.query.filter_by(name=name, class_id=class_id).first()
+                if existing and existing.id != subclass_id:
+                    flash('Subclass name already exists for this class', 'error')
+                else:
+                    subclass.name = name
+                    subclass.class_id = class_id
+                    db.session.commit()
+                    flash('Subclass updated', 'success')
+                    return redirect(url_for('admin_equipment_subclasses'))
+            except ValueError:
+                flash('Invalid class selection', 'error')
+    
+    return render_template('admin_edit_equipment_subclass.html', subclass=subclass, classes=classes)
+
+@app.route('/admin/equipment-subclasses/<int:subclass_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_equipment_subclass(subclass_id):
+    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    subclass.is_active = False
+    db.session.commit()
+    flash('Subclass deactivated', 'success')
+    return redirect(url_for('admin_equipment_subclasses'))
+
+@app.route('/admin/departments')
+@login_required
+@admin_required
+def admin_departments():
+    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    return render_template('admin_departments.html', departments=departments)
+
+@app.route('/admin/departments/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_department():
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name:
+            existing = Department.query.filter_by(name=name).first()
+            if existing:
+                if existing.is_active:
+                    flash('Department already exists', 'error')
+                else:
+                    existing.is_active = True
+                    db.session.commit()
+                    flash('Department reactivated', 'success')
+            else:
+                new_dept = Department(name=name)
+                db.session.add(new_dept)
+                db.session.commit()
+                flash('Department added', 'success')
+        return redirect(url_for('admin_departments'))
+    
+    return render_template('admin_add_department.html')
+
+@app.route('/admin/departments/<int:dept_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name and name != dept.name:
+            existing = Department.query.filter_by(name=name).first()
+            if existing and existing.id != dept_id:
+                flash('Department name already exists', 'error')
+            else:
+                dept.name = name
+                db.session.commit()
+                flash('Department updated', 'success')
+                return redirect(url_for('admin_departments'))
+        elif name == dept.name:
+            flash('No changes made', 'info')
+            return redirect(url_for('admin_departments'))
+    
+    return render_template('admin_edit_department.html', dept=dept)
+
+@app.route('/admin/departments/<int:dept_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    dept.is_active = False
+    db.session.commit()
+    flash('Department deactivated', 'success')
+    return redirect(url_for('admin_departments'))
+
+@app.route('/admin/facilities')
+@login_required
+@admin_required
+def admin_facilities():
+    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    return render_template('admin_facilities.html', facilities=facilities)
+
+@app.route('/admin/facilities/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_facility():
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        address = request.form.get('address', '').strip()
+        if name:
+            existing = Facility.query.filter_by(name=name).first()
+            if existing:
+                if existing.is_active:
+                    flash('Facility already exists', 'error')
+                else:
+                    existing.is_active = True
+                    existing.address = address
+                    db.session.commit()
+                    flash('Facility reactivated', 'success')
+            else:
+                new_facility = Facility(name=name, address=address)
+                db.session.add(new_facility)
+                db.session.commit()
+                flash('Facility added', 'success')
+        return redirect(url_for('admin_facilities'))
+    
+    return render_template('admin_add_facility.html')
+
+@app.route('/admin/facilities/<int:facility_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_facility(facility_id):
+    facility = Facility.query.get_or_404(facility_id)
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        address = request.form.get('address', '').strip()
+        
+        if name and name != facility.name:
+            existing = Facility.query.filter_by(name=name).first()
+            if existing and existing.id != facility_id:
+                flash('Facility name already exists', 'error')
+            else:
+                facility.name = name
+                facility.address = address
+                db.session.commit()
+                flash('Facility updated', 'success')
+                return redirect(url_for('admin_facilities'))
+        elif name == facility.name:
+            # Check if only address changed
+            if address != (facility.address or ''):
+                facility.address = address
+                db.session.commit()
+                flash('Facility updated', 'success')
+                return redirect(url_for('admin_facilities'))
+            else:
+                flash('No changes made', 'info')
+                return redirect(url_for('admin_facilities'))
+    
+    return render_template('admin_edit_facility.html', facility=facility)
+
+@app.route('/admin/facilities/<int:facility_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_facility(facility_id):
+    facility = Facility.query.get_or_404(facility_id)
+    facility.is_active = False
+    db.session.commit()
+    flash('Facility deactivated', 'success')
+    return redirect(url_for('admin_facilities'))
+
+@app.route('/admin/manufacturers')
+@login_required
+@admin_required
+def admin_manufacturers():
+    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    return render_template('admin_manufacturers.html', manufacturers=manufacturers)
+
+@app.route('/admin/manufacturers/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_manufacturer():
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name:
+            existing = Manufacturer.query.filter_by(name=name).first()
+            if existing:
+                if existing.is_active:
+                    flash('Manufacturer already exists', 'error')
+                else:
+                    existing.is_active = True
+                    db.session.commit()
+                    flash('Manufacturer reactivated', 'success')
+            else:
+                new_mfr = Manufacturer(name=name)
+                db.session.add(new_mfr)
+                db.session.commit()
+                flash('Manufacturer added', 'success')
+        return redirect(url_for('admin_manufacturers'))
+    
+    return render_template('admin_add_manufacturer.html')
+
+@app.route('/admin/manufacturers/<int:mfr_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_manufacturer(mfr_id):
+    mfr = Manufacturer.query.get_or_404(mfr_id)
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        if name and name != mfr.name:
+            existing = Manufacturer.query.filter_by(name=name).first()
+            if existing and existing.id != mfr_id:
+                flash('Manufacturer name already exists', 'error')
+            else:
+                mfr.name = name
+                db.session.commit()
+                flash('Manufacturer updated', 'success')
+                return redirect(url_for('admin_manufacturers'))
+        elif name == mfr.name:
+            flash('No changes made', 'info')
+            return redirect(url_for('admin_manufacturers'))
+    
+    return render_template('admin_edit_manufacturer.html', mfr=mfr)
+
+@app.route('/admin/manufacturers/<int:mfr_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_manufacturer(mfr_id):
+    mfr = Manufacturer.query.get_or_404(mfr_id)
+    mfr.is_active = False
+    db.session.commit()
+    flash('Manufacturer deactivated', 'success')
+    return redirect(url_for('admin_manufacturers'))
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    # Only run debug mode in development
+    debug_mode = os.environ.get('FLASK_ENV') == 'development'
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

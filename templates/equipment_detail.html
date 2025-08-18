@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equipment.equipment_class.name if equipment.equipment_class else 'Equipment' }} - {{ equipment.manufacturer.name if equipment.manufacturer else 'Unknown' }} {{ equipment.eq_mod }} - REMS{% endblock %}
+
+{% block content %}
+{% set is_retired = equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today) %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-cog"></i> 
+                {{ equipment.equipment_class.name if equipment.equipment_class else 'Equipment' }} 
+                {% if is_retired %}
+                    <span class="badge bg-danger">Retired</span>
+                {% else %}
+                    <span class="badge bg-success">Active</span>
+                {% endif %}
+            </h1>
+            <div>
+                <a href="{{ url_for('equipment_list', **search_params) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+                {% if current_user.can_manage_equipment() %}
+                    <a href="{{ url_for('equipment_edit', eq_id=equipment.eq_id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                {% endif %}
+                {% if not is_retired and current_user.can_manage_compliance() %}
+                    <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}" class="btn btn-warning">
+                        <i class="fas fa-plus"></i> Add Test
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Equipment Details -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle"></i> Equipment Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th width="40%">Equipment ID:</th>
+                                        <td>{{ equipment.eq_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Class:</th>
+                                        <td>{{ equipment.equipment_class.name if equipment.equipment_class else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Subclass:</th>
+                                        <td>{{ equipment.equipment_subclass.name if equipment.equipment_subclass else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Manufacturer:</th>
+                                        <td>{{ equipment.manufacturer.name if equipment.manufacturer else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Model:</th>
+                                        <td>{{ equipment.eq_mod or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Department:</th>
+                                        <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Room:</th>
+                                        <td>{{ equipment.eq_rm or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Facility:</th>
+                                        <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <th width="40%">Asset ID:</th>
+                                        <td>{{ equipment.eq_assetid or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Serial Number:</th>
+                                        <td>{{ equipment.eq_sn or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Install Date:</th>
+                                        <td>{{ equipment.eq_instdt.strftime('%Y-%m-%d') if equipment.eq_instdt else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Manufacture Date:</th>
+                                        <td>{{ equipment.eq_mandt.strftime('%Y-%m-%d') if equipment.eq_mandt else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>End of Life:</th>
+                                        <td>{{ equipment.eq_eoldate.strftime('%Y-%m-%d') if equipment.eq_eoldate else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Audit Frequency:</th>
+                                        <td>{{ equipment.eq_auditfreq or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ACR Site:</th>
+                                        <td>{{ equipment.eq_acrsite or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ACR Unit:</th>
+                                        <td>{{ equipment.eq_acrunit or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ME Facility:</th>
+                                        <td>{{ equipment.eq_mefac or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ME Registration:</th>
+                                        <td>{{ equipment.eq_mereg or 'N/A' }}</td>
+                                    </tr>
+                                    {% if equipment.eq_retired and equipment.eq_retdate %}
+                                    <tr>
+                                        <th>Retired Date:</th>
+                                        <td>{{ equipment.eq_retdate.strftime('%Y-%m-%d') }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                        
+                        {% if equipment.facility and equipment.facility.address %}
+                        <div class="mt-3">
+                            <h6><i class="fas fa-map-marker-alt"></i> Address</h6>
+                            <p>{{ equipment.facility.address }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if equipment.eq_notes %}
+                        <div class="mt-3">
+                            <h6><i class="fas fa-sticky-note"></i> Notes</h6>
+                            <p>{{ equipment.eq_notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-address-book"></i> Contact Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% if equipment.contact %}
+                            <div class="col-12 mb-3">
+                                <h6><i class="fas fa-user"></i> Primary Contact</h6>
+                                <div class="border rounded p-3">
+                                    <div><strong>{{ equipment.contact.name }}</strong></div>
+                                    {% if equipment.contact.email %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-envelope text-primary"></i> 
+                                            <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.contact.phone %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.contact.department %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if equipment.supervisor %}
+                            <div class="col-12 mb-3">
+                                <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
+                                <div class="border rounded p-3">
+                                    <div><strong>{{ equipment.supervisor.name }}</strong></div>
+                                    {% if equipment.supervisor.email %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-envelope text-primary"></i> 
+                                            <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.supervisor.phone %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.supervisor.department %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if equipment.physician %}
+                            <div class="col-12 mb-3">
+                                <h6><i class="fas fa-user-md"></i> Physician</h6>
+                                <div class="border rounded p-3">
+                                    <div><strong>{{ equipment.physician.name }}</strong></div>
+                                    {% if equipment.physician.email %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-envelope text-primary"></i> 
+                                            <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.physician.phone %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
+                                        </div>
+                                    {% endif %}
+                                    {% if equipment.physician.department %}
+                                        <div class="mt-1">
+                                            <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compliance Status -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-check-circle"></i> Compliance Status</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if is_retired %}
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Equipment Status</h6>
+                            <p class="mb-0">
+                                <strong>Retired Equipment</strong><br>
+                                No further compliance testing required.
+                                {% if equipment.eq_retdate %}
+                                <br><small class="text-muted">Retired: {{ equipment.eq_retdate.strftime('%Y-%m-%d') }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% else %}
+                            {% if next_test %}
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-clock"></i> Next Test Due</h6>
+                                <p class="mb-0">
+                                    <strong>{{ next_test.get_test_type_display() }}</strong><br>
+                                    Due: {{ next_test.next_due_date.strftime('%Y-%m-%d') }}
+                                </p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if current_user.can_manage_compliance() %}
+                                <div class="text-center">
+                                    <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}" 
+                                       class="btn btn-warning">
+                                        <i class="fas fa-plus"></i> Add New Test
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Capital Details -->
+                {% if equipment.eq_radcap or equipment.eq_capcat or equipment.eq_capcst %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-dollar-sign"></i> Capital Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-borderless table-sm">
+                            {% if equipment.eq_radcap is not none %}
+                            <tr>
+                                <th>Radiology Owned:</th>
+                                <td>{% if equipment.eq_radcap == 1 %}Yes{% else %}No{% endif %}</td>
+                            </tr>
+                            {% endif %}
+                            {% if equipment.eq_capcat is not none %}
+                            <tr>
+                                <th>Capital Cost Category:</th>
+                                <td>
+                                    {% if equipment.eq_capcat == 0 %}N/A
+                                    {% elif equipment.eq_capcat == 1 %}Category 1
+                                    {% elif equipment.eq_capcat == 2 %}Category 2
+                                    {% elif equipment.eq_capcat == 3 %}Category 3
+                                    {% else %}{{ equipment.eq_capcat }}{% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if equipment.eq_capcst %}
+                            <tr>
+                                <th>Capital Cost:</th>
+                                <td>${{ "{:,}".format(equipment.eq_capcst * 1000) }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Compliance Tests History -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Compliance Tests History</h5>
+            </div>
+            <div class="card-body">
+                {% if tests %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="test_type">
+                                        Test Type <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="test_date">
+                                        Test Date <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="report_date">
+                                        Report Date <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="performed_by">
+                                        Performed By <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="reviewed_by">
+                                        Reviewing Physicist <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="created_by">
+                                        Created By <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="modified_by">
+                                        Modified By <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-column="notes">
+                                        Notes <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for test in tests %}
+                                <tr data-test-type="{{ test.test_type }}"
+                                    data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}"
+                                    data-report-date="{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else '' }}"
+                                    data-performed-by="{{ test.performed_by.name if test.performed_by else '' }}"
+                                    data-reviewed-by="{{ test.reviewed_by.name if test.reviewed_by else '' }}"
+                                    data-created-by="{{ test.created_by if test.created_by else '' }}"
+                                    data-modified-by="{{ test.modified_by if test.modified_by else '' }}"
+                                    data-notes="{{ test.notes if test.notes else '' }}">
+                                    <td>{{ test.get_test_type_display() }}</td>
+                                    <td>{{ test.test_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else 'N/A' }}</td>
+                                    <td>{{ test.performed_by.name if test.performed_by else 'N/A' }}</td>
+                                    <td>{{ test.reviewed_by.name if test.reviewed_by else 'N/A' }}</td>
+                                    <td>
+                                        {% if test.created_by %}
+                                            <span class="badge bg-secondary" title="Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ test.created_by }}</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if test.modified_by %}
+                                            <span class="badge bg-secondary" title="Modified: {{ test.updated_at.strftime('%Y-%m-%d %H:%M') if test.updated_at else 'Unknown' }}">{{ test.modified_by }}</span>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ test.notes if test.notes else 'N/A' }}</td>
+                                    <td style="white-space: nowrap;">
+                                        {% if current_user.can_manage_compliance() %}
+                                            <a href="{{ url_for('compliance_test_edit', test_id=test.test_id) }}" 
+                                               class="btn btn-sm btn-outline-primary me-1" title="Edit Test">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    onclick="deleteComplianceTest({{ test.test_id }}, '{{ test.get_test_type_display() }}', '{{ test.test_date.strftime('%Y-%m-%d') }}')"
+                                                    title="Delete Test">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% else %}
+                                            <span class="text-muted">View Only</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                        <h4 class="text-muted mt-3">No compliance tests recorded</h4>
+                        <p class="text-muted">
+                            {% if current_user.can_manage_compliance() %}
+                                <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}">Add the first compliance test</a> for this equipment.
+                            {% else %}
+                                No compliance test records are available for this equipment.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add sorting functionality to compliance tests table
+    const sortableHeaders = document.querySelectorAll('.sortable');
+    let currentSort = { column: 'test_date', direction: 'desc' }; // Default sort by test date descending
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            let direction = 'asc';
+            
+            // Toggle direction if clicking the same column
+            if (currentSort.column === column) {
+                direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            }
+            
+            currentSort = { column, direction };
+            sortTable(column, direction);
+            updateSortIcons(this, direction);
+        });
+    });
+    
+    // Initial sort by test date descending (most recent first)
+    const testDateHeader = document.querySelector('[data-column="test_date"]');
+    if (testDateHeader) {
+        sortTable('test_date', 'desc');
+        updateSortIcons(testDateHeader, 'desc');
+    }
+    
+    function sortTable(column, direction) {
+        const tbody = document.querySelector('.table-striped tbody');
+        if (!tbody) return;
+        
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        rows.sort((a, b) => {
+            let aValue = a.dataset[column.replace('_', '-')] || '';
+            let bValue = b.dataset[column.replace('_', '-')] || '';
+            
+            // Handle date sorting
+            if (column === 'test_date' || column === 'report_date') {
+                aValue = new Date(aValue || '1900-01-01');
+                bValue = new Date(bValue || '1900-01-01');
+            } else {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+            
+            if (direction === 'asc') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+        
+        // Clear and re-append sorted rows
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    }
+    
+    function updateSortIcons(activeHeader, direction) {
+        // Reset all icons
+        sortableHeaders.forEach(header => {
+            const icon = header.querySelector('i');
+            icon.className = 'fas fa-sort';
+        });
+        
+        // Set active icon
+        const activeIcon = activeHeader.querySelector('i');
+        activeIcon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
+});
+
+// Delete compliance test function
+function deleteComplianceTest(testId, testType, testDate) {
+    if (confirm(`Are you sure you want to delete the ${testType} test from ${testDate}?\n\nThis action cannot be undone.`)) {
+        // Create a form to submit the delete request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/compliance/test/${testId}/delete`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

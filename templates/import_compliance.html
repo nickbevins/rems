@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Import Compliance Tests - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-file-import"></i> Import Compliance Tests</h1>
+            <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Upload CSV File</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.csv_file.label(class="form-label") }}
+                        {{ form.csv_file(class="form-control", accept=".csv") }}
+                        {% if form.csv_file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.csv_file.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Upload a CSV file with compliance test data. 
+                            <a href="{{ url_for('export_compliance') }}" class="text-decoration-none">
+                                Download a sample format
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-primary">
+                        <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Required columns:</strong> eq_id, test_type, test_date</li>
+                            <li><strong>Optional columns:</strong> test_id, report_date, performed_by_id, reviewed_by_id, notes</li>
+                            <li><strong>Date format:</strong> YYYY-MM-DD (leave blank for optional dates)</li>
+                            <li><strong>Test types:</strong> acceptance, annual, audit, other, qc_review, retire, shielding_design, submission</li>
+                            <li><strong>Equipment ID:</strong> Use existing equipment IDs from the system</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-users"></i> Valid Personnel IDs:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h7><strong>For performed_by_id:</strong></h7>
+                                <ul class="mb-0">
+                                    {% for person in performed_by_personnel %}
+                                    <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h7><strong>For reviewed_by_id (Reviewing Physicist):</strong></h7>
+                                <ul class="mb-0">
+                                    {% for person in reviewed_by_personnel %}
+                                    <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Import Tests
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

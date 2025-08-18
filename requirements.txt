@@ -1,0 +1,12 @@
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-WTF
+WTForms
+PyMySQL
+python-dotenv
+pandas
+openpyxl
+email-validator
+python-dateutil
+gunicorn
