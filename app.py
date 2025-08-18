@@ -41,7 +41,15 @@ def extract_personnel_initials(name):
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///physdb.db')
+# Use persistent database path for production
+if 'RENDER' in os.environ:
+    # On Render, store database in persistent location
+    db_path = '/opt/render/project/src/instance/physdb.db'
+    os.makedirs('/opt/render/project/src/instance', exist_ok=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+else:
+    # Local development - use instance folder
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///instance/physdb.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
