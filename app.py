@@ -2097,20 +2097,31 @@ def export_compliance():
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write headers
-    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'performed_by_id', 'reviewed_by_id', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
+    # Write headers - use names instead of IDs for better usability
+    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
     writer.writerow(headers)
     
     # Write data
     for test in compliance_tests:
+        # Get personnel names from IDs
+        performed_by_name = ''
+        if test.performed_by_id:
+            performed_by = Personnel.query.get(test.performed_by_id)
+            performed_by_name = performed_by.name if performed_by else ''
+            
+        reviewed_by_name = ''
+        if test.reviewed_by_id:
+            reviewed_by = Personnel.query.get(test.reviewed_by_id)
+            reviewed_by_name = reviewed_by.name if reviewed_by else ''
+        
         writer.writerow([
             test.test_id,
             test.eq_id,
             test.test_type,
             test.test_date.strftime('%Y-%m-%d') if test.test_date else '',
             test.report_date.strftime('%Y-%m-%d') if test.report_date else '',
-            test.performed_by_id if test.performed_by_id else '',
-            test.reviewed_by_id if test.reviewed_by_id else '',
+            performed_by_name,
+            reviewed_by_name,
             test.notes if test.notes else '',
             test.created_by if test.created_by else '',
             test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else '',
@@ -2193,19 +2204,45 @@ def import_compliance():
                         else:
                             test.report_date = None
                         
-                        if 'performed_by_id' in row and not pd.isna(row['performed_by_id']):
-                            performed_by_id = int(row['performed_by_id'])
-                            if Personnel.query.get(performed_by_id):
-                                test.performed_by_id = performed_by_id
+                        # Handle performed_by (name or ID for backward compatibility)
+                        performed_by_val = row.get('performed_by') or row.get('performed_by_id')
+                        if performed_by_val and not pd.isna(performed_by_val):
+                            performed_by_str = str(performed_by_val).strip()
+                            if performed_by_str.isdigit():
+                                # It's an ID (backward compatibility)
+                                performed_by_id = int(performed_by_str)
+                                if Personnel.query.get(performed_by_id):
+                                    test.performed_by_id = performed_by_id
+                                else:
+                                    print(f"Warning: Personnel ID {performed_by_id} not found for performed_by")
                             else:
-                                print(f"Warning: Personnel ID {performed_by_id} not found for performed_by")
+                                # It's a name - find or create personnel
+                                performed_by = Personnel.query.filter_by(name=performed_by_str).first()
+                                if not performed_by:
+                                    performed_by = Personnel(name=performed_by_str)
+                                    db.session.add(performed_by)
+                                    db.session.flush()
+                                test.performed_by_id = performed_by.id
                         
-                        if 'reviewed_by_id' in row and not pd.isna(row['reviewed_by_id']):
-                            reviewed_by_id = int(row['reviewed_by_id'])
-                            if Personnel.query.get(reviewed_by_id):
-                                test.reviewed_by_id = reviewed_by_id
+                        # Handle reviewed_by (name or ID for backward compatibility)
+                        reviewed_by_val = row.get('reviewed_by') or row.get('reviewed_by_id')
+                        if reviewed_by_val and not pd.isna(reviewed_by_val):
+                            reviewed_by_str = str(reviewed_by_val).strip()
+                            if reviewed_by_str.isdigit():
+                                # It's an ID (backward compatibility)
+                                reviewed_by_id = int(reviewed_by_str)
+                                if Personnel.query.get(reviewed_by_id):
+                                    test.reviewed_by_id = reviewed_by_id
+                                else:
+                                    print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by")
                             else:
-                                print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by")
+                                # It's a name - find or create personnel
+                                reviewed_by = Personnel.query.filter_by(name=reviewed_by_str).first()
+                                if not reviewed_by:
+                                    reviewed_by = Personnel(name=reviewed_by_str)
+                                    db.session.add(reviewed_by)
+                                    db.session.flush()
+                                test.reviewed_by_id = reviewed_by.id
                         
                         if 'notes' in row and not pd.isna(row['notes']):
                             test.notes = row['notes']
