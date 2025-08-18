@@ -49,7 +49,10 @@ if 'RENDER' in os.environ:
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 else:
     # Local development - use instance folder
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///instance/physdb.db')
+    instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
+    os.makedirs(instance_dir, exist_ok=True)
+    db_path = os.path.join(instance_dir, 'physdb.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
