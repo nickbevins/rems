@@ -1606,13 +1606,13 @@ def import_data():
                             db.session.flush()  # Get the ID
                         equipment.class_id = equipment_class.id
                     
-                    # Equipment Subclass
+                    # Equipment Subclass (only if we have a class)
                     eq_subclass_val = row.get('equipment_subclass') or row.get('Equipment Subclass') or row.get('eq_subclass')
-                    if eq_subclass_val and str(eq_subclass_val).strip():
+                    if eq_subclass_val and str(eq_subclass_val).strip() and hasattr(equipment, 'class_id') and equipment.class_id:
                         subclass_name = str(eq_subclass_val).strip()
                         equipment_subclass = EquipmentSubclass.query.filter_by(name=subclass_name).first()
                         if not equipment_subclass:
-                            equipment_subclass = EquipmentSubclass(name=subclass_name)
+                            equipment_subclass = EquipmentSubclass(name=subclass_name, class_id=equipment.class_id)
                             db.session.add(equipment_subclass)
                             db.session.flush()
                         equipment.subclass_id = equipment_subclass.id
@@ -1977,18 +1977,25 @@ def import_personnel():
                     
                     # Don't overwrite existing users - check by ID first, then email
                     personnel = None
+                    is_new_user = True
+                    
                     if personnel_id and not pd.isna(personnel_id):
                         personnel = Personnel.query.get(int(personnel_id))
+                        if personnel:
+                            is_new_user = False
                     
                     if not personnel:
                         # Check by email to avoid duplicates
                         personnel = Personnel.query.filter_by(email=email).first()
+                        if personnel:
+                            is_new_user = False
                     
                     if not personnel:
                         # Create new personnel only if doesn't exist
                         personnel = Personnel()
                         if personnel_id and not pd.isna(personnel_id):
                             personnel.id = int(personnel_id)
+                        is_new_user = True
                     
                     # Set basic fields
                     personnel.name = row['name']
@@ -2009,7 +2016,6 @@ def import_personnel():
                         personnel.roles = ', '.join(role_list)
                     
                     # Set default login credentials for NEW users only
-                    is_new_user = personnel.id is None
                     
                     if not personnel.username:
                         # Create username from email (part before @)
