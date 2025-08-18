@@ -1565,6 +1565,13 @@ def import_data():
                         skipped_count += 1
                         continue
                     
+                    # Require Equipment Class - this is mandatory data
+                    eq_class = row.get('Equipment Class') or row.get('eq_class')
+                    if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
+                        print(f"Skipping row {index + 1}: Missing Equipment Class")
+                        skipped_count += 1
+                        continue
+                    
                     # Check if equipment with this ID already exists
                     eq_id = row.get('eq_id')
                     if pd.notna(eq_id) and eq_id != '':
@@ -1757,7 +1764,10 @@ def import_data():
                 return redirect(url_for('equipment_list'))
                 
             except Exception as e:
-                flash(f'Error importing data: {str(e)}', 'error')
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"Equipment import error: {error_details}")
+                flash(f'Error importing data: {str(e)}. Check logs for details.', 'error')
                 return redirect(request.url)
         
         flash('Please select a CSV file', 'error')
