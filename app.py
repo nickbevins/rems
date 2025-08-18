@@ -43,10 +43,19 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 # Use persistent database path for production
 if 'RENDER' in os.environ:
-    # On Render, use persistent disk mount point
-    db_path = '/mnt/data/physdb.db'
-    os.makedirs('/mnt/data', exist_ok=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    # On Render, check for persistent disk or PostgreSQL
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Use PostgreSQL or other provided database URL
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    elif os.path.exists('/var/data'):
+        # Use persistent disk if mounted at /var/data
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////var/data/physdb.db'
+    else:
+        # Fallback to temp location (data will be lost on deploy)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/physdb.db'
+        print("WARNING: Using temporary SQLite database. Data will be lost on deployment!")
+        print("Consider upgrading to a paid plan and adding a persistent disk, or use PostgreSQL.")
 else:
     # Local development - use instance folder
     instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
