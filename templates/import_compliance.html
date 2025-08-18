@@ -41,33 +41,36 @@
                         <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> eq_id, test_type, test_date</li>
-                            <li><strong>Optional columns:</strong> test_id, report_date, performed_by_id, reviewed_by_id, notes</li>
+                            <li><strong>Optional columns:</strong> test_id, report_date, performed_by, reviewed_by, notes</li>
                             <li><strong>Date format:</strong> YYYY-MM-DD (leave blank for optional dates)</li>
                             <li><strong>Test types:</strong> acceptance, annual, audit, other, qc_review, retire, shielding_design, submission</li>
                             <li><strong>Equipment ID:</strong> Use existing equipment IDs from the system</li>
+                            <li><strong>Personnel:</strong> Use full names (e.g., "John Smith") - new personnel will be created automatically</li>
                         </ul>
                     </div>
                     
-                    <div class="alert alert-warning">
-                        <h6><i class="fas fa-users"></i> Valid Personnel IDs:</h6>
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-users"></i> Personnel Names:</h6>
+                        <p><strong>Use actual names instead of IDs:</strong></p>
                         <div class="row">
                             <div class="col-md-6">
-                                <h7><strong>For performed_by_id:</strong></h7>
+                                <h7><strong>For performed_by column:</strong></h7>
                                 <ul class="mb-0">
                                     {% for person in performed_by_personnel %}
-                                    <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                    <li>{{ person.name }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
                             <div class="col-md-6">
-                                <h7><strong>For reviewed_by_id (Reviewing Physicist):</strong></h7>
+                                <h7><strong>For reviewed_by column (Reviewing Physicist):</strong></h7>
                                 <ul class="mb-0">
                                     {% for person in reviewed_by_personnel %}
-                                    <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                    <li>{{ person.name }}</li>
                                     {% endfor %}
                                 </ul>
                             </div>
                         </div>
+                        <small class="text-muted">Note: If you enter a name that doesn't exist, a new personnel record will be created automatically.</small>
                     </div>
                     
                     <button type="submit" class="btn btn-primary">
