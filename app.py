@@ -46,6 +46,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# Initialize database tables
+def init_db():
+    """Initialize database tables if they don't exist"""
+    try:
+        with app.app_context():
+            db.create_all()
+            print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
+# Call init_db when the module is loaded
+init_db()
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
