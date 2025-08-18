@@ -1975,21 +1975,25 @@ def import_personnel():
                     personnel.phone = row.get('phone', '')
                     personnel.roles = row.get('roles', '')
                     
-                    # Set default login credentials for imported users
+                    # Set default login credentials for NEW users only
+                    is_new_user = not personnel.id or Personnel.query.get(personnel.id) is None
+                    
                     if not personnel.username:
                         # Create username from email (part before @)
                         username = row['email'].split('@')[0].lower()
                         personnel.username = username
                     
-                    # Set default password for all imported users
-                    personnel.set_password('password123')
+                    # Set default password only for NEW users (don't overwrite existing passwords)
+                    if is_new_user or not personnel.password_hash:
+                        personnel.set_password('password123')
+                    
                     personnel.is_active = True
                     
                     # Set admin status based on roles
                     if personnel.roles and 'admin' in personnel.roles.lower():
                         personnel.is_admin = True
                     
-                    if not personnel.id or Personnel.query.get(personnel.id) is None:
+                    if is_new_user:
                         db.session.add(personnel)
                     
                     imported_count += 1
