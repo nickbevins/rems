@@ -1567,6 +1567,7 @@ def import_data():
                     
                     # Require Equipment Class - this is mandatory data
                     eq_class = row.get('Equipment Class') or row.get('eq_class')
+                    print(f"Row {index + 1}: Equipment Class = '{eq_class}', Available columns: {list(row.index)}")
                     if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
                         print(f"Skipping row {index + 1}: Missing Equipment Class")
                         skipped_count += 1
@@ -2028,8 +2029,7 @@ def import_personnel():
                     
                     if is_new_user:
                         db.session.add(personnel)
-                    
-                    imported_count += 1
+                        imported_count += 1
                     
                 except Exception as e:
                     error_count += 1
