@@ -1975,6 +1975,20 @@ def import_personnel():
                     personnel.phone = row.get('phone', '')
                     personnel.roles = row.get('roles', '')
                     
+                    # Set default login credentials for imported users
+                    if not personnel.username:
+                        # Create username from email (part before @)
+                        username = row['email'].split('@')[0].lower()
+                        personnel.username = username
+                    
+                    # Set default password for all imported users
+                    personnel.set_password('password123')
+                    personnel.is_active = True
+                    
+                    # Set admin status based on roles
+                    if personnel.roles and 'admin' in personnel.roles.lower():
+                        personnel.is_admin = True
+                    
                     if not personnel.id or Personnel.query.get(personnel.id) is None:
                         db.session.add(personnel)
                     
@@ -1987,7 +2001,7 @@ def import_personnel():
             # Commit all changes
             db.session.commit()
             
-            flash(f'Successfully imported {imported_count} personnel records. {error_count} errors.', 'success')
+            flash(f'Successfully imported {imported_count} personnel records. All users can log in with password "password123". {error_count} errors.', 'success')
             return redirect(url_for('personnel_list'))
             
         except Exception as e:
