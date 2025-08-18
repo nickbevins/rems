@@ -56,32 +56,7 @@ def init_db():
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
-# Call init_db when the module is loaded
-init_db()
-
-# Create default admin user if none exists
-def create_default_admin():
-    """Create default admin user if database is empty"""
-    try:
-        with app.app_context():
-            if Personnel.query.count() == 0:
-                admin_user = Personnel(
-                    name='Admin User',
-                    email='admin@rems.com',
-                    username='admin',
-                    is_admin=True,
-                    is_active=True,
-                    roles='admin'
-                )
-                admin_user.set_password('password123')
-                db.session.add(admin_user)
-                db.session.commit()
-                print("Default admin user created: admin/password123")
-    except Exception as e:
-        print(f"Error creating default admin: {e}")
-
-# Create default admin after database initialization
-create_default_admin()
+# Don't initialize here - wait until all models are defined
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -650,6 +625,33 @@ def change_password():
             flash('Error changing password. Please try again.', 'error')
     
     return render_template('change_password.html', form=form)
+
+# Initialize database and create default admin after all models are defined
+init_db()
+
+# Create default admin user if none exists
+def create_default_admin():
+    """Create default admin user if database is empty"""
+    try:
+        with app.app_context():
+            if Personnel.query.count() == 0:
+                admin_user = Personnel(
+                    name='Admin User',
+                    email='admin@rems.com',
+                    username='admin',
+                    is_admin=True,
+                    is_active=True,
+                    roles='admin'
+                )
+                admin_user.set_password('password123')
+                db.session.add(admin_user)
+                db.session.commit()
+                print("Default admin user created: admin/password123")
+    except Exception as e:
+        print(f"Error creating default admin: {e}")
+
+# Create default admin after database initialization
+create_default_admin()
 
 # Routes
 @app.route('/')
