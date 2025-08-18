@@ -1655,13 +1655,13 @@ def import_data():
                         equipment.department_id = department.id
                     
                     # Facility
-                    eq_fac_val = row.get('Facility') or row.get('eq_fac')
+                    eq_fac_val = row.get('facility') or row.get('Facility') or row.get('eq_fac')
                     if eq_fac_val and str(eq_fac_val).strip():
                         fac_name = str(eq_fac_val).strip()
                         facility = Facility.query.filter_by(name=fac_name).first()
                         if not facility:
                             # Try to get address from CSV
-                            fac_address = row.get('Facility Address') or row.get('eq_address') or ''
+                            fac_address = row.get('facility_address') or row.get('Facility Address') or row.get('eq_address') or ''
                             facility = Facility(name=fac_name, address=str(fac_address).strip())
                             db.session.add(facility)
                             db.session.flush()
