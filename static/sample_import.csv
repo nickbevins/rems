@@ -1,0 +1,1 @@
+eq_id,equipment_class,equipment_subclass,manufacturer,eq_mod,department,eq_rm,facility,facility_address,contact_person,contact_email,supervisor,supervisor_email,physician,physician_email,eq_assetid,eq_sn,eq_mefac,eq_mereg,eq_mefacreg,eq_manid,eq_mandt,eq_instdt,eq_eoldate,eq_eeoldate,eq_retdate,eq_retired,eq_auditfreq,eq_acrsite,eq_acrunit,eq_radcap,eq_capcat,eq_capcst,eq_notes

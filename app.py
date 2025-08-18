@@ -1565,11 +1565,10 @@ def import_data():
                         skipped_count += 1
                         continue
                     
-                    # Require Equipment Class - this is mandatory data
-                    eq_class = row.get('Equipment Class') or row.get('eq_class')
-                    print(f"Row {index + 1}: Equipment Class = '{eq_class}', Available columns: {list(row.index)}")
+                    # Require Equipment Class - this is mandatory data (match export format)
+                    eq_class = row.get('equipment_class') or row.get('Equipment Class') or row.get('eq_class')
                     if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
-                        print(f"Skipping row {index + 1}: Missing Equipment Class")
+                        print(f"Row {index + 1}: Missing equipment_class. Available columns: {list(row.index)}")
                         skipped_count += 1
                         continue
                     
@@ -1595,9 +1594,9 @@ def import_data():
                         equipment = Equipment()
                         is_update = False
                     
-                    # Map CSV columns to database fields - handle both new and legacy formats
+                    # Map CSV columns to database fields - match export format
                     # Equipment Class
-                    eq_class_val = row.get('Equipment Class') or row.get('eq_class')
+                    eq_class_val = row.get('equipment_class') or row.get('Equipment Class') or row.get('eq_class')
                     if eq_class_val and str(eq_class_val).strip():
                         class_name = str(eq_class_val).strip()
                         equipment_class = EquipmentClass.query.filter_by(name=class_name).first()
@@ -1608,7 +1607,7 @@ def import_data():
                         equipment.class_id = equipment_class.id
                     
                     # Equipment Subclass
-                    eq_subclass_val = row.get('Equipment Subclass') or row.get('eq_subclass')
+                    eq_subclass_val = row.get('equipment_subclass') or row.get('Equipment Subclass') or row.get('eq_subclass')
                     if eq_subclass_val and str(eq_subclass_val).strip():
                         subclass_name = str(eq_subclass_val).strip()
                         equipment_subclass = EquipmentSubclass.query.filter_by(name=subclass_name).first()
@@ -1619,7 +1618,7 @@ def import_data():
                         equipment.subclass_id = equipment_subclass.id
                     
                     # Manufacturer
-                    eq_manu_val = row.get('Manufacturer') or row.get('eq_manu')
+                    eq_manu_val = row.get('manufacturer') or row.get('Manufacturer') or row.get('eq_manu')
                     if eq_manu_val and str(eq_manu_val).strip():
                         manu_name = str(eq_manu_val).strip()
                         manufacturer = Manufacturer.query.filter_by(name=manu_name).first()
@@ -1630,7 +1629,7 @@ def import_data():
                         equipment.manufacturer_id = manufacturer.id
                     
                     # Department
-                    eq_dept_val = row.get('Department') or row.get('eq_dept')
+                    eq_dept_val = row.get('department') or row.get('Department') or row.get('eq_dept')
                     if eq_dept_val and str(eq_dept_val).strip():
                         dept_name = str(eq_dept_val).strip()
                         department = Department.query.filter_by(name=dept_name).first()
