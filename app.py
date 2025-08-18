@@ -2265,6 +2265,9 @@ def import_compliance():
                         
                         if not test_id or pd.isna(test_id):
                             db.session.add(test)
+                        else:
+                            # For existing tests, make sure they're tracked by the session
+                            db.session.merge(test)
                         imported_count += 1
                         
                     except Exception as e:
@@ -2296,6 +2299,117 @@ def import_compliance():
                          form=form,
                          performed_by_personnel=performed_by_personnel,
                          reviewed_by_personnel=reviewed_by_personnel)
+
+@app.route('/export-facilities')
+@login_required
+@admin_required
+def export_facilities():
+    facilities = Facility.query.filter_by(is_active=True).all()
+    
+    # Create CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    headers = ['id', 'name', 'address', 'is_active']
+    writer.writerow(headers)
+    
+    # Write data
+    for facility in facilities:
+        writer.writerow([
+            facility.id,
+            facility.name,
+            facility.address or '',
+            facility.is_active
+        ])
+    
+    # Create response
+    output.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'facilities_export_{timestamp}.csv'
+    
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+@app.route('/import-facilities', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def import_facilities():
+    if request.method == 'POST':
+        file = request.files.get('csv_file')
+        
+        if file and file.filename.endswith('.csv'):
+            try:
+                # Read CSV
+                df = pd.read_csv(file)
+                
+                # Expected columns
+                required_columns = ['name']
+                optional_columns = ['id', 'address', 'is_active']
+                
+                # Check required columns
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                if missing_columns:
+                    flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+                    return redirect(request.url)
+                
+                # Process each row
+                imported_count = 0
+                error_count = 0
+                
+                for index, row in df.iterrows():
+                    try:
+                        # Check if facility exists by ID or name
+                        facility_id = row.get('id')
+                        name = row['name']
+                        
+                        facility = None
+                        if facility_id and not pd.isna(facility_id):
+                            facility = Facility.query.get(int(facility_id))
+                        
+                        if not facility:
+                            # Check by name to avoid duplicates
+                            facility = Facility.query.filter_by(name=name).first()
+                        
+                        if not facility:
+                            # Create new facility
+                            facility = Facility()
+                            if facility_id and not pd.isna(facility_id):
+                                facility.id = int(facility_id)
+                            is_new = True
+                        else:
+                            is_new = False
+                        
+                        # Set fields
+                        facility.name = name
+                        facility.address = row.get('address', '')
+                        facility.is_active = True if row.get('is_active', 'TRUE').upper() == 'TRUE' else False
+                        
+                        if is_new:
+                            db.session.add(facility)
+                        imported_count += 1
+                        
+                    except Exception as e:
+                        error_count += 1
+                        print(f"Error processing facility row {index + 1}: {str(e)}")
+                        continue
+                
+                # Commit all changes
+                db.session.commit()
+                
+                flash(f'Successfully imported {imported_count} facilities. {error_count} errors.', 'success')
+                return redirect(url_for('admin_facilities'))
+                
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error processing file: {str(e)}', 'error')
+        else:
+            flash('Please select a CSV file', 'error')
+    
+    return render_template('import_facilities.html')
 
 # Admin Routes
 @app.route('/admin')

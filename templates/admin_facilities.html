@@ -11,6 +11,12 @@
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Admin
                 </a>
+                <a href="{{ url_for('export_facilities') }}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+                <a href="{{ url_for('import_facilities') }}" class="btn btn-info">
+                    <i class="fas fa-upload"></i> Import CSV
+                </a>
                 <a href="{{ url_for('admin_add_facility') }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Add Facility
                 </a>
