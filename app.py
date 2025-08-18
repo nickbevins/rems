@@ -2328,11 +2328,11 @@ def export_facilities():
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'facilities_export_{timestamp}.csv'
     
-    return Response(
-        output.getvalue(),
-        mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename={filename}'}
-    )
+    response = make_response(output.getvalue())
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv'
+    
+    return response
 
 @app.route('/import-facilities', methods=['GET', 'POST'])
 @login_required
