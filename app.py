@@ -59,6 +59,30 @@ def init_db():
 # Call init_db when the module is loaded
 init_db()
 
+# Create default admin user if none exists
+def create_default_admin():
+    """Create default admin user if database is empty"""
+    try:
+        with app.app_context():
+            if Personnel.query.count() == 0:
+                admin_user = Personnel(
+                    name='Admin User',
+                    email='admin@rems.com',
+                    username='admin',
+                    is_admin=True,
+                    is_active=True,
+                    roles='admin'
+                )
+                admin_user.set_password('password123')
+                db.session.add(admin_user)
+                db.session.commit()
+                print("Default admin user created: admin/password123")
+    except Exception as e:
+        print(f"Error creating default admin: {e}")
+
+# Create default admin after database initialization
+create_default_admin()
+
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
