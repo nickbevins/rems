@@ -1559,13 +1559,13 @@ def import_data():
                 updated_count = 0
                 skipped_count = 0
                 for index, row in df.iterrows():
-                    try:
-                        # Skip completely empty rows
-                        if row.isna().all():
-                            skipped_count += 1
-                            continue
-                        
-                        # Check if equipment with this ID already exists
+                    # Skip completely empty rows
+                    if row.isna().all():
+                        print(f"Skipping empty row {index + 1}")
+                        skipped_count += 1
+                        continue
+                    
+                    # Check if equipment with this ID already exists
                     eq_id = row.get('eq_id')
                     if pd.notna(eq_id) and eq_id != '':
                         try:
@@ -1731,21 +1731,15 @@ def import_data():
                             except:
                                 pass
                     
-                        equipment.eq_acrsite = row.get('eq_acrsite')
-                        equipment.eq_acrunit = row.get('eq_acrunit')
-                        equipment.eq_notes = row.get('eq_notes')
-                        
-                        if not is_update:
-                            db.session.add(equipment)
-                            imported_count += 1
-                        else:
-                            updated_count += 1
+                    equipment.eq_acrsite = row.get('eq_acrsite')
+                    equipment.eq_acrunit = row.get('eq_acrunit')
+                    equipment.eq_notes = row.get('eq_notes')
                     
-                    except Exception as row_error:
-                        # Log the specific row error and continue processing
-                        print(f"Error processing row {index + 1}: {row_error}")
-                        skipped_count += 1
-                        continue
+                    if not is_update:
+                        db.session.add(equipment)
+                        imported_count += 1
+                    else:
+                        updated_count += 1
                 
                 db.session.commit()
                 
