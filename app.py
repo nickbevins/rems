@@ -1925,9 +1925,11 @@ def export_personnel():
         
         writer.writerow(row)
     
-    # Create response
+    # Create response with timestamped filename
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'personnel_{timestamp}.csv'
     response = make_response(output.getvalue())
-    response.headers['Content-Disposition'] = 'attachment; filename=personnel.csv'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     response.headers['Content-Type'] = 'text/csv'
     
     return response
@@ -1959,26 +1961,45 @@ def import_personnel():
             
             for index, row in df.iterrows():
                 try:
-                    # Check if personnel already exists by ID
+                    # Check if personnel already exists by ID or email
                     personnel_id = row.get('id')
+                    email = row['email']
+                    
+                    # Don't overwrite existing users - check by ID first, then email
+                    personnel = None
                     if personnel_id and not pd.isna(personnel_id):
                         personnel = Personnel.query.get(int(personnel_id))
-                        if not personnel:
-                            # Create new personnel with specified ID
-                            personnel = Personnel()
-                            personnel.id = int(personnel_id)
-                    else:
-                        # Create new personnel (auto-assign ID)
+                    
+                    if not personnel:
+                        # Check by email to avoid duplicates
+                        personnel = Personnel.query.filter_by(email=email).first()
+                    
+                    if not personnel:
+                        # Create new personnel only if doesn't exist
                         personnel = Personnel()
+                        if personnel_id and not pd.isna(personnel_id):
+                            personnel.id = int(personnel_id)
                     
                     # Set basic fields
                     personnel.name = row['name']
                     personnel.email = row['email']
                     personnel.phone = row.get('phone', '')
-                    personnel.roles = row.get('roles', '')
+                    
+                    # Handle roles - check for both formats (comma-separated OR individual columns)
+                    if 'roles' in row and not pd.isna(row['roles']):
+                        # Simple comma-separated format
+                        personnel.roles = row['roles']
+                    else:
+                        # Individual role columns (TRUE/FALSE format from export)
+                        role_list = []
+                        all_roles = ['admin', 'contact', 'supervisor', 'physician', 'physicist', 'physics_assistant', 'qa_technologist']
+                        for role in all_roles:
+                            if role in row and str(row[role]).upper() == 'TRUE':
+                                role_list.append(role)
+                        personnel.roles = ', '.join(role_list)
                     
                     # Set default login credentials for NEW users only
-                    is_new_user = not personnel.id or Personnel.query.get(personnel.id) is None
+                    is_new_user = personnel.id is None
                     
                     if not personnel.username:
                         # Create username from email (part before @)
