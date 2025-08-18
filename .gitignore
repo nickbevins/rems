@@ -57,3 +57,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Helper scripts (keep local only)
+scripts/
+reset_passwords.py
+list_users.py
