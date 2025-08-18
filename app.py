@@ -631,10 +631,12 @@ init_db()
 
 # Create default admin user if none exists
 def create_default_admin():
-    """Create default admin user if database is empty"""
+    """Create default admin user if no admin exists"""
     try:
         with app.app_context():
-            if Personnel.query.count() == 0:
+            # Check if any admin user exists (don't create if we already have admins)
+            admin_exists = Personnel.query.filter_by(is_admin=True).first() is not None
+            if not admin_exists:
                 admin_user = Personnel(
                     name='Admin User',
                     email='admin@rems.com',
