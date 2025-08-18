@@ -43,9 +43,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 # Use persistent database path for production
 if 'RENDER' in os.environ:
-    # On Render, store database in persistent location
-    db_path = '/opt/render/project/src/instance/physdb.db'
-    os.makedirs('/opt/render/project/src/instance', exist_ok=True)
+    # On Render, use persistent disk mount point
+    db_path = '/mnt/data/physdb.db'
+    os.makedirs('/mnt/data', exist_ok=True)
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 else:
     # Local development - use instance folder
