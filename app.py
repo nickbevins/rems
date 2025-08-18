@@ -639,12 +639,11 @@ init_db()
 
 # Create default admin user if none exists
 def create_default_admin():
-    """Create default admin user if no admin exists"""
+    """Create default admin user if no users exist at all"""
     try:
         with app.app_context():
-            # Check if any admin user exists (don't create if we already have admins)
-            admin_exists = Personnel.query.filter_by(is_admin=True).first() is not None
-            if not admin_exists:
+            # Only create admin if database is completely empty
+            if Personnel.query.count() == 0:
                 admin_user = Personnel(
                     name='Admin User',
                     email='admin@rems.com',
@@ -657,6 +656,8 @@ def create_default_admin():
                 db.session.add(admin_user)
                 db.session.commit()
                 print("Default admin user created: admin/password123")
+            else:
+                print("Personnel exist - skipping default admin creation")
     except Exception as e:
         print(f"Error creating default admin: {e}")
 
@@ -1662,9 +1663,9 @@ def import_data():
                             db.session.flush()
                         equipment.facility_id = facility.id
                     
-                    # Contact Personnel
-                    contact_val = row.get('Primary Contact') or row.get('eq_contact')
-                    contact_email_val = row.get('Contact Email') or row.get('eq_contactinfo')
+                    # Contact Personnel (match export format)
+                    contact_val = row.get('contact_person') or row.get('Primary Contact') or row.get('eq_contact')
+                    contact_email_val = row.get('contact_email') or row.get('Contact Email') or row.get('eq_contactinfo')
                     if contact_val and str(contact_val).strip():
                         contact_name = str(contact_val).strip()
                         contact_email = str(contact_email_val).strip() if contact_email_val else ''
@@ -1674,6 +1675,32 @@ def import_data():
                             db.session.add(contact)
                             db.session.flush()
                         equipment.contact_id = contact.id
+                    
+                    # Supervisor Personnel (match export format)
+                    supervisor_val = row.get('supervisor') or row.get('eq_sup')
+                    supervisor_email_val = row.get('supervisor_email') or row.get('eq_supinfo')
+                    if supervisor_val and str(supervisor_val).strip():
+                        supervisor_name = str(supervisor_val).strip()
+                        supervisor_email = str(supervisor_email_val).strip() if supervisor_email_val else ''
+                        supervisor = Personnel.query.filter_by(name=supervisor_name).first()
+                        if not supervisor:
+                            supervisor = Personnel(name=supervisor_name, email=supervisor_email if supervisor_email else None)
+                            db.session.add(supervisor)
+                            db.session.flush()
+                        equipment.supervisor_id = supervisor.id
+                    
+                    # Physician Personnel (match export format)
+                    physician_val = row.get('physician') or row.get('eq_physician')
+                    physician_email_val = row.get('physician_email') or row.get('eq_physicianinfo')
+                    if physician_val and str(physician_val).strip():
+                        physician_name = str(physician_val).strip()
+                        physician_email = str(physician_email_val).strip() if physician_email_val else ''
+                        physician = Personnel.query.filter_by(name=physician_name).first()
+                        if not physician:
+                            physician = Personnel(name=physician_name, email=physician_email if physician_email else None)
+                            db.session.add(physician)
+                            db.session.flush()
+                        equipment.physician_id = physician.id
                     
                     # Model and Room - direct fields
                     equipment.eq_mod = row.get('eq_mod')
@@ -2149,9 +2176,11 @@ def import_compliance():
                         
                         # Set fields
                         eq_id = int(row['eq_id'])
-                        if not Equipment.query.get(eq_id):
+                        equipment = Equipment.query.get(eq_id)
+                        if not equipment:
                             error_count += 1
-                            print(f"Row {index + 1}: Equipment ID {eq_id} not found in database")
+                            available_ids = [str(eq.eq_id) for eq in Equipment.query.all()]
+                            print(f"Row {index + 1}: Equipment ID {eq_id} not found. Available equipment IDs: {', '.join(available_ids[:10])}")
                             continue
                         
                         test.eq_id = eq_id
