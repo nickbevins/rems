@@ -2143,7 +2143,7 @@ def import_compliance():
                         eq_id = int(row['eq_id'])
                         if not Equipment.query.get(eq_id):
                             error_count += 1
-                            print(f"Error: Equipment ID {eq_id} not found")
+                            print(f"Row {index + 1}: Equipment ID {eq_id} not found in database")
                             continue
                         
                         test.eq_id = eq_id
@@ -2186,8 +2186,7 @@ def import_compliance():
                         
                         if not test_id or pd.isna(test_id):
                             db.session.add(test)
-                        
-                        imported_count += 1
+                            imported_count += 1
                         
                     except Exception as e:
                         error_count += 1
