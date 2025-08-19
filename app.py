@@ -80,8 +80,20 @@ def check_and_migrate_db():
                 # Add the missing column with default value False
                 with db.engine.connect() as conn:
                     conn.execute(db.text("ALTER TABLE personnel ADD COLUMN login_required BOOLEAN DEFAULT 0"))
+                    # Update existing users who have username and password to login_required=True
+                    conn.execute(db.text("UPDATE personnel SET login_required = 1 WHERE username IS NOT NULL AND username != '' AND password_hash IS NOT NULL AND password_hash != ''"))
                     conn.commit()
-                print("Successfully added login_required column")
+                print("Successfully added login_required column and updated existing users")
+            else:
+                # Column exists - check if we need to update existing users
+                # This handles the case where column was added but users weren't updated
+                with db.engine.connect() as conn:
+                    result = conn.execute(db.text("SELECT COUNT(*) FROM personnel WHERE username IS NOT NULL AND username != '' AND password_hash IS NOT NULL AND password_hash != '' AND login_required = 0")).fetchone()
+                    if result[0] > 0:
+                        print(f"Updating {result[0]} existing users to have login_required=True...")
+                        conn.execute(db.text("UPDATE personnel SET login_required = 1 WHERE username IS NOT NULL AND username != '' AND password_hash IS NOT NULL AND password_hash != '' AND login_required = 0"))
+                        conn.commit()
+                        print("Successfully updated existing users")
             
             # Check if submission_date column exists in compliance_tests table  
             if inspector.has_table('compliance_tests'):
