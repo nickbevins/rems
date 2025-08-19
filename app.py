@@ -66,6 +66,36 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# Database migration functions
+def check_and_migrate_db():
+    """Check database schema and apply migrations if needed"""
+    try:
+        with app.app_context():
+            # Check if login_required column exists in personnel table
+            inspector = db.inspect(db.engine)
+            personnel_columns = [col['name'] for col in inspector.get_columns('personnel')]
+            
+            if 'login_required' not in personnel_columns:
+                print("Adding login_required column to personnel table...")
+                # Add the missing column with default value False
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("ALTER TABLE personnel ADD COLUMN login_required BOOLEAN DEFAULT 0"))
+                    conn.commit()
+                print("Successfully added login_required column")
+            
+            # Check if submission_date column exists in compliance_tests table  
+            if inspector.has_table('compliance_tests'):
+                compliance_columns = [col['name'] for col in inspector.get_columns('compliance_tests')]
+                if 'submission_date' not in compliance_columns:
+                    print("Adding submission_date column to compliance_tests table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE compliance_tests ADD COLUMN submission_date DATE"))
+                        conn.commit()
+                    print("Successfully added submission_date column")
+                    
+    except Exception as e:
+        print(f"Error during database migration: {e}")
+
 # Initialize database tables
 def init_db():
     """Initialize database tables if they don't exist"""
@@ -73,6 +103,8 @@ def init_db():
         with app.app_context():
             db.create_all()
             print("Database tables created successfully")
+            # Run migrations after creating tables
+            check_and_migrate_db()
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
@@ -678,6 +710,7 @@ def create_default_admin():
                     username='admin',
                     is_admin=True,
                     is_active=True,
+                    login_required=True,
                     roles='admin'
                 )
                 admin_user.set_password('password123')
@@ -2912,9 +2945,18 @@ def admin_delete_manufacturer(mfr_id):
     flash('Manufacturer deactivated', 'success')
     return redirect(url_for('admin_manufacturers'))
 
+# Auto-initialize database on import (for production)
+try:
+    with app.app_context():
+        db.create_all()
+        check_and_migrate_db()
+except Exception as e:
+    print(f"Database initialization error: {e}")
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        check_and_migrate_db()
     # Only run debug mode in development
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     port = int(os.environ.get('PORT', 5000))
