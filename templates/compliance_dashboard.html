@@ -19,6 +19,74 @@
             </div>
         </div>
         
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-filter"></i> Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" id="filterForm" class="row g-3">
+                    <!-- Preserve days parameter -->
+                    <input type="hidden" name="days" value="{{ days_ahead }}">
+                    
+                    <!-- First row: Dropdown filters -->
+                    <div class="col-md-3">
+                        <label for="eq_class" class="form-label">Equipment Class</label>
+                        <select name="eq_class" id="eq_class" class="form-select auto-filter">
+                            <option value="">All Classes</option>
+                            {% for class_name in classes %}
+                                <option value="{{ class_name }}" {% if eq_class == class_name %}selected{% endif %}>
+                                    {{ class_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="eq_subclass" class="form-label">Subclass</label>
+                        <select name="eq_subclass" id="eq_subclass" class="form-select auto-filter">
+                            <option value="">All Subclasses</option>
+                            {% for subclass in subclasses %}
+                                <option value="{{ subclass }}" {% if eq_subclass == subclass %}selected{% endif %}>
+                                    {{ subclass }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="eq_fac" class="form-label">Facility</label>
+                        <select name="eq_fac" id="eq_fac" class="form-select auto-filter">
+                            <option value="">All Facilities</option>
+                            {% for facility in facilities %}
+                                <option value="{{ facility }}" {% if eq_fac == facility %}selected{% endif %}>
+                                    {{ facility }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" name="search" id="search" class="form-control" 
+                               placeholder="Search equipment..." 
+                               value="{{ search }}">
+                    </div>
+                </form>
+                
+                <!-- Clear button and results count -->
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted">
+                            Showing {{ overdue_tests|length + upcoming_tests|length + scheduled_tests|length }} total compliance items
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Statistics Cards -->
         <div class="row mb-4">
             <div class="col-md-4">
@@ -352,6 +420,72 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-filter functionality
+    const autoFilterElements = document.querySelectorAll('.auto-filter');
+    const searchInput = document.getElementById('search');
+    
+    autoFilterElements.forEach(element => {
+        element.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+    
+    // Handle search input with Enter key
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    }
+    
+    // Cascading filter: Update subclasses when class changes
+    const classSelect = document.getElementById('eq_class');
+    const subclassSelect = document.getElementById('eq_subclass');
+    const currentSubclass = '{{ eq_subclass }}';
+    
+    function updateSubclasses() {
+        const selectedClass = classSelect.value;
+        const url = selectedClass ? '/api/subclasses?eq_class=' + encodeURIComponent(selectedClass) : '/api/subclasses';
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(subclasses => {
+                // Clear existing options
+                subclassSelect.innerHTML = '<option value="">All Subclasses</option>';
+                
+                // Add new options
+                subclasses.forEach(subclass => {
+                    const option = document.createElement('option');
+                    option.value = subclass;
+                    option.textContent = subclass;
+                    
+                    // Maintain selection if it's still valid
+                    if (subclass === currentSubclass) {
+                        option.selected = true;
+                    }
+                    
+                    subclassSelect.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading subclasses:', error);
+            });
+    }
+    
+    // Update subclasses when class changes
+    if (classSelect && subclassSelect) {
+        classSelect.addEventListener('change', function() {
+            updateSubclasses();
+            // Clear subclass selection when class changes
+            subclassSelect.value = '';
+        });
+        
+        // Initial load - update subclasses for current class selection
+        if (classSelect.value) {
+            updateSubclasses();
+        }
+    }
     // Add sorting functionality to all tables
     const tables = ['overdueTable', 'upcomingTable', 'scheduledTable'];
     
@@ -494,5 +628,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Clear all filters
+function clearFilters() {
+    const form = document.getElementById('filterForm');
+    const inputs = form.querySelectorAll('input:not([type="hidden"]), select');
+    
+    inputs.forEach(input => {
+        if (input.type !== 'hidden') {
+            input.value = '';
+        }
+    });
+    
+    // Submit form to clear filters
+    form.submit();
+}
 </script>
 {% endblock %}

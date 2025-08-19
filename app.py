@@ -1043,6 +1043,12 @@ def compliance_dashboard():
     upcoming_tests = []
     scheduled_tests = []
     
+    # Get filter parameters from query string
+    eq_class = request.args.get('eq_class', '').strip()
+    eq_subclass = request.args.get('eq_subclass', '').strip()
+    eq_fac = request.args.get('eq_fac', '').strip()
+    search = request.args.get('search', '').strip()
+    
     # Get days parameter from query string, default to 90
     try:
         days_ahead = int(request.args.get('days', 90))
@@ -1051,9 +1057,9 @@ def compliance_dashboard():
     except (ValueError, TypeError):
         days_ahead = 90
     
-    # Get all active equipment (not retired and not past retirement date)
+    # Build base query for active equipment (not retired and not past retirement date)
     from sqlalchemy import and_, or_
-    active_equipment = Equipment.query.filter(
+    query = Equipment.query.filter(
         and_(
             Equipment.eq_retired == False,
             or_(
@@ -1061,7 +1067,78 @@ def compliance_dashboard():
                 Equipment.eq_retdate > today
             )
         )
-    ).all()
+    )
+    
+    # Apply filters
+    if eq_class:
+        # Filter by equipment class name or relationship
+        query = query.join(EquipmentClass, isouter=True).filter(
+            or_(
+                EquipmentClass.name.ilike(f'%{eq_class}%'),
+                Equipment.eq_class.ilike(f'%{eq_class}%')
+            )
+        )
+    
+    if eq_subclass:
+        # Filter by equipment subclass name or relationship  
+        query = query.join(EquipmentSubclass, isouter=True).filter(
+            or_(
+                EquipmentSubclass.name.ilike(f'%{eq_subclass}%'),
+                Equipment.eq_subclass.ilike(f'%{eq_subclass}%')
+            )
+        )
+    
+    if eq_fac:
+        # Filter by facility name or relationship
+        query = query.join(Facility, isouter=True).filter(
+            or_(
+                Facility.name.ilike(f'%{eq_fac}%'),
+                Equipment.eq_fac.ilike(f'%{eq_fac}%')
+            )
+        )
+    
+    if search:
+        # Free text search across multiple fields
+        search_term = f'%{search}%'
+        query = query.outerjoin(EquipmentClass).outerjoin(Manufacturer).outerjoin(Department).outerjoin(Facility).filter(
+            or_(
+                Equipment.eq_class.ilike(search_term),
+                Equipment.eq_manu.ilike(search_term),
+                Equipment.eq_mod.ilike(search_term),
+                Equipment.eq_dept.ilike(search_term),
+                Equipment.eq_rm.ilike(search_term),
+                Equipment.eq_fac.ilike(search_term),
+                Equipment.eq_assetid.ilike(search_term),
+                Equipment.eq_sn.ilike(search_term),
+                EquipmentClass.name.ilike(search_term),
+                Manufacturer.name.ilike(search_term),
+                Department.name.ilike(search_term),
+                Facility.name.ilike(search_term)
+            )
+        )
+    
+    active_equipment = query.all()
+    
+    # Get filter choices for dropdowns
+    classes = db.session.query(Equipment.eq_class).distinct().filter(Equipment.eq_class.isnot(None)).order_by(Equipment.eq_class).all()
+    classes = [c[0] for c in classes if c[0]]
+    
+    subclasses = []
+    if eq_class:
+        subclasses = db.session.query(Equipment.eq_subclass).join(EquipmentClass, isouter=True).filter(
+            or_(
+                EquipmentClass.name.ilike(f'%{eq_class}%'),
+                Equipment.eq_class.ilike(f'%{eq_class}%')
+            ),
+            Equipment.eq_subclass.isnot(None)
+        ).distinct().order_by(Equipment.eq_subclass).all()
+        subclasses = [s[0] for s in subclasses if s[0]]
+    else:
+        subclasses = db.session.query(Equipment.eq_subclass).distinct().filter(Equipment.eq_subclass.isnot(None)).order_by(Equipment.eq_subclass).all()
+        subclasses = [s[0] for s in subclasses if s[0]]
+    
+    facilities = db.session.query(Equipment.eq_fac).distinct().filter(Equipment.eq_fac.isnot(None)).order_by(Equipment.eq_fac).all()
+    facilities = [f[0] for f in facilities if f[0]]
     
     # Check for scheduled tests (future test dates in ComplianceTest table)
     future_compliance_tests = ComplianceTest.query.filter(
@@ -1107,7 +1184,14 @@ def compliance_dashboard():
                          upcoming_tests=upcoming_tests,
                          scheduled_tests=scheduled_tests,
                          today=today,
-                         days_ahead=days_ahead)
+                         days_ahead=days_ahead,
+                         classes=classes,
+                         subclasses=subclasses,
+                         facilities=facilities,
+                         eq_class=eq_class,
+                         eq_subclass=eq_subclass,
+                         eq_fac=eq_fac,
+                         search=search)
 
 @app.route('/compliance/test/<int:eq_id>/new', methods=['GET', 'POST'])
 @login_required
