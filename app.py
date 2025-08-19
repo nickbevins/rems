@@ -1107,30 +1107,21 @@ def compliance_dashboard():
     
     # Apply filters
     if eq_class:
-        # Filter by equipment class name or relationship
+        # Filter by equipment class name
         query = query.join(EquipmentClass, isouter=True).filter(
-            or_(
-                EquipmentClass.name.ilike(f'%{eq_class}%'),
-                Equipment.eq_class.ilike(f'%{eq_class}%')
-            )
+            EquipmentClass.name.ilike(f'%{eq_class}%')
         )
     
     if eq_subclass:
-        # Filter by equipment subclass name or relationship  
+        # Filter by equipment subclass name
         query = query.join(EquipmentSubclass, isouter=True).filter(
-            or_(
-                EquipmentSubclass.name.ilike(f'%{eq_subclass}%'),
-                Equipment.eq_subclass.ilike(f'%{eq_subclass}%')
-            )
+            EquipmentSubclass.name.ilike(f'%{eq_subclass}%')
         )
     
     if eq_fac:
-        # Filter by facility name or relationship
+        # Filter by facility name
         query = query.join(Facility, isouter=True).filter(
-            or_(
-                Facility.name.ilike(f'%{eq_fac}%'),
-                Equipment.eq_fac.ilike(f'%{eq_fac}%')
-            )
+            Facility.name.ilike(f'%{eq_fac}%')
         )
     
     if search:
@@ -1138,12 +1129,8 @@ def compliance_dashboard():
         search_term = f'%{search}%'
         query = query.outerjoin(EquipmentClass).outerjoin(Manufacturer).outerjoin(Department).outerjoin(Facility).filter(
             or_(
-                Equipment.eq_class.ilike(search_term),
-                Equipment.eq_manu.ilike(search_term),
                 Equipment.eq_mod.ilike(search_term),
-                Equipment.eq_dept.ilike(search_term),
                 Equipment.eq_rm.ilike(search_term),
-                Equipment.eq_fac.ilike(search_term),
                 Equipment.eq_assetid.ilike(search_term),
                 Equipment.eq_sn.ilike(search_term),
                 EquipmentClass.name.ilike(search_term),
@@ -1156,24 +1143,23 @@ def compliance_dashboard():
     active_equipment = query.all()
     
     # Get filter choices for dropdowns
-    classes = db.session.query(Equipment.eq_class).distinct().filter(Equipment.eq_class.isnot(None)).order_by(Equipment.eq_class).all()
+    classes = db.session.query(EquipmentClass.name).join(Equipment).filter(EquipmentClass.is_active == True).distinct().order_by(EquipmentClass.name).all()
     classes = [c[0] for c in classes if c[0]]
     
     subclasses = []
     if eq_class:
-        subclasses = db.session.query(Equipment.eq_subclass).join(EquipmentClass, isouter=True).filter(
-            or_(
-                EquipmentClass.name.ilike(f'%{eq_class}%'),
-                Equipment.eq_class.ilike(f'%{eq_class}%')
-            ),
-            Equipment.eq_subclass.isnot(None)
-        ).distinct().order_by(Equipment.eq_subclass).all()
+        # Get subclasses for specific class
+        subclasses = db.session.query(EquipmentSubclass.name).join(Equipment).join(EquipmentClass).filter(
+            EquipmentClass.name.ilike(f'%{eq_class}%'),
+            EquipmentSubclass.is_active == True
+        ).distinct().order_by(EquipmentSubclass.name).all()
         subclasses = [s[0] for s in subclasses if s[0]]
     else:
-        subclasses = db.session.query(Equipment.eq_subclass).distinct().filter(Equipment.eq_subclass.isnot(None)).order_by(Equipment.eq_subclass).all()
+        # Get all subclasses
+        subclasses = db.session.query(EquipmentSubclass.name).join(Equipment).filter(EquipmentSubclass.is_active == True).distinct().order_by(EquipmentSubclass.name).all()
         subclasses = [s[0] for s in subclasses if s[0]]
     
-    facilities = db.session.query(Equipment.eq_fac).distinct().filter(Equipment.eq_fac.isnot(None)).order_by(Equipment.eq_fac).all()
+    facilities = db.session.query(Facility.name).join(Equipment).filter(Facility.is_active == True).distinct().order_by(Facility.name).all()
     facilities = [f[0] for f in facilities if f[0]]
     
     # Check for scheduled tests (future test dates in ComplianceTest table)
