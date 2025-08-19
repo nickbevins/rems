@@ -2021,6 +2021,16 @@ def import_personnel():
             
             for index, row in df.iterrows():
                 try:
+                    # Skip completely empty rows
+                    if row.isna().all():
+                        print(f"Skipping empty row {index + 1}")
+                        continue
+                    
+                    # Skip rows with empty name or email (required fields)
+                    if pd.isna(row.get('name')) or pd.isna(row.get('email')) or str(row.get('name')).strip() == '' or str(row.get('email')).strip() == '':
+                        print(f"Skipping row {index + 1}: Missing name or email")
+                        continue
+                    
                     # Check if personnel already exists by ID or email
                     personnel_id = row.get('id')
                     email = row['email']
