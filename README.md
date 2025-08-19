@@ -1,6 +1,6 @@
-# Physics Database - Radiology Equipment Management System
+# REMS - Radiation Equipment Management System
 
-A comprehensive web-based application for managing radiology imaging equipment, compliance testing, and maintenance records.
+A comprehensive web-based application for managing radiology imaging equipment, compliance testing, personnel, and maintenance records.
 
 ## Features
 
@@ -9,23 +9,30 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 - **Asset Tracking**: Serial numbers, asset IDs, installation dates, and lifecycle information
 - **Location Management**: Track equipment across multiple facilities, departments, and rooms
 - **Contact Information**: Maintain contact details for equipment managers, supervisors, and physicians
+- **Reference Data**: Manage facilities, departments, manufacturers, and equipment classes
+
+### Personnel Management
+- **User Accounts**: Role-based access control with secure authentication
+- **Role Management**: Admin, physicist, supervisor, contact person, and other specialized roles
+- **Password Management**: Secure password reset and change functionality
+- **Import/Export**: Bulk personnel management with CSV files
 
 ### Compliance Testing
 - **Test Scheduling**: Automated scheduling based on equipment audit frequencies
 - **Compliance Dashboard**: View overdue and upcoming tests at a glance
-- **Test Recording**: Detailed test result documentation with pass/fail status
-- **Notification System**: Alerts for upcoming and overdue compliance tests
+- **Test Recording**: Detailed test result documentation with personnel tracking
+- **Personnel Integration**: Track who performed and reviewed each test
 
 ### Data Management
-- **CSV Import**: Bulk import equipment data from spreadsheets
+- **CSV Import/Export**: Bulk operations for equipment, personnel, compliance tests, and facilities
 - **Search & Filter**: Advanced filtering by equipment class, manufacturer, department, facility
-- **Export Functionality**: Export equipment lists and compliance reports
 - **Data Validation**: Ensure data integrity with built-in validation
+- **Relationship Management**: Proper handling of equipment-personnel-facility relationships
 
 ### User Interface
 - **Modern Web Interface**: Responsive design works on desktop and mobile devices
 - **Dashboard**: Real-time overview of equipment status and compliance
-- **Intuitive Forms**: Easy-to-use forms for adding and editing equipment
+- **Admin Interface**: Comprehensive management of reference data
 - **Advanced Search**: Find equipment quickly with multiple filter options
 
 ## Installation
@@ -65,25 +72,53 @@ A comprehensive web-based application for managing radiology imaging equipment, 
    # This will create the database tables automatically
    ```
 
-6. **Import Your Data**
-   - Access the web interface at `http://localhost:5000`
-   - Go to "Import Data" and upload your CSV file
-   - The system will automatically import your equipment data
+6. **Access the Application**
+   - Navigate to `http://localhost:5000`
+   - Default admin login: `admin` / `password123`
+   - Change the admin password immediately after first login
+
+## Production Deployment (Render.com)
+
+### Requirements
+- Render.com account with paid tier ($7+ for persistent storage)
+- GitHub repository with your code
+
+### Setup Steps
+1. **Create Render Web Service**
+   - Connect your GitHub repository
+   - Set build command: `pip install -r requirements.txt`
+   - Set start command: `gunicorn app:app`
+
+2. **Add Persistent Disk**
+   - In Render dashboard, go to your service
+   - Add disk with mount path: `/var/data`
+   - Size: 1GB minimum (can expand later)
+
+3. **Environment Variables**
+   - Set `RENDER=true`
+   - Set `SECRET_KEY` to a secure random string
+   - Optionally set `DATABASE_URL` for PostgreSQL
+
+4. **Deploy and Import Data**
+   - Deploy the service
+   - Use CSV import features to load your data
+   - Data will persist across future deployments
 
 ## Usage
 
-### Starting the Application
+### Starting the Application (Local)
 ```bash
 python app.py
 ```
 
 Access the application at `http://localhost:5000`
 
-### Data Import
-1. Export your existing equipment data to CSV format
-2. Ensure column headers match the expected format (see template)
-3. Use the "Import Data" feature to upload your CSV file
-4. Verify the imported data in the equipment list
+### Data Import/Export
+1. **Facilities**: Import reference data first via Admin → Facilities
+2. **Personnel**: Import users via Personnel → Import Personnel
+3. **Equipment**: Import equipment data via Equipment → Import Data
+4. **Compliance Tests**: Import test records via Compliance → Import Tests
+5. **Export**: Download CSV files from any list view
 
 ### Equipment Management
 - **Add Equipment**: Use the "Add New Equipment" form
