@@ -92,7 +92,15 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <!-- Empty column for spacing -->
+                            <div class="mb-3">
+                                {{ form.submission_date.label(class="form-label") }}
+                                <span class="text-muted">(Optional)</span>
+                                {{ form.submission_date(class="form-control") }}
+                                {% for error in form.submission_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                <small class="form-text text-muted">Date submission was made to regulatory body</small>
+                            </div>
                         </div>
                     </div>
                     

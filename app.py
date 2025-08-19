@@ -349,6 +349,7 @@ class ComplianceTest(db.Model):
     test_type = db.Column(db.String(100), nullable=False)
     test_date = db.Column(db.Date, nullable=False)
     report_date = db.Column(db.Date, nullable=True)
+    submission_date = db.Column(db.Date, nullable=True)
     performed_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
     notes = db.Column(db.Text)
@@ -499,8 +500,18 @@ class EquipmentForm(FlaskForm):
     ], validators=[Optional()])
     eq_acrsite = StringField('ACR Site', validators=[Optional(), Length(max=100)])
     eq_acrunit = StringField('ACR Unit', validators=[Optional(), Length(max=100)])
-    eq_radcap = IntegerField('Radiology Owned (1=Yes, 0=No)', validators=[Optional()])
-    eq_capcat = IntegerField('Capital Cost Category (0=N/A, 1-3)', validators=[Optional()])
+    eq_radcap = SelectField('Radiology Owned', choices=[
+        ('', 'Select'),
+        (0, 'No'),
+        (1, 'Yes')
+    ], validators=[Optional()], coerce=lambda x: int(x) if x else None)
+    eq_capcat = SelectField('Capital Category', choices=[
+        ('', 'Select'),
+        (0, 'N/A'),
+        (1, 'Category 1'),
+        (2, 'Category 2'), 
+        (3, 'Category 3')
+    ], validators=[Optional()], coerce=lambda x: int(x) if x else None)
     eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
     eq_notes = TextAreaField('Notes', validators=[Optional()])
 
@@ -517,6 +528,7 @@ class ComplianceTestForm(FlaskForm):
     ], validators=[DataRequired()], default='Annual')
     test_date = DateField('Test Date', validators=[DataRequired()])
     report_date = DateField('Report Date', validators=[Optional()])
+    submission_date = DateField('Submission Date', validators=[Optional()])
     performed_by_id = SelectField('Performed By', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
     reviewed_by_id = SelectField('Reviewing Physicist', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
     notes = TextAreaField('Comments', validators=[Optional()])
@@ -2122,7 +2134,7 @@ def export_compliance():
     writer = csv.writer(output)
     
     # Write headers - use names instead of IDs for better usability
-    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
+    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
     writer.writerow(headers)
     
     # Write data
@@ -2144,6 +2156,7 @@ def export_compliance():
             test.test_type,
             test.test_date.strftime('%Y-%m-%d') if test.test_date else '',
             test.report_date.strftime('%Y-%m-%d') if test.report_date else '',
+            test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '',
             performed_by_name,
             reviewed_by_name,
             test.notes if test.notes else '',
@@ -2227,6 +2240,12 @@ def import_compliance():
                             test.report_date = pd.to_datetime(row['report_date']).date()
                         else:
                             test.report_date = None
+                        
+                        # Handle optional submission_date
+                        if 'submission_date' in row and not pd.isna(row['submission_date']) and row['submission_date']:
+                            test.submission_date = pd.to_datetime(row['submission_date']).date()
+                        else:
+                            test.submission_date = None
                         
                         # Handle performed_by (name or ID for backward compatibility)
                         performed_by_val = row.get('performed_by') or row.get('performed_by_id')

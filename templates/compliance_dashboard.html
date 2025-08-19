@@ -253,7 +253,7 @@
                                     <th class="sortable" data-column="test_type" style="width: 10%;">Test Type <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="test_date" style="width: 9%;">Due Date <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="days_until" style="width: 8%;">Days Until Due <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="created_by" style="width: 8%;">Created By <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="submission_date" style="width: 8%;">Submission Date <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="modified_by" style="width: 9%;">Modified By <i class="fas fa-sort"></i></th>
                                     <th style="width: 10%;">Actions</th>
                                 </tr>
@@ -269,7 +269,7 @@
                                     data-test-type="{{ test.get_test_type_display() }}" 
                                     data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}" 
                                     data-days-until="{{ days_until }}"
-                                    data-created-by="{{ test.created_by if test.created_by else '' }}"
+                                    data-submission-date="{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '' }}"
                                     data-modified-by="{{ test.modified_by if test.modified_by else '' }}">
                                     <td>
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else equipment.eq_class }}</div>
@@ -289,13 +289,7 @@
                                             <span class="badge bg-secondary">{{ days_until }} days</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% if test.created_by %}
-                                            <span class="badge bg-secondary" title="Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ test.created_by }}</span>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
+                                    <td>{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else 'N/A' }}</td>
                                     <td>
                                         {% if test.modified_by %}
                                             <span class="badge bg-secondary" title="Modified: {{ test.updated_at.strftime('%Y-%m-%d %H:%M') if test.updated_at else 'Unknown' }}">{{ test.modified_by }}</span>

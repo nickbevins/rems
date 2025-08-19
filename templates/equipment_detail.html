@@ -338,8 +338,8 @@
                                     <th class="sortable" data-column="reviewed_by">
                                         Reviewing Physicist <i class="fas fa-sort"></i>
                                     </th>
-                                    <th class="sortable" data-column="created_by">
-                                        Created By <i class="fas fa-sort"></i>
+                                    <th class="sortable" data-column="submission_date">
+                                        Submission Date <i class="fas fa-sort"></i>
                                     </th>
                                     <th class="sortable" data-column="modified_by">
                                         Modified By <i class="fas fa-sort"></i>
@@ -357,7 +357,7 @@
                                     data-report-date="{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else '' }}"
                                     data-performed-by="{{ test.performed_by.name if test.performed_by else '' }}"
                                     data-reviewed-by="{{ test.reviewed_by.name if test.reviewed_by else '' }}"
-                                    data-created-by="{{ test.created_by if test.created_by else '' }}"
+                                    data-submission-date="{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '' }}"
                                     data-modified-by="{{ test.modified_by if test.modified_by else '' }}"
                                     data-notes="{{ test.notes if test.notes else '' }}">
                                     <td>{{ test.get_test_type_display() }}</td>
@@ -365,13 +365,7 @@
                                     <td>{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else 'N/A' }}</td>
                                     <td>{{ test.performed_by.name if test.performed_by else 'N/A' }}</td>
                                     <td>{{ test.reviewed_by.name if test.reviewed_by else 'N/A' }}</td>
-                                    <td>
-                                        {% if test.created_by %}
-                                            <span class="badge bg-secondary" title="Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ test.created_by }}</span>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
+                                    <td>{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else 'N/A' }}</td>
                                     <td>
                                         {% if test.modified_by %}
                                             <span class="badge bg-secondary" title="Modified: {{ test.updated_at.strftime('%Y-%m-%d %H:%M') if test.updated_at else 'Unknown' }}">{{ test.modified_by }}</span>
