@@ -73,6 +73,9 @@
                                     <th class="sortable" data-column="roles">
                                         Roles <i class="fas fa-sort"></i>
                                     </th>
+                                    <th class="sortable" data-column="login_status">
+                                        Login Status <i class="fas fa-sort"></i>
+                                    </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -89,6 +92,17 @@
                                             {% endfor %}
                                         {% else %}
                                             -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if person.login_required %}
+                                            {% if person.username and person.password_hash %}
+                                                <span class="badge bg-success">Login Enabled</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Login Required (Not Configured)</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-secondary">Contact Only</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -256,6 +270,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (column === 'roles') {
                     aVal = a.querySelector('td:nth-child(4)').textContent.trim();
                     bVal = b.querySelector('td:nth-child(4)').textContent.trim();
+                } else if (column === 'login_status') {
+                    aVal = a.querySelector('td:nth-child(5)').textContent.trim();
+                    bVal = b.querySelector('td:nth-child(5)').textContent.trim();
                 }
                 
                 if (aVal === '-') aVal = '';

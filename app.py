@@ -267,6 +267,7 @@ class Personnel(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
+    login_required = db.Column(db.Boolean, default=False)  # True if this person needs login access
     last_login = db.Column(db.DateTime)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -338,7 +339,8 @@ class Personnel(UserMixin, db.Model):
             'roles': self.roles,
             'username': self.username,
             'is_active': self.is_active,
-            'is_admin': self.is_admin
+            'is_admin': self.is_admin,
+            'login_required': self.login_required
         }
 
 class ComplianceTest(db.Model):
@@ -546,6 +548,7 @@ class PersonnelForm(FlaskForm):
         ('qa_technologist', 'QA Technologist'),
         ('supervisor', 'Supervisor')
     ], validators=[DataRequired()])
+    login_required = BooleanField('Requires Login Access', default=False)
     username = StringField('Username', validators=[Optional(), Length(max=80)])
     password = PasswordField('Password', validators=[Optional(), Length(min=6)])
     is_admin = BooleanField('Admin User')
@@ -613,7 +616,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = Personnel.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data) and user.is_active:
+        if user and user.check_password(form.password.data) and user.is_active and user.login_required:
             login_user(user)
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -2059,7 +2062,7 @@ def export_personnel():
     writer = csv.writer(output)
     
     # Write headers - basic info plus each role as a column
-    headers = ['id', 'name', 'email', 'phone'] + all_roles
+    headers = ['id', 'name', 'email', 'phone', 'login_required'] + all_roles
     writer.writerow(headers)
     
     # Write data
@@ -2072,7 +2075,8 @@ def export_personnel():
             person.id,
             person.name,
             person.email,
-            person.phone
+            person.phone,
+            'TRUE' if person.login_required else 'FALSE'
         ]
         
         # Add true/false for each role
@@ -2103,7 +2107,7 @@ def import_personnel():
             
             # Expected columns
             required_columns = ['name', 'email']
-            optional_columns = ['id', 'phone', 'roles']
+            optional_columns = ['id', 'phone', 'login_required', 'roles']
             
             # Check required columns
             missing_columns = [col for col in required_columns if col not in df.columns]
@@ -2158,6 +2162,12 @@ def import_personnel():
                     personnel.name = row['name']
                     personnel.email = row['email']
                     personnel.phone = row.get('phone', '')
+                    
+                    # Handle login_required field
+                    if 'login_required' in row and not pd.isna(row['login_required']):
+                        personnel.login_required = str(row['login_required']).upper() == 'TRUE'
+                    else:
+                        personnel.login_required = False
                     
                     # Handle roles - check for both formats (comma-separated OR individual columns)
                     if 'roles' in row and not pd.isna(row['roles']):

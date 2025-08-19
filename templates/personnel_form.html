@@ -70,10 +70,18 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.login_required(class="form-check-input") }}
+                            {{ form.login_required.label(class="form-check-label") }}
+                            <small class="form-text text-muted">Check this if the person needs login access to the system</small>
+                        </div>
+                    </div>
+
                     <hr>
-                    <h5>Login Access</h5>
+                    <h5 id="loginAccessHeader">Login Access</h5>
                     
-                    <div class="row">
+                    <div class="row" id="loginAccessSection">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.username.label(class="form-label") }}
@@ -140,4 +148,28 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginRequiredCheckbox = document.getElementById('login_required');
+    const loginAccessHeader = document.getElementById('loginAccessHeader');
+    const loginAccessSection = document.getElementById('loginAccessSection');
+    
+    function toggleLoginAccess() {
+        if (loginRequiredCheckbox.checked) {
+            loginAccessHeader.style.display = 'block';
+            loginAccessSection.style.display = 'block';
+        } else {
+            loginAccessHeader.style.display = 'none';
+            loginAccessSection.style.display = 'none';
+        }
+    }
+    
+    // Initial toggle
+    toggleLoginAccess();
+    
+    // Toggle when checkbox changes
+    loginRequiredCheckbox.addEventListener('change', toggleLoginAccess);
+});
+</script>
 {% endblock %}
