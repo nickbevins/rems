@@ -96,8 +96,10 @@
                                     </td>
                                     <td>
                                         {% if person.login_required %}
-                                            {% if person.username and person.password_hash %}
+                                            {% if person.username and person.password_hash and person.is_active %}
                                                 <span class="badge bg-success">Login Enabled</span>
+                                            {% elif person.username and person.password_hash and not person.is_active %}
+                                                <span class="badge bg-danger">Login Disabled (Inactive)</span>
                                             {% else %}
                                                 <span class="badge bg-warning">Login Required (Not Configured)</span>
                                             {% endif %}
