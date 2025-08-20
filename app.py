@@ -227,14 +227,17 @@ class Equipment(db.Model):
     
     def get_next_due_date(self):
         """Get the next due date based on the most recent acceptance or annual test."""
-        from datetime import timedelta
+        from datetime import timedelta, datetime
         from dateutil.relativedelta import relativedelta
         import calendar
         
-        # Find the most recent acceptance or annual test
+        today = datetime.now().date()
+        
+        # Find the most recent acceptance or annual test (excluding future dates)
         latest_test = ComplianceTest.query.filter(
             ComplianceTest.eq_id == self.eq_id,
-            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
+            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual']),
+            ComplianceTest.test_date <= today
         ).order_by(ComplianceTest.test_date.desc()).first()
         
         if latest_test and self.eq_auditfreq:

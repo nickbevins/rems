@@ -132,9 +132,6 @@
                                     <th class="sortable" data-sort="eq_manu">
                                         Manufacturer <i class="fas fa-sort"></i>
                                     </th>
-                                    <th class="sortable" data-sort="eq_mod">
-                                        Model <i class="fas fa-sort"></i>
-                                    </th>
                                     <th class="sortable" data-sort="eq_dept">
                                         Department <i class="fas fa-sort"></i>
                                     </th>
@@ -143,6 +140,9 @@
                                     </th>
                                     <th class="sortable" data-sort="eq_fac">
                                         Facility <i class="fas fa-sort"></i>
+                                    </th>
+                                    <th class="sortable" data-sort="eq_mereg">
+                                        ME Registration <i class="fas fa-sort"></i>
                                     </th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -155,16 +155,21 @@
                                     data-eq-id="{{ eq.eq_id }}" style="cursor: pointer;" 
                                     title="Double-click to view details">
                                     <td>
-                                        <div class="fw-bold">{{ eq.equipment_class.name if eq.equipment_class else 'N/A' }}</div>
+                                        <div>{{ eq.equipment_class.name if eq.equipment_class else 'N/A' }}</div>
                                         {% if eq.equipment_subclass %}
-                                            <div class="text-muted">{{ eq.equipment_subclass.name }}</div>
+                                            <div>{{ eq.equipment_subclass.name }}</div>
                                         {% endif %}
                                     </td>
-                                    <td>{{ eq.manufacturer.name if eq.manufacturer else 'N/A' }}</td>
-                                    <td>{{ eq.eq_mod or 'N/A' }}</td>
+                                    <td>
+                                        <div>{{ eq.manufacturer.name if eq.manufacturer else 'N/A' }}</div>
+                                        {% if eq.eq_mod %}
+                                            <div>{{ eq.eq_mod }}</div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ eq.department.name if eq.department else 'N/A' }}</td>
                                     <td>{{ eq.eq_rm or 'N/A' }}</td>
                                     <td>{{ eq.facility.name if eq.facility else 'N/A' }}</td>
+                                    <td>{{ eq.eq_mereg or 'N/A' }}</td>
                                     <td>
                                         {% if is_retired %}
                                             <span class="badge bg-danger">Retired</span>
