@@ -157,13 +157,13 @@
                                     <td>
                                         <div>{{ eq.equipment_class.name if eq.equipment_class else 'N/A' }}</div>
                                         {% if eq.equipment_subclass %}
-                                            <div>{{ eq.equipment_subclass.name }}</div>
+                                            <div class="text-muted">{{ eq.equipment_subclass.name }}</div>
                                         {% endif %}
                                     </td>
                                     <td>
                                         <div>{{ eq.manufacturer.name if eq.manufacturer else 'N/A' }}</div>
                                         {% if eq.eq_mod %}
-                                            <div>{{ eq.eq_mod }}</div>
+                                            <div class="text-muted">{{ eq.eq_mod }}</div>
                                         {% endif %}
                                     </td>
                                     <td>{{ eq.department.name if eq.department else 'N/A' }}</td>
