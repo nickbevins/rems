@@ -902,12 +902,35 @@ def equipment_list():
     else:
         query = query.order_by(sort_column.asc())
     
-    equipment = query.paginate(
-        page=page, 
-        per_page=per_page, 
-        error_out=False,
-        max_per_page=100
-    )
+    # Handle pagination or show all
+    if request.args.get('show_all') == 'true':
+        # Get all items without pagination
+        all_equipment = query.all()
+        # Create a mock pagination object for template compatibility
+        equipment = type('MockPagination', (), {
+            'items': all_equipment,
+            'total': len(all_equipment),
+            'pages': 1,
+            'page': 1,
+            'has_prev': False,
+            'has_next': False,
+            'prev_num': None,
+            'next_num': None,
+            'iter_pages': lambda: [1]
+        })()
+    else:
+        # Validate per_page range
+        if per_page < 1:
+            per_page = 25
+        elif per_page > 1000:  # Reasonable maximum
+            per_page = 1000
+            
+        equipment = query.paginate(
+            page=page, 
+            per_page=per_page, 
+            error_out=False,
+            max_per_page=1000
+        )
     
     # Get values for filters from standardized lists
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()

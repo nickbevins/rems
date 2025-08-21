@@ -106,12 +106,34 @@
                         <span class="text-muted small ms-3">{{ equipment.total }} total results</span>
                     </div>
                     <div class="col-6 text-end">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input auto-filter" type="checkbox" name="include_retired" value="true" id="include_retired" form="filterForm"
-                                   {% if request.args.get('include_retired') == 'true' %}checked{% endif %}>
-                            <label class="form-check-label text-muted small" for="include_retired">
-                                Include retired equipment
-                            </label>
+                        <div class="d-flex align-items-center justify-content-end gap-3">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input auto-filter" type="checkbox" name="include_retired" value="true" id="include_retired" form="filterForm"
+                                       {% if request.args.get('include_retired') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label text-muted small" for="include_retired">
+                                    Include retired equipment
+                                </label>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <label for="per_page" class="form-label text-muted small mb-0 me-2">Show:</label>
+                                <select name="per_page" id="per_page" class="form-select form-select-sm auto-filter" style="width: auto;" form="filterForm">
+                                    <option value="25" {% if request.args.get('per_page', '25') == '25' %}selected{% endif %}>25</option>
+                                    <option value="50" {% if request.args.get('per_page') == '50' %}selected{% endif %}>50</option>
+                                    <option value="100" {% if request.args.get('per_page') == '100' %}selected{% endif %}>100</option>
+                                    <option value="200" {% if request.args.get('per_page') == '200' %}selected{% endif %}>200</option>
+                                </select>
+                            </div>
+                            <div>
+                                {% if request.args.get('show_all') == 'true' %}
+                                    <a href="{{ url_for('equipment_list', **request.args) | replace('&show_all=true', '') | replace('show_all=true&', '') | replace('show_all=true', '') }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-list"></i> Paginate
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('equipment_list', show_all='true', **request.args) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Show All
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +191,12 @@
                                     <td>{{ eq.department.name if eq.department else 'N/A' }}</td>
                                     <td>{{ eq.eq_rm or 'N/A' }}</td>
                                     <td>{{ eq.facility.name if eq.facility else 'N/A' }}</td>
-                                    <td>{{ eq.eq_mereg or 'N/A' }}</td>
+                                    <td>
+                                        <div>{{ eq.eq_mereg or 'N/A' }}</div>
+                                        {% if eq.eq_mefac %}
+                                            <div class="text-muted">{{ eq.eq_mefac }}</div>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if is_retired %}
                                             <span class="badge bg-danger">Retired</span>
@@ -202,12 +229,12 @@
                     </div>
                     
                     <!-- Pagination -->
-                    {% if equipment.pages > 1 %}
+                    {% if equipment.pages > 1 and request.args.get('show_all') != 'true' %}
                     <nav aria-label="Equipment pagination">
                         <ul class="pagination justify-content-center">
                             {% if equipment.has_prev %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('equipment_list', page=equipment.prev_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order')) }}">Previous</a>
+                                    <a class="page-link" href="{{ url_for('equipment_list', page=equipment.prev_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order'), per_page=request.args.get('per_page')) }}">Previous</a>
                                 </li>
                             {% endif %}
                             
@@ -215,7 +242,7 @@
                                 {% if page_num %}
                                     {% if page_num != equipment.page %}
                                         <li class="page-item">
-                                            <a class="page-link" href="{{ url_for('equipment_list', page=page_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order')) }}">{{ page_num }}</a>
+                                            <a class="page-link" href="{{ url_for('equipment_list', page=page_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order'), per_page=request.args.get('per_page')) }}">{{ page_num }}</a>
                                         </li>
                                     {% else %}
                                         <li class="page-item active">
@@ -231,11 +258,17 @@
                             
                             {% if equipment.has_next %}
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('equipment_list', page=equipment.next_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order')) }}">Next</a>
+                                    <a class="page-link" href="{{ url_for('equipment_list', page=equipment.next_num, search=request.args.get('search'), eq_class=request.args.get('eq_class'), eq_subclass=request.args.get('eq_subclass'), eq_manu=request.args.get('eq_manu'), eq_dept=request.args.get('eq_dept'), eq_fac=request.args.get('eq_fac'), include_retired=request.args.get('include_retired'), sort=request.args.get('sort'), order=request.args.get('order'), per_page=request.args.get('per_page')) }}">Next</a>
                                 </li>
                             {% endif %}
                         </ul>
                     </nav>
+                    {% endif %}
+                    
+                    {% if request.args.get('show_all') == 'true' %}
+                    <div class="text-center text-muted mt-3">
+                        <small>Showing all {{ equipment.total }} items</small>
+                    </div>
                     {% endif %}
                 {% else %}
                     <div class="text-center py-4">
