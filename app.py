@@ -2264,50 +2264,61 @@ def import_personnel():
 
 @app.route('/export-compliance')
 def export_compliance():
-    compliance_tests = ComplianceTest.query.all()
+    # Check if this is a request for sample template
+    sample = request.args.get('sample', 'false').lower() == 'true'
     
     # Create CSV data
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write headers - use names instead of IDs for better usability
-    headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
-    writer.writerow(headers)
-    
-    # Write data
-    for test in compliance_tests:
-        # Get personnel names from IDs
-        performed_by_name = ''
-        if test.performed_by_id:
-            performed_by = Personnel.query.get(test.performed_by_id)
-            performed_by_name = performed_by.name if performed_by else ''
-            
-        reviewed_by_name = ''
-        if test.reviewed_by_id:
-            reviewed_by = Personnel.query.get(test.reviewed_by_id)
-            reviewed_by_name = reviewed_by.name if reviewed_by else ''
+    if sample:
+        # For sample template, use simplified headers matching import requirements
+        headers = ['eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes']
+        writer.writerow(headers)
         
-        writer.writerow([
-            test.test_id,
-            test.eq_id,
-            test.test_type,
-            test.test_date.strftime('%Y-%m-%d') if test.test_date else '',
-            test.report_date.strftime('%Y-%m-%d') if test.report_date else '',
-            test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '',
-            performed_by_name,
-            reviewed_by_name,
-            test.notes if test.notes else '',
-            test.created_by if test.created_by else '',
-            test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else '',
-            test.modified_by if test.modified_by else '',
-            test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else ''
-        ])
+        # Create response for template
+        response = make_response(output.getvalue())
+        filename = 'compliance_tests_template.csv'
+    else:
+        # For full export, use complete headers with audit fields
+        headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
+        writer.writerow(headers)
+        
+        # Write data for all compliance tests
+        compliance_tests = ComplianceTest.query.all()
+        for test in compliance_tests:
+            # Get personnel names from IDs
+            performed_by_name = ''
+            if test.performed_by_id:
+                performed_by = Personnel.query.get(test.performed_by_id)
+                performed_by_name = performed_by.name if performed_by else ''
+                
+            reviewed_by_name = ''
+            if test.reviewed_by_id:
+                reviewed_by = Personnel.query.get(test.reviewed_by_id)
+                reviewed_by_name = reviewed_by.name if reviewed_by else ''
+            
+            writer.writerow([
+                test.test_id,
+                test.eq_id,
+                test.test_type,
+                test.test_date.strftime('%Y-%m-%d') if test.test_date else '',
+                test.report_date.strftime('%Y-%m-%d') if test.report_date else '',
+                test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '',
+                performed_by_name,
+                reviewed_by_name,
+                test.notes if test.notes else '',
+                test.created_by if test.created_by else '',
+                test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else '',
+                test.modified_by if test.modified_by else '',
+                test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else ''
+            ])
+        
+        # Create response for full export
+        response = make_response(output.getvalue())
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'compliance_tests_with_audit_{timestamp}.csv'
     
-    # Create response
-    response = make_response(output.getvalue())
-    # Generate filename with timestamp and audit note
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'compliance_tests_with_audit_{timestamp}.csv'
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     response.headers['Content-Type'] = 'text/csv'
     

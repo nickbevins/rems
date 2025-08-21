@@ -31,8 +31,8 @@
                         {% endif %}
                         <div class="form-text">
                             Upload a CSV file with compliance test data. 
-                            <a href="{{ url_for('export_compliance') }}" class="text-decoration-none">
-                                Download a sample format
+                            <a href="{{ url_for('export_compliance', sample='true') }}" class="text-decoration-none">
+                                Download a sample template
                             </a>
                         </div>
                     </div>
@@ -41,7 +41,7 @@
                         <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> eq_id, test_type, test_date</li>
-                            <li><strong>Optional columns:</strong> test_id, report_date, performed_by, reviewed_by, notes</li>
+                            <li><strong>Optional columns:</strong> test_id, report_date, submission_date, performed_by, reviewed_by, notes</li>
                             <li><strong>Date format:</strong> YYYY-MM-DD (leave blank for optional dates)</li>
                             <li><strong>Test types:</strong> acceptance, annual, audit, other, qc_review, retire, shielding_design, submission</li>
                             <li><strong>Equipment ID:</strong> Use existing equipment IDs from the system</li>
