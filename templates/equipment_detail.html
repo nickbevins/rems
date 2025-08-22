@@ -146,88 +146,102 @@
                     </div>
                 </div>
                 
-                <!-- Contact Information -->
+                <!-- Compliance Tests History -->
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-address-book"></i> Contact Information</h5>
+                        <h5><i class="fas fa-history"></i> Compliance Tests History</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            {% if equipment.contact %}
-                            <div class="col-12 mb-3">
-                                <h6><i class="fas fa-user"></i> Primary Contact</h6>
-                                <div class="border rounded p-3">
-                                    <div><strong>{{ equipment.contact.name }}</strong></div>
-                                    {% if equipment.contact.email %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-envelope text-primary"></i> 
-                                            <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
-                                        </div>
-                                    {% endif %}
-                                    {% if equipment.contact.phone %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
-                                        </div>
-                                    {% endif %}
-                                    {% if equipment.contact.department %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                        {% if tests %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th class="sortable" data-column="test_type">
+                                                Test Type <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="test_date">
+                                                Test Date <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="report_date">
+                                                Report Date <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="submission_date">
+                                                Submission Date <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="performed_by">
+                                                Performed By <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="reviewed_by">
+                                                Reviewing Physicist <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="modified_by">
+                                                Modified By <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="notes">
+                                                Notes <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for test in tests %}
+                                        <tr data-test-type="{{ test.test_type }}"
+                                            data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}"
+                                            data-report-date="{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else '' }}"
+                                            data-performed-by="{{ test.performed_by.name if test.performed_by else '' }}"
+                                            data-reviewed-by="{{ test.reviewed_by.name if test.reviewed_by else '' }}"
+                                            data-submission-date="{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '' }}"
+                                            data-modified-by="{{ test.modified_by if test.modified_by else '' }}"
+                                            data-notes="{{ test.notes if test.notes else '' }}">
+                                            <td>{{ test.get_test_type_display() }}</td>
+                                            <td>{{ test.test_date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else 'N/A' }}</td>
+                                            <td>{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else 'N/A' }}</td>
+                                            <td>{{ test.performed_by.name if test.performed_by else 'N/A' }}</td>
+                                            <td>{{ test.reviewed_by.name if test.reviewed_by else 'N/A' }}</td>
+                                            <td>
+                                                {% if test.modified_by %}
+                                                    <span class="badge bg-secondary" title="Modified: {{ test.updated_at.strftime('%Y-%m-%d %H:%M') if test.updated_at else 'Unknown' }}">{{ test.modified_by }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ test.notes if test.notes else 'N/A' }}</td>
+                                            <td style="white-space: nowrap;">
+                                                {% if current_user.can_manage_compliance() %}
+                                                    <a href="{{ url_for('compliance_test_edit', test_id=test.test_id) }}" 
+                                                       class="btn btn-sm btn-outline-primary me-1" title="Edit Test">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-danger" 
+                                                            onclick="deleteComplianceTest({{ test.test_id }}, '{{ test.get_test_type_display() }}', '{{ test.test_date.strftime('%Y-%m-%d') }}')"
+                                                            title="Delete Test">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <span class="text-muted">View Only</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
-                            {% endif %}
-                            
-                            {% if equipment.supervisor %}
-                            <div class="col-12 mb-3">
-                                <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
-                                <div class="border rounded p-3">
-                                    <div><strong>{{ equipment.supervisor.name }}</strong></div>
-                                    {% if equipment.supervisor.email %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-envelope text-primary"></i> 
-                                            <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
-                                        </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                                <h4 class="text-muted mt-3">No compliance tests recorded</h4>
+                                <p class="text-muted">
+                                    {% if current_user.can_manage_compliance() %}
+                                        <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}">Add the first compliance test</a> for this equipment.
+                                    {% else %}
+                                        No compliance test records are available for this equipment.
                                     {% endif %}
-                                    {% if equipment.supervisor.phone %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
-                                        </div>
-                                    {% endif %}
-                                    {% if equipment.supervisor.department %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
-                                        </div>
-                                    {% endif %}
-                                </div>
+                                </p>
                             </div>
-                            {% endif %}
-                            
-                            {% if equipment.physician %}
-                            <div class="col-12 mb-3">
-                                <h6><i class="fas fa-user-md"></i> Physician</h6>
-                                <div class="border rounded p-3">
-                                    <div><strong>{{ equipment.physician.name }}</strong></div>
-                                    {% if equipment.physician.email %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-envelope text-primary"></i> 
-                                            <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
-                                        </div>
-                                    {% endif %}
-                                    {% if equipment.physician.phone %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
-                                        </div>
-                                    {% endif %}
-                                    {% if equipment.physician.department %}
-                                        <div class="mt-1">
-                                            <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -312,102 +326,88 @@
             </div>
         </div>
         
-        <!-- Compliance Tests History -->
+        <!-- Contact Information -->
         <div class="card mt-4">
             <div class="card-header">
-                <h5><i class="fas fa-history"></i> Compliance Tests History</h5>
+                <h5><i class="fas fa-address-book"></i> Contact Information</h5>
             </div>
             <div class="card-body">
-                {% if tests %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th class="sortable" data-column="test_type">
-                                        Test Type <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="test_date">
-                                        Test Date <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="report_date">
-                                        Report Date <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="submission_date">
-                                        Submission Date <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="performed_by">
-                                        Performed By <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="reviewed_by">
-                                        Reviewing Physicist <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="modified_by">
-                                        Modified By <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th class="sortable" data-column="notes">
-                                        Notes <i class="fas fa-sort"></i>
-                                    </th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for test in tests %}
-                                <tr data-test-type="{{ test.test_type }}"
-                                    data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}"
-                                    data-report-date="{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else '' }}"
-                                    data-performed-by="{{ test.performed_by.name if test.performed_by else '' }}"
-                                    data-reviewed-by="{{ test.reviewed_by.name if test.reviewed_by else '' }}"
-                                    data-submission-date="{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '' }}"
-                                    data-modified-by="{{ test.modified_by if test.modified_by else '' }}"
-                                    data-notes="{{ test.notes if test.notes else '' }}">
-                                    <td>{{ test.get_test_type_display() }}</td>
-                                    <td>{{ test.test_date.strftime('%Y-%m-%d') }}</td>
-                                    <td>{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else 'N/A' }}</td>
-                                    <td>{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else 'N/A' }}</td>
-                                    <td>{{ test.performed_by.name if test.performed_by else 'N/A' }}</td>
-                                    <td>{{ test.reviewed_by.name if test.reviewed_by else 'N/A' }}</td>
-                                    <td>
-                                        {% if test.modified_by %}
-                                            <span class="badge bg-secondary" title="Modified: {{ test.updated_at.strftime('%Y-%m-%d %H:%M') if test.updated_at else 'Unknown' }}">{{ test.modified_by }}</span>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ test.notes if test.notes else 'N/A' }}</td>
-                                    <td style="white-space: nowrap;">
-                                        {% if current_user.can_manage_compliance() %}
-                                            <a href="{{ url_for('compliance_test_edit', test_id=test.test_id) }}" 
-                                               class="btn btn-sm btn-outline-primary me-1" title="Edit Test">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteComplianceTest({{ test.test_id }}, '{{ test.get_test_type_display() }}', '{{ test.test_date.strftime('%Y-%m-%d') }}')"
-                                                    title="Delete Test">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        {% else %}
-                                            <span class="text-muted">View Only</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-clipboard-list fa-3x text-muted"></i>
-                        <h4 class="text-muted mt-3">No compliance tests recorded</h4>
-                        <p class="text-muted">
-                            {% if current_user.can_manage_compliance() %}
-                                <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}">Add the first compliance test</a> for this equipment.
-                            {% else %}
-                                No compliance test records are available for this equipment.
+                <div class="row">
+                    {% if equipment.contact %}
+                    <div class="col-12 mb-3">
+                        <h6><i class="fas fa-user"></i> Primary Contact</h6>
+                        <div class="border rounded p-3">
+                            <div><strong>{{ equipment.contact.name if equipment.contact.name != 'nan' else 'N/A' }}</strong></div>
+                            {% if equipment.contact.email and equipment.contact.email != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-envelope text-primary"></i> 
+                                    <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
+                                </div>
                             {% endif %}
-                        </p>
+                            {% if equipment.contact.phone and equipment.contact.phone != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
+                                </div>
+                            {% endif %}
+                            {% if equipment.contact.department and equipment.contact.department != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
-                {% endif %}
+                    {% endif %}
+                    
+                    {% if equipment.supervisor %}
+                    <div class="col-12 mb-3">
+                        <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
+                        <div class="border rounded p-3">
+                            <div><strong>{{ equipment.supervisor.name if equipment.supervisor.name != 'nan' else 'N/A' }}</strong></div>
+                            {% if equipment.supervisor.email and equipment.supervisor.email != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-envelope text-primary"></i> 
+                                    <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
+                                </div>
+                            {% endif %}
+                            {% if equipment.supervisor.phone and equipment.supervisor.phone != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
+                                </div>
+                            {% endif %}
+                            {% if equipment.supervisor.department and equipment.supervisor.department != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if equipment.physician %}
+                    <div class="col-12 mb-3">
+                        <h6><i class="fas fa-user-md"></i> Physician</h6>
+                        <div class="border rounded p-3">
+                            <div><strong>{{ equipment.physician.name if equipment.physician.name != 'nan' else 'N/A' }}</strong></div>
+                            {% if equipment.physician.email and equipment.physician.email != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-envelope text-primary"></i> 
+                                    <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
+                                </div>
+                            {% endif %}
+                            {% if equipment.physician.phone and equipment.physician.phone != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
+                                </div>
+                            {% endif %}
+                            {% if equipment.physician.department and equipment.physician.department != 'nan' %}
+                                <div class="mt-1">
+                                    <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
