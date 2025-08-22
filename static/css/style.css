@@ -27,17 +27,7 @@ body {
     color: #e9ecef !important;
 }
 
-/* Ensure Bootstrap color classes work on dashboard */
-.card.bg-success,
-.card.bg-warning, 
-.card.bg-danger,
-.card.bg-secondary,
-.card.bg-primary,
-.card.bg-info,
-.card.bg-light,
-.card.bg-dark {
-    background-color: inherit !important;
-}
+/* Bootstrap color classes should work without any overrides */
 
 .card-header {
     background-color: #404040;
