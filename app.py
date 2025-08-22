@@ -920,33 +920,43 @@ def equipment_list():
     
     # Handle days_until_due sorting if present
     if has_days_until_due_sort:
-        # Get all items for sorting
-        all_equipment = query.all()
-        
-        # Calculate days until due for each equipment
-        today = datetime.now().date()
-        
-        def get_days_until_due(eq):
-            if eq.eq_retired or (eq.eq_retdate and eq.eq_retdate <= today):
-                return 9999  # Put retired equipment at the end
+        try:
+            # Get all items for sorting
+            all_equipment = query.all()
             
-            due_date = eq.get_next_due_date()
-            if due_date:
-                return (due_date - today).days
-            else:
-                return 9998  # Put equipment with no due date near the end
-        
-        # Find the days_until_due sort order
-        days_sort_order = 'asc'
-        for i, field in enumerate(sort_fields):
-            if field == 'days_until_due':
-                days_sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
-                break
-        
-        # Sort by days until due
-        reverse_sort = (days_sort_order == 'desc')
-        all_equipment.sort(key=get_days_until_due, reverse=reverse_sort)
-        
+            # Calculate days until due for each equipment
+            today = datetime.now().date()
+            
+            def get_days_until_due(eq):
+                try:
+                    if eq.eq_retired or (eq.eq_retdate and eq.eq_retdate <= today):
+                        return 9999  # Put retired equipment at the end
+                    
+                    due_date = eq.get_next_due_date()
+                    if due_date:
+                        return (due_date - today).days
+                    else:
+                        return 9998  # Put equipment with no due date near the end
+                except Exception as e:
+                    # If there's any error calculating for this equipment, put it at the end
+                    return 9997
+            
+            # Find the days_until_due sort order
+            days_sort_order = 'asc'
+            for i, field in enumerate(sort_fields):
+                if field == 'days_until_due':
+                    days_sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
+                    break
+            
+            # Sort by days until due
+            reverse_sort = (days_sort_order == 'desc')
+            all_equipment.sort(key=get_days_until_due, reverse=reverse_sort)
+        except Exception as e:
+            # If sorting fails, fall back to regular query without days_until_due sorting
+            has_days_until_due_sort = False
+    
+    # Handle pagination based on whether days_until_due sorting was successful
+    if has_days_until_due_sort:
         # Create pagination manually
         total_items = len(all_equipment)
         if request.args.get('show_all') == 'true':
