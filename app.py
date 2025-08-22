@@ -800,6 +800,8 @@ def index():
 @app.route('/equipment')
 @login_required
 def equipment_list():
+    from datetime import datetime
+    
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     
@@ -923,7 +925,6 @@ def equipment_list():
         all_equipment = query.all()
         
         # Calculate days until due for each equipment
-        from datetime import datetime
         today = datetime.now().date()
         
         def get_days_until_due(eq):
