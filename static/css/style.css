@@ -34,6 +34,7 @@ body {
 
 .card.bg-warning {
     background-color: #ffc107 !important;
+    color: #212529 !important;
 }
 
 .card.bg-danger {
@@ -42,6 +43,11 @@ body {
 
 .card.bg-secondary {
     background-color: #6c757d !important;
+}
+
+/* Scheduled tests card - blue background */
+.card[style*="background-color: #0066cc"] {
+    background-color: #0066cc !important;
 }
 
 .card-header {
