@@ -970,7 +970,7 @@ def equipment_list():
                 'has_next': False,
                 'prev_num': None,
                 'next_num': None,
-                'iter_pages': lambda: [1]
+                'iter_pages': lambda *args, **kwargs: [1]
             })()
         else:
             # Manual pagination
@@ -996,7 +996,7 @@ def equipment_list():
                 'has_next': page < total_pages,
                 'prev_num': page - 1 if page > 1 else None,
                 'next_num': page + 1 if page < total_pages else None,
-                'iter_pages': lambda: range(max(1, page - 2), min(total_pages + 1, page + 3))
+                'iter_pages': lambda *args, **kwargs: range(max(1, page - 2), min(total_pages + 1, page + 3))
             })()
     else:
         # Handle pagination or show all normally
@@ -1013,7 +1013,7 @@ def equipment_list():
                 'has_next': False,
                 'prev_num': None,
                 'next_num': None,
-                'iter_pages': lambda: [1]
+                'iter_pages': lambda *args, **kwargs: [1]
             })()
         else:
             # Validate per_page range
