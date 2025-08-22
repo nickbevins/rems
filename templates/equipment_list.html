@@ -123,7 +123,7 @@
                                     <option value="200" {% if request.args.get('per_page') == '200' %}selected{% endif %}>200</option>
                                 </select>
                             </div>
-                            <div>
+                            <div class="d-flex gap-2">
                                 {% if request.args.get('show_all') == 'true' %}
                                     <a href="{{ url_for('equipment_list', **request.args) | replace('&show_all=true', '') | replace('show_all=true&', '') | replace('show_all=true', '') }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="fas fa-list"></i> Paginate
@@ -133,6 +133,9 @@
                                         <i class="fas fa-eye"></i> Show All
                                     </a>
                                 {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="resetColumnOrder()" title="Reset column order to default">
+                                    <i class="fas fa-undo"></i> Reset Columns
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -147,7 +150,7 @@
                     <div class="table-responsive">
                         <table class="table table-striped table-hover" id="equipmentTable">
                             <thead>
-                                <tr>
+                                <tr id="equipmentTableHeader">
                                     <th class="sortable" data-sort="eq_class">
                                         Class <i class="fas fa-sort"></i>
                                     </th>
@@ -470,5 +473,187 @@
             updateSubclasses();
         }
     });
+
+    // Column Reordering Functionality
+    class ColumnReorderManager {
+        constructor(tableId, storageKey) {
+            this.table = document.getElementById(tableId);
+            this.storageKey = storageKey;
+            this.headerRow = document.getElementById(tableId + 'Header');
+            this.init();
+        }
+
+        init() {
+            if (!this.table || !this.headerRow) return;
+            
+            // Load saved column order
+            this.loadColumnOrder();
+            
+            // Make header row sortable
+            this.sortable = Sortable.create(this.headerRow, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                onEnd: (evt) => {
+                    this.reorderTableColumns(evt.oldIndex, evt.newIndex);
+                    this.saveColumnOrder();
+                }
+            });
+
+            // Add visual indicators
+            this.addDragIndicators();
+        }
+
+        addDragIndicators() {
+            const headers = this.headerRow.querySelectorAll('th');
+            headers.forEach(header => {
+                if (!header.innerHTML.includes('Actions')) { // Don't make Actions column draggable
+                    header.style.cursor = 'move';
+                    header.title = header.title || header.textContent.trim() + ' - Drag to reorder columns';
+                    header.classList.add('draggable-header');
+                }
+            });
+        }
+
+        reorderTableColumns(oldIndex, newIndex) {
+            // Reorder all table rows to match header
+            const tbody = this.table.querySelector('tbody');
+            if (!tbody) return;
+
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = Array.from(row.children);
+                const cellToMove = cells[oldIndex];
+                
+                if (newIndex >= cells.length) {
+                    row.appendChild(cellToMove);
+                } else {
+                    row.insertBefore(cellToMove, cells[newIndex]);
+                }
+            });
+        }
+
+        saveColumnOrder() {
+            const headers = Array.from(this.headerRow.children);
+            const order = headers.map(th => {
+                // Extract column identifier from sortable data attribute or text
+                return th.getAttribute('data-sort') || th.textContent.trim().toLowerCase().replace(/\s+/g, '_');
+            });
+            
+            localStorage.setItem(this.storageKey, JSON.stringify(order));
+        }
+
+        loadColumnOrder() {
+            const savedOrder = localStorage.getItem(this.storageKey);
+            if (!savedOrder) return;
+
+            try {
+                const order = JSON.parse(savedOrder);
+                this.applyColumnOrder(order);
+            } catch (e) {
+                console.warn('Failed to load column order:', e);
+            }
+        }
+
+        applyColumnOrder(order) {
+            const headers = Array.from(this.headerRow.children);
+            const tbody = this.table.querySelector('tbody');
+            
+            // Create a mapping of current positions
+            const currentOrder = headers.map(th => 
+                th.getAttribute('data-sort') || th.textContent.trim().toLowerCase().replace(/\s+/g, '_')
+            );
+
+            // Reorder headers
+            order.forEach((colId, newIndex) => {
+                const currentIndex = currentOrder.indexOf(colId);
+                if (currentIndex !== -1 && currentIndex !== newIndex) {
+                    const headerToMove = headers[currentIndex];
+                    
+                    // Move header
+                    if (newIndex >= this.headerRow.children.length) {
+                        this.headerRow.appendChild(headerToMove);
+                    } else {
+                        this.headerRow.insertBefore(headerToMove, this.headerRow.children[newIndex]);
+                    }
+
+                    // Move corresponding cells in all body rows
+                    if (tbody) {
+                        const rows = tbody.querySelectorAll('tr');
+                        rows.forEach(row => {
+                            const cells = Array.from(row.children);
+                            const cellToMove = cells[currentIndex];
+                            
+                            if (newIndex >= cells.length) {
+                                row.appendChild(cellToMove);
+                            } else {
+                                row.insertBefore(cellToMove, cells[newIndex]);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        resetColumnOrder() {
+            localStorage.removeItem(this.storageKey);
+            location.reload();
+        }
+    }
+
+    // Initialize column reordering for equipment table
+    document.addEventListener('DOMContentLoaded', function() {
+        const equipmentTable = document.getElementById('equipmentTable');
+        if (equipmentTable) {
+            window.equipmentColumnManager = new ColumnReorderManager('equipmentTable', 'equipment_list_column_order');
+        }
+    });
+
+    // Global function for reset button
+    function resetColumnOrder() {
+        if (window.equipmentColumnManager && confirm('Reset column order to default? This will reload the page.')) {
+            window.equipmentColumnManager.resetColumnOrder();
+        }
+    }
 </script>
+
+<!-- Add CSS for drag indicators -->
+<style>
+.draggable-header {
+    position: relative;
+}
+
+.draggable-header:before {
+    content: '⋮⋮';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 12px;
+    opacity: 0.6;
+    font-weight: bold;
+    letter-spacing: -2px;
+}
+
+.sortable-ghost {
+    opacity: 0.5;
+    background: #f8f9fa !important;
+}
+
+.sortable-chosen {
+    background: #e9ecef !important;
+}
+
+.sortable-drag {
+    background: #dee2e6 !important;
+    transform: rotate(2deg);
+}
+
+.draggable-header:hover:before {
+    opacity: 1;
+    color: #495057;
+}
+</style>
 {% endblock %}
