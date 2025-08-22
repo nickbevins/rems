@@ -169,7 +169,7 @@
                                     <th class="sortable" data-sort="eq_mereg">
                                         ME Registration <i class="fas fa-sort"></i>
                                     </th>
-                                    <th class="sortable" data-sort="days_until_due">
+                                    <th class="sortable" data-sort="days_until_due" style="white-space: nowrap; min-width: 140px;">
                                         Days Until Due <i class="fas fa-sort"></i>
                                     </th>
                                     <th>Actions</th>
@@ -202,7 +202,7 @@
                                             <div class="text-muted">{{ eq.eq_mefac }}</div>
                                         {% endif %}
                                     </td>
-                                    <td>
+                                    <td style="white-space: nowrap;">
                                         {% if is_retired %}
                                             <span class="badge bg-danger">Retired</span>
                                             {% if eq.eq_retdate %}

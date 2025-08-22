@@ -22,12 +22,27 @@ body {
 }
 
 /* Default dark cards only when no specific background class */
-.card:not([class*="bg-"]) {
+.card:not(.bg-success):not(.bg-warning):not(.bg-danger):not(.bg-secondary):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
     background-color: #2d2d2d !important;
     color: #e9ecef !important;
 }
 
-/* Bootstrap color classes should work without any overrides */
+/* Ensure Bootstrap color classes work properly */
+.card.bg-success {
+    background-color: #198754 !important;
+}
+
+.card.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.card.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.card.bg-secondary {
+    background-color: #6c757d !important;
+}
 
 .card-header {
     background-color: #404040;
