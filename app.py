@@ -812,9 +812,9 @@ def equipment_list():
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')  # Default to false
     
-    # Sorting
-    sort_field = request.args.get('sort', 'eq_id')
-    sort_order = request.args.get('order', 'asc')
+    # Multi-level sorting
+    sort_fields = request.args.get('sort', 'eq_id').split(',')
+    sort_orders = request.args.get('order', 'asc').split(',')
     
     # Build query with proper joins for relational data
     query = Equipment.query.join(
@@ -881,7 +881,7 @@ def equipment_list():
             )
         )
     
-    # Apply sorting - map legacy sort fields to relational fields
+    # Apply multi-level sorting - map legacy sort fields to relational fields
     sort_mapping = {
         'eq_class': EquipmentClass.name,
         'eq_manu': Manufacturer.name,
@@ -890,17 +890,26 @@ def equipment_list():
         'eq_subclass': EquipmentSubclass.name
     }
     
-    if sort_field in sort_mapping:
-        sort_column = sort_mapping[sort_field]
-    elif hasattr(Equipment, sort_field):
-        sort_column = getattr(Equipment, sort_field)
-    else:
-        sort_column = Equipment.eq_id  # default
+    # Build order by clauses for multiple sort levels
+    order_clauses = []
+    for i, sort_field in enumerate(sort_fields):
+        sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
+        
+        if sort_field in sort_mapping:
+            sort_column = sort_mapping[sort_field]
+        elif hasattr(Equipment, sort_field):
+            sort_column = getattr(Equipment, sort_field)
+        else:
+            sort_column = Equipment.eq_id  # default
+        
+        if sort_order == 'desc':
+            order_clauses.append(sort_column.desc())
+        else:
+            order_clauses.append(sort_column.asc())
     
-    if sort_order == 'desc':
-        query = query.order_by(sort_column.desc())
-    else:
-        query = query.order_by(sort_column.asc())
+    # Apply all sort clauses
+    if order_clauses:
+        query = query.order_by(*order_clauses)
     
     # Handle pagination or show all
     if request.args.get('show_all') == 'true':
