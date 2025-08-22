@@ -2296,7 +2296,7 @@ def export_compliance():
     
     if sample:
         # For sample template, use simplified headers matching import requirements
-        headers = ['eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes']
+        headers = ['eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by_id', 'reviewed_by_id', 'notes']
         writer.writerow(headers)
         
         # Create response for template
@@ -2365,7 +2365,7 @@ def import_compliance():
                 
                 # Expected columns
                 required_columns = ['eq_id', 'test_type', 'test_date']
-                optional_columns = ['test_id', 'report_date', 'performed_by', 'reviewed_by', 'notes']
+                optional_columns = ['test_id', 'report_date', 'submission_date', 'performed_by_id', 'reviewed_by_id', 'notes']
                 
                 # Check required columns
                 missing_columns = [col for col in required_columns if col not in df.columns]
@@ -2418,45 +2418,25 @@ def import_compliance():
                         else:
                             test.submission_date = None
                         
-                        # Handle performed_by (name or ID for backward compatibility)
-                        performed_by_val = row.get('performed_by') or row.get('performed_by_id')
-                        if performed_by_val and not pd.isna(performed_by_val):
-                            performed_by_str = str(performed_by_val).strip()
-                            if performed_by_str.isdigit():
-                                # It's an ID (backward compatibility)
-                                performed_by_id = int(performed_by_str)
-                                if Personnel.query.get(performed_by_id):
-                                    test.performed_by_id = performed_by_id
-                                else:
-                                    print(f"Warning: Personnel ID {performed_by_id} not found for performed_by")
+                        # Handle performed_by_id 
+                        performed_by_id = row.get('performed_by_id')
+                        if performed_by_id and not pd.isna(performed_by_id):
+                            performed_by_id = int(performed_by_id)
+                            personnel_record = Personnel.query.get(performed_by_id)
+                            if personnel_record:
+                                test.performed_by_id = performed_by_id
                             else:
-                                # It's a name - find or create personnel
-                                performed_by = Personnel.query.filter_by(name=performed_by_str).first()
-                                if not performed_by:
-                                    performed_by = Personnel(name=performed_by_str)
-                                    db.session.add(performed_by)
-                                    db.session.flush()
-                                test.performed_by_id = performed_by.id
+                                print(f"Warning: Personnel ID {performed_by_id} not found for performed_by in row {index + 1}")
                         
-                        # Handle reviewed_by (name or ID for backward compatibility)
-                        reviewed_by_val = row.get('reviewed_by') or row.get('reviewed_by_id')
-                        if reviewed_by_val and not pd.isna(reviewed_by_val):
-                            reviewed_by_str = str(reviewed_by_val).strip()
-                            if reviewed_by_str.isdigit():
-                                # It's an ID (backward compatibility)
-                                reviewed_by_id = int(reviewed_by_str)
-                                if Personnel.query.get(reviewed_by_id):
-                                    test.reviewed_by_id = reviewed_by_id
-                                else:
-                                    print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by")
+                        # Handle reviewed_by_id
+                        reviewed_by_id = row.get('reviewed_by_id')
+                        if reviewed_by_id and not pd.isna(reviewed_by_id):
+                            reviewed_by_id = int(reviewed_by_id)
+                            personnel_record = Personnel.query.get(reviewed_by_id)
+                            if personnel_record:
+                                test.reviewed_by_id = reviewed_by_id
                             else:
-                                # It's a name - find or create personnel
-                                reviewed_by = Personnel.query.filter_by(name=reviewed_by_str).first()
-                                if not reviewed_by:
-                                    reviewed_by = Personnel(name=reviewed_by_str)
-                                    db.session.add(reviewed_by)
-                                    db.session.flush()
-                                test.reviewed_by_id = reviewed_by.id
+                                print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by in row {index + 1}")
                         
                         if 'notes' in row and not pd.isna(row['notes']):
                             test.notes = row['notes']
