@@ -892,10 +892,16 @@ def equipment_list():
     
     # Build order by clauses for multiple sort levels
     order_clauses = []
+    has_days_until_due_sort = False
+    
     for i, sort_field in enumerate(sort_fields):
         sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
         
-        if sort_field in sort_mapping:
+        if sort_field == 'days_until_due':
+            # Special handling for calculated field - we'll sort this in Python after query
+            has_days_until_due_sort = True
+            continue
+        elif sort_field in sort_mapping:
             sort_column = sort_mapping[sort_field]
         elif hasattr(Equipment, sort_field):
             sort_column = getattr(Equipment, sort_field)
@@ -911,35 +917,108 @@ def equipment_list():
     if order_clauses:
         query = query.order_by(*order_clauses)
     
-    # Handle pagination or show all
-    if request.args.get('show_all') == 'true':
-        # Get all items without pagination
+    # Handle days_until_due sorting if present
+    if has_days_until_due_sort:
+        # Get all items for sorting
         all_equipment = query.all()
-        # Create a mock pagination object for template compatibility
-        equipment = type('MockPagination', (), {
-            'items': all_equipment,
-            'total': len(all_equipment),
-            'pages': 1,
-            'page': 1,
-            'has_prev': False,
-            'has_next': False,
-            'prev_num': None,
-            'next_num': None,
-            'iter_pages': lambda: [1]
-        })()
-    else:
-        # Validate per_page range
-        if per_page < 1:
-            per_page = 25
-        elif per_page > 1000:  # Reasonable maximum
-            per_page = 1000
+        
+        # Calculate days until due for each equipment
+        from datetime import datetime
+        today = datetime.now().date()
+        
+        def get_days_until_due(eq):
+            if eq.eq_retired or (eq.eq_retdate and eq.eq_retdate <= today):
+                return 9999  # Put retired equipment at the end
             
-        equipment = query.paginate(
-            page=page, 
-            per_page=per_page, 
-            error_out=False,
-            max_per_page=1000
-        )
+            due_date = eq.get_next_due_date()
+            if due_date:
+                return (due_date - today).days
+            else:
+                return 9998  # Put equipment with no due date near the end
+        
+        # Find the days_until_due sort order
+        days_sort_order = 'asc'
+        for i, field in enumerate(sort_fields):
+            if field == 'days_until_due':
+                days_sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
+                break
+        
+        # Sort by days until due
+        reverse_sort = (days_sort_order == 'desc')
+        all_equipment.sort(key=get_days_until_due, reverse=reverse_sort)
+        
+        # Create pagination manually
+        total_items = len(all_equipment)
+        if request.args.get('show_all') == 'true':
+            equipment_items = all_equipment
+            equipment = type('MockPagination', (), {
+                'items': equipment_items,
+                'total': total_items,
+                'pages': 1,
+                'page': 1,
+                'has_prev': False,
+                'has_next': False,
+                'prev_num': None,
+                'next_num': None,
+                'iter_pages': lambda: [1]
+            })()
+        else:
+            # Manual pagination
+            per_page = int(request.args.get('per_page', 25))
+            if per_page < 1:
+                per_page = 25
+            elif per_page > 1000:
+                per_page = 1000
+            
+            page = int(request.args.get('page', 1))
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            equipment_items = all_equipment[start_idx:end_idx]
+            
+            total_pages = (total_items + per_page - 1) // per_page
+            
+            equipment = type('MockPagination', (), {
+                'items': equipment_items,
+                'total': total_items,
+                'pages': total_pages,
+                'page': page,
+                'has_prev': page > 1,
+                'has_next': page < total_pages,
+                'prev_num': page - 1 if page > 1 else None,
+                'next_num': page + 1 if page < total_pages else None,
+                'iter_pages': lambda: range(max(1, page - 2), min(total_pages + 1, page + 3))
+            })()
+    else:
+        # Handle pagination or show all normally
+        if request.args.get('show_all') == 'true':
+            # Get all items without pagination
+            all_equipment = query.all()
+            # Create a mock pagination object for template compatibility
+            equipment = type('MockPagination', (), {
+                'items': all_equipment,
+                'total': len(all_equipment),
+                'pages': 1,
+                'page': 1,
+                'has_prev': False,
+                'has_next': False,
+                'prev_num': None,
+                'next_num': None,
+                'iter_pages': lambda: [1]
+            })()
+        else:
+            # Validate per_page range
+            if per_page < 1:
+                per_page = 25
+            elif per_page > 1000:  # Reasonable maximum
+                per_page = 1000
+                
+            equipment = query.paginate(
+                page=page, 
+                per_page=per_page, 
+                error_out=False,
+                max_per_page=1000
+            )
+    
     
     # Get values for filters from standardized lists
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
