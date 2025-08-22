@@ -169,7 +169,9 @@
                                     <th class="sortable" data-sort="eq_mereg">
                                         ME Registration <i class="fas fa-sort"></i>
                                     </th>
-                                    <th>Status</th>
+                                    <th class="sortable" data-sort="days_until_due">
+                                        Days Until Due <i class="fas fa-sort"></i>
+                                    </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -207,7 +209,27 @@
                                                 <br><small class="text-secondary">{{ eq.eq_retdate.strftime('%Y-%m-%d') }}</small>
                                             {% endif %}
                                         {% else %}
-                                            <span class="badge bg-success">Active</span>
+                                            {% set due_date = eq.get_next_due_date() %}
+                                            {% if due_date %}
+                                                {% set days_until = (due_date - today).days %}
+                                                {% if days_until < 0 %}
+                                                    <span class="badge bg-danger">{{ days_until|abs }} days overdue</span>
+                                                {% elif days_until <= 7 %}
+                                                    <span class="badge bg-danger">{{ days_until }} days</span>
+                                                {% elif days_until <= 30 %}
+                                                    <span class="badge bg-warning text-dark">{{ days_until }} days</span>
+                                                {% elif days_until <= 90 %}
+                                                    <span class="badge bg-info text-dark">{{ days_until }} days</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">{{ days_until }} days</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if eq.eq_auditfreq %}
+                                                    <span class="badge bg-secondary">No tests yet</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">No frequency</span>
+                                                {% endif %}
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                     <td style="white-space: nowrap;">
