@@ -145,15 +145,189 @@
                         {% endif %}
                     </div>
                 </div>
-                
-                <!-- Compliance Tests History -->
-                <div class="card mt-4">
+            </div>
+            
+            <!-- Compliance Status -->
+            <div class="col-md-4">
+                <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-history"></i> Compliance Tests History</h5>
+                        <h5><i class="fas fa-check-circle"></i> Compliance Status</h5>
                     </div>
                     <div class="card-body">
-                        {% if tests %}
-                            <div class="table-responsive">
+                        {% if is_retired %}
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Equipment Status</h6>
+                            <p class="mb-0">
+                                <strong>Retired Equipment</strong><br>
+                                No further compliance testing required.
+                                {% if equipment.eq_retdate %}
+                                <br><small class="text-muted">Retired: {{ equipment.eq_retdate.strftime('%Y-%m-%d') }}</small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% else %}
+                        {% set due_date = equipment.get_next_due_date() %}
+                        {% if due_date %}
+                            {% set days_until = (due_date - today).days %}
+                            {% if days_until < 0 %}
+                            <div class="alert alert-danger">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Overdue</h6>
+                                <p class="mb-2"><strong>{{ days_until|abs }} days overdue</strong></p>
+                                <p class="mb-0">Due: {{ due_date.strftime('%Y-%m-%d') }}</p>
+                            </div>
+                            {% elif days_until <= 30 %}
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-clock"></i> Due Soon</h6>
+                                <p class="mb-2"><strong>{{ days_until }} days remaining</strong></p>
+                                <p class="mb-0">Due: {{ due_date.strftime('%Y-%m-%d') }}</p>
+                            </div>
+                            {% elif days_until <= 90 %}
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Upcoming</h6>
+                                <p class="mb-2"><strong>{{ days_until }} days remaining</strong></p>
+                                <p class="mb-0">Due: {{ due_date.strftime('%Y-%m-%d') }}</p>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-check"></i> Compliant</h6>
+                                <p class="mb-2"><strong>{{ days_until }} days remaining</strong></p>
+                                <p class="mb-0">Due: {{ due_date.strftime('%Y-%m-%d') }}</p>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            {% if equipment.eq_auditfreq %}
+                            <div class="alert alert-secondary">
+                                <h6><i class="fas fa-question"></i> No Tests Yet</h6>
+                                <p class="mb-2">No acceptance or annual tests found.</p>
+                                <p class="mb-0">Frequency: {{ equipment.eq_auditfreq }}</p>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-secondary">
+                                <h6><i class="fas fa-question"></i> No Schedule</h6>
+                                <p class="mb-0">No audit frequency set.</p>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <!-- Audit Details -->
+                        <div class="mt-3">
+                            <h6>Audit Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="50%">Frequency:</th>
+                                    <td>{{ equipment.eq_auditfreq or 'Not set' }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Next Due Date:</th>
+                                    <td>{{ due_date.strftime('%Y-%m-%d') if due_date else 'N/A' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-address-book"></i> Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <h6><i class="fas fa-user"></i> Primary Contact</h6>
+                        <div class="border rounded p-3 h-100">
+                            {% if equipment.contact %}
+                                <div><strong>{{ equipment.contact.name if equipment.contact.name != 'nan' else 'N/A' }}</strong></div>
+                                {% if equipment.contact.email and equipment.contact.email != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-envelope text-primary"></i> 
+                                        <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
+                                    </div>
+                                {% endif %}
+                                {% if equipment.contact.phone and equipment.contact.phone != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
+                                    </div>
+                                {% endif %}
+                                {% if equipment.contact.department and equipment.contact.department != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-muted"><i class="fas fa-user-slash"></i> No primary contact assigned</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
+                        <div class="border rounded p-3 h-100">
+                            {% if equipment.supervisor %}
+                                <div><strong>{{ equipment.supervisor.name if equipment.supervisor.name != 'nan' else 'N/A' }}</strong></div>
+                                {% if equipment.supervisor.email and equipment.supervisor.email != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-envelope text-primary"></i> 
+                                        <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
+                                    </div>
+                                {% endif %}
+                                {% if equipment.supervisor.phone and equipment.supervisor.phone != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
+                                    </div>
+                                {% endif %}
+                                {% if equipment.supervisor.department and equipment.supervisor.department != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-muted"><i class="fas fa-user-slash"></i> No supervisor assigned</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <h6><i class="fas fa-user-md"></i> Physician</h6>
+                        <div class="border rounded p-3 h-100">
+                            {% if equipment.physician %}
+                                <div><strong>{{ equipment.physician.name if equipment.physician.name != 'nan' else 'N/A' }}</strong></div>
+                                {% if equipment.physician.email and equipment.physician.email != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-envelope text-primary"></i> 
+                                        <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
+                                    </div>
+                                {% endif %}
+                                {% if equipment.physician.phone and equipment.physician.phone != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
+                                    </div>
+                                {% endif %}
+                                {% if equipment.physician.department and equipment.physician.department != 'nan' %}
+                                    <div class="mt-1">
+                                        <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-muted"><i class="fas fa-user-slash"></i> No physician assigned</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Compliance Tests History (Full Width) -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Compliance Tests History</h5>
+            </div>
+            <div class="card-body">
+                {% if tests %}
+                    <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
@@ -323,97 +497,6 @@
                     </div>
                 </div>
                 {% endif %}
-            </div>
-        </div>
-        
-        <!-- Contact Information -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5><i class="fas fa-address-book"></i> Contact Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <h6><i class="fas fa-user"></i> Primary Contact</h6>
-                        <div class="border rounded p-3">
-                            {% if equipment.contact %}
-                                <div><strong>{{ equipment.contact.name if equipment.contact.name != 'nan' else 'N/A' }}</strong></div>
-                                {% if equipment.contact.email and equipment.contact.email != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i> 
-                                        <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
-                                    </div>
-                                {% endif %}
-                                {% if equipment.contact.phone and equipment.contact.phone != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
-                                    </div>
-                                {% endif %}
-                                {% if equipment.contact.department and equipment.contact.department != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No primary contact assigned</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-12 mb-3">
-                        <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
-                        <div class="border rounded p-3">
-                            {% if equipment.supervisor %}
-                                <div><strong>{{ equipment.supervisor.name if equipment.supervisor.name != 'nan' else 'N/A' }}</strong></div>
-                                {% if equipment.supervisor.email and equipment.supervisor.email != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i> 
-                                        <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
-                                    </div>
-                                {% endif %}
-                                {% if equipment.supervisor.phone and equipment.supervisor.phone != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
-                                    </div>
-                                {% endif %}
-                                {% if equipment.supervisor.department and equipment.supervisor.department != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No supervisor assigned</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-12 mb-3">
-                        <h6><i class="fas fa-user-md"></i> Physician</h6>
-                        <div class="border rounded p-3">
-                            {% if equipment.physician %}
-                                <div><strong>{{ equipment.physician.name if equipment.physician.name != 'nan' else 'N/A' }}</strong></div>
-                                {% if equipment.physician.email and equipment.physician.email != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i> 
-                                        <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
-                                    </div>
-                                {% endif %}
-                                {% if equipment.physician.phone and equipment.physician.phone != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
-                                    </div>
-                                {% endif %}
-                                {% if equipment.physician.department and equipment.physician.department != 'nan' %}
-                                    <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No physician assigned</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
