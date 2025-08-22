@@ -801,6 +801,7 @@ def index():
 @login_required
 def equipment_list():
     from datetime import datetime
+    from sqlalchemy import and_, or_
     
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
@@ -835,7 +836,6 @@ def equipment_list():
     
     # Search across multiple fields including relational data
     if search:
-        from sqlalchemy import or_
         search_filter = or_(
             EquipmentClass.name.ilike(f'%{search}%'),
             EquipmentSubclass.name.ilike(f'%{search}%'),
@@ -872,7 +872,6 @@ def equipment_list():
     
     # By default, only show active equipment unless include_retired is checked
     if include_retired != 'true':
-        from sqlalchemy import and_, or_
         query = query.filter(
             and_(
                 Equipment.eq_retired == False,
@@ -1531,7 +1530,6 @@ def export_equipment():
     
     # By default, only show active equipment unless include_retired is checked
     if include_retired != 'true':
-        from sqlalchemy import and_, or_
         query = query.filter(
             and_(
                 Equipment.eq_retired == False,
