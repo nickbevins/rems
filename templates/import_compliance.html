@@ -42,10 +42,11 @@
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> eq_id, test_type, test_date</li>
                             <li><strong>Optional columns:</strong> test_id, report_date, submission_date, performed_by_id, reviewed_by_id, notes</li>
-                            <li><strong>Date format:</strong> YYYY-MM-DD (leave blank for optional dates)</li>
+                            <li><strong>Date format:</strong> YYYY-MM-DD (leave blank to preserve existing values, use "CLEAR" to remove dates)</li>
                             <li><strong>Test types:</strong> acceptance, annual, audit, other, qc_review, retire, shielding_design, submission</li>
                             <li><strong>Equipment ID:</strong> Use existing equipment IDs from the system</li>
                             <li><strong>Personnel IDs:</strong> Use existing personnel IDs from the system (performed_by_id, reviewed_by_id)</li>
+                            <li><strong>Clearing fields:</strong> Use "CLEAR", "NULL", or "NONE" to remove existing data from optional fields</li>
                         </ul>
                     </div>
                     
@@ -70,7 +71,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <small class="text-muted">Note: Use the numeric ID values. Invalid IDs will be skipped with a warning.</small>
+                        <small class="text-muted">Note: Use the numeric ID values. Invalid IDs will be skipped with a warning. Use "CLEAR" to remove personnel assignments.</small>
                     </div>
                     
                     <button type="submit" class="btn btn-primary">

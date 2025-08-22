@@ -2407,39 +2407,61 @@ def import_compliance():
                         test.test_date = pd.to_datetime(row['test_date']).date()
                         
                         # Handle optional report_date
-                        if 'report_date' in row and not pd.isna(row['report_date']) and row['report_date']:
-                            test.report_date = pd.to_datetime(row['report_date']).date()
-                        else:
-                            test.report_date = None
+                        if 'report_date' in row and not pd.isna(row['report_date']):
+                            report_date_str = str(row['report_date']).strip().upper()
+                            if report_date_str in ['CLEAR', 'NULL', 'NONE', '']:
+                                test.report_date = None
+                            elif row['report_date']:
+                                test.report_date = pd.to_datetime(row['report_date']).date()
                         
                         # Handle optional submission_date
-                        if 'submission_date' in row and not pd.isna(row['submission_date']) and row['submission_date']:
-                            test.submission_date = pd.to_datetime(row['submission_date']).date()
-                        else:
-                            test.submission_date = None
+                        if 'submission_date' in row and not pd.isna(row['submission_date']):
+                            submission_date_str = str(row['submission_date']).strip().upper()
+                            if submission_date_str in ['CLEAR', 'NULL', 'NONE', '']:
+                                test.submission_date = None
+                            elif row['submission_date']:
+                                test.submission_date = pd.to_datetime(row['submission_date']).date()
                         
                         # Handle performed_by_id 
-                        performed_by_id = row.get('performed_by_id')
-                        if performed_by_id and not pd.isna(performed_by_id):
-                            performed_by_id = int(performed_by_id)
-                            personnel_record = Personnel.query.get(performed_by_id)
-                            if personnel_record:
-                                test.performed_by_id = performed_by_id
+                        performed_by_val = row.get('performed_by_id')
+                        if performed_by_val and not pd.isna(performed_by_val):
+                            performed_by_str = str(performed_by_val).strip().upper()
+                            if performed_by_str in ['CLEAR', 'NULL', 'NONE', '']:
+                                test.performed_by_id = None
                             else:
-                                print(f"Warning: Personnel ID {performed_by_id} not found for performed_by in row {index + 1}")
+                                try:
+                                    performed_by_id = int(performed_by_str)
+                                    personnel_record = Personnel.query.get(performed_by_id)
+                                    if personnel_record:
+                                        test.performed_by_id = performed_by_id
+                                    else:
+                                        print(f"Warning: Personnel ID {performed_by_id} not found for performed_by in row {index + 1}")
+                                except ValueError:
+                                    print(f"Warning: Invalid personnel ID '{performed_by_val}' for performed_by in row {index + 1}")
                         
                         # Handle reviewed_by_id
-                        reviewed_by_id = row.get('reviewed_by_id')
-                        if reviewed_by_id and not pd.isna(reviewed_by_id):
-                            reviewed_by_id = int(reviewed_by_id)
-                            personnel_record = Personnel.query.get(reviewed_by_id)
-                            if personnel_record:
-                                test.reviewed_by_id = reviewed_by_id
+                        reviewed_by_val = row.get('reviewed_by_id')
+                        if reviewed_by_val and not pd.isna(reviewed_by_val):
+                            reviewed_by_str = str(reviewed_by_val).strip().upper()
+                            if reviewed_by_str in ['CLEAR', 'NULL', 'NONE', '']:
+                                test.reviewed_by_id = None
                             else:
-                                print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by in row {index + 1}")
+                                try:
+                                    reviewed_by_id = int(reviewed_by_str)
+                                    personnel_record = Personnel.query.get(reviewed_by_id)
+                                    if personnel_record:
+                                        test.reviewed_by_id = reviewed_by_id
+                                    else:
+                                        print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by in row {index + 1}")
+                                except ValueError:
+                                    print(f"Warning: Invalid personnel ID '{reviewed_by_val}' for reviewed_by in row {index + 1}")
                         
                         if 'notes' in row and not pd.isna(row['notes']):
-                            test.notes = row['notes']
+                            notes_str = str(row['notes']).strip().upper()
+                            if notes_str in ['CLEAR', 'NULL', 'NONE']:
+                                test.notes = None
+                            else:
+                                test.notes = row['notes']
                         
                         # Add audit info based on current user
                         if current_user.is_authenticated:
