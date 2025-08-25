@@ -21,8 +21,8 @@ body {
     color: #e9ecef;
 }
 
-/* Default dark cards only when no specific background class */
-.card:not(.bg-success):not(.bg-warning):not(.bg-danger):not(.bg-secondary):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark) {
+/* Default dark cards only when no specific background class and no inline style */
+.card:not(.bg-success):not(.bg-warning):not(.bg-danger):not(.bg-secondary):not(.bg-primary):not(.bg-info):not(.bg-light):not(.bg-dark):not([style*="background-color"]) {
     background-color: #2d2d2d !important;
     color: #e9ecef !important;
 }
@@ -47,6 +47,11 @@ body {
 
 /* Scheduled tests card - blue background */
 .card[style*="background-color: #0066cc"] {
+    background-color: #0066cc !important;
+}
+
+/* More specific selector for scheduled tests card */
+.card.text-white[style*="background-color: #0066cc"] {
     background-color: #0066cc !important;
 }
 
