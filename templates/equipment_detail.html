@@ -98,7 +98,15 @@
                                     </tr>
                                     <tr>
                                         <th>End of Life:</th>
-                                        <td>{{ equipment.eq_eoldate.strftime('%Y-%m-%d') if equipment.eq_eoldate else 'N/A' }}</td>
+                                        <td>
+                                            {% if equipment.eq_eoldate %}
+                                                {{ equipment.eq_eoldate.strftime('%Y-%m-%d') }}
+                                            {% elif equipment.eq_eeoldate %}
+                                                {{ equipment.eq_eeoldate.strftime('%Y-%m-%d') }} <span class="text-muted">(estimated)</span>
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>Audit Frequency:</th>
