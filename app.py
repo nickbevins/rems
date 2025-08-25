@@ -1506,6 +1506,7 @@ def api_facility_address(facility_id):
 
 @app.route('/export-equipment')
 def export_equipment():
+    from sqlalchemy import and_, or_
     # Get all equipment or apply filters like in equipment_list
     eq_class = request.args.get('eq_class')
     eq_manu = request.args.get('eq_manu')
