@@ -107,10 +107,7 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
             db.session.add(contact)
             db.session.flush()
         else:
-            # Update email if provided and different
-            if contact_email and contact.email != contact_email:
-                contact.email = contact_email
-            # Ensure role is assigned
+            # Ensure role is assigned (don't update email from equipment import)
             ensure_personnel_role(contact, role_name)
     
     return contact
