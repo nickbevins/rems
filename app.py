@@ -165,6 +165,7 @@ class Equipment(db.Model):
     # Equipment Details (still text fields)
     eq_mod = db.Column(db.String(200))
     eq_rm = db.Column(db.String(100))
+    eq_phone = db.Column(db.String(20))
     eq_address = db.Column(db.Text)
     
     # Note: Personnel contact details are now stored in Personnel table
@@ -280,6 +281,7 @@ class Equipment(db.Model):
             'eq_mod': self.eq_mod,
             'eq_dept': self.eq_dept,
             'eq_rm': self.eq_rm,
+            'eq_phone': self.eq_phone,
             'eq_fac': self.eq_fac,
             'eq_address': self.eq_address,
             'eq_contact': self.eq_contact,
@@ -531,6 +533,7 @@ class EquipmentForm(FlaskForm):
     eq_mod = StringField('Model', validators=[Optional(), Length(max=200)])
     department_id = SelectField('Department', choices=[], validators=[Optional()])
     eq_rm = StringField('Room', validators=[Optional(), Length(max=100)])
+    eq_phone = StringField('Phone', validators=[Optional(), Length(max=20)])
     facility_id = SelectField('Facility', choices=[], validators=[Optional()])
     eq_address = TextAreaField('Address', validators=[Optional()])
     contact_id = SelectField('Contact Person', choices=[], validators=[Optional()])
@@ -1581,7 +1584,7 @@ def export_equipment():
     
     # Write header - using relational field names
     headers = [
-        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'facility', 'facility_address',
+        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
         'contact_person', 'contact_email', 'supervisor', 'supervisor_email', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
@@ -1599,6 +1602,7 @@ def export_equipment():
             eq.eq_mod or '',
             eq.department.name if eq.department else '',
             eq.eq_rm or '',
+            eq.eq_phone or '',
             eq.facility.name if eq.facility else '',
             eq.facility.address if eq.facility else '',
             eq.contact.name if eq.contact else '',
@@ -1743,6 +1747,7 @@ def bulk_edit():
                         # Direct fields
                         equipment.eq_mod = str(row.get('eq_mod', '')).strip()
                         equipment.eq_rm = str(row.get('eq_rm', '')).strip()
+                        equipment.eq_phone = str(row.get('eq_phone', '')).strip()
                         equipment.eq_assetid = str(row.get('eq_assetid', '')).strip()
                         equipment.eq_sn = str(row.get('eq_sn', '')).strip()
                         equipment.eq_mefac = str(row.get('eq_mefac', '')).strip()
@@ -2000,6 +2005,7 @@ def import_data():
                     # Model and Room - direct fields
                     equipment.eq_mod = row.get('eq_mod')
                     equipment.eq_rm = row.get('eq_rm')
+                    equipment.eq_phone = row.get('eq_phone')
                     equipment.eq_assetid = row.get('eq_assetid')
                     equipment.eq_sn = row.get('eq_sn')
                     equipment.eq_mefac = row.get('eq_mefac')
