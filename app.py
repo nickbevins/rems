@@ -113,6 +113,16 @@ def check_and_migrate_db():
                         conn.execute(db.text("ALTER TABLE compliance_tests ADD COLUMN submission_date DATE"))
                         conn.commit()
                     print("Successfully added submission_date column")
+            
+            # Check if eq_phone column exists in equipment table
+            if inspector.has_table('equipment'):
+                equipment_columns = [col['name'] for col in inspector.get_columns('equipment')]
+                if 'eq_phone' not in equipment_columns:
+                    print("Adding eq_phone column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_phone VARCHAR(20)"))
+                        conn.commit()
+                    print("Successfully added eq_phone column")
                     
     except Exception as e:
         print(f"Error during database migration: {e}")
