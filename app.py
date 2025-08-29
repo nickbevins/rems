@@ -560,15 +560,15 @@ class EquipmentForm(FlaskForm):
     eq_acrunit = StringField('ACR Unit', validators=[Optional(), Length(max=100)])
     eq_radcap = SelectField('Radiology Owned', choices=[
         ('', 'Select'),
-        (0, 'No'),
-        (1, 'Yes')
+        ('0', 'No'),
+        ('1', 'Yes')
     ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcat = SelectField('Capital Category', choices=[
         ('', 'Select'),
-        (0, 'N/A'),
-        (1, 'Category 1'),
-        (2, 'Category 2'), 
-        (3, 'Category 3')
+        ('0', 'N/A'),
+        ('1', 'Category 1'),
+        ('2', 'Category 2'), 
+        ('3', 'Category 3')
     ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
     eq_notes = TextAreaField('Notes', validators=[Optional()])
@@ -1195,6 +1195,8 @@ def equipment_edit(eq_id):
         form.contact_id.data = str(equipment.contact_id) if equipment.contact_id else ''
         form.supervisor_id.data = str(equipment.supervisor_id) if equipment.supervisor_id else ''
         form.physician_id.data = str(equipment.physician_id) if equipment.physician_id else ''
+        form.eq_radcap.data = str(equipment.eq_radcap) if equipment.eq_radcap is not None else ''
+        form.eq_capcat.data = str(equipment.eq_capcat) if equipment.eq_capcat is not None else ''
     
     if form.validate_on_submit():
         form.populate_obj(equipment)
