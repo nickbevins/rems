@@ -91,10 +91,13 @@
                                     <tr><td>eq_phone</td><td>Text</td><td>Phone number</td></tr>
                                     <tr><td>facility</td><td>Text</td><td>Facility name</td></tr>
                                     <tr><td>facility_address</td><td>Text</td><td>Facility address</td></tr>
+                                    <tr><td>contact_id</td><td>Number</td><td>Personnel ID for contact (blank = create new)</td></tr>
                                     <tr><td>contact_person</td><td>Text</td><td>Primary contact name</td></tr>
                                     <tr><td>contact_email</td><td>Text</td><td>Primary contact email</td></tr>
+                                    <tr><td>supervisor_id</td><td>Number</td><td>Personnel ID for supervisor (blank = create new)</td></tr>
                                     <tr><td>supervisor</td><td>Text</td><td>Supervisor name</td></tr>
                                     <tr><td>supervisor_email</td><td>Text</td><td>Supervisor email</td></tr>
+                                    <tr><td>physician_id</td><td>Number</td><td>Personnel ID for physician (blank = create new)</td></tr>
                                     <tr><td>physician</td><td>Text</td><td>Physician name</td></tr>
                                     <tr><td>physician_email</td><td>Text</td><td>Physician email</td></tr>
                                     <tr><td>eq_assetid</td><td>Text</td><td>Asset ID</td></tr>
@@ -121,12 +124,13 @@
                         </div>
                         
                         <div class="alert alert-info mt-3">
-                            <h6><i class="fas fa-info-circle"></i> Contact Information Notes:</h6>
+                            <h6><i class="fas fa-info-circle"></i> Personnel Matching & Creation:</h6>
                             <ul class="mb-0">
-                                <li>Contact personnel are automatically created/linked in the Personnel database</li>
-                                <li>If a contact name doesn't exist, a new Personnel record will be created</li>
-                                <li>Email addresses are stored with the Personnel record, not the equipment</li>
-                                <li>Use the current export format column names for best compatibility</li>
+                                <li><strong>ID-based matching:</strong> If personnel ID is provided, it will match exactly to existing Personnel records</li>
+                                <li><strong>New personnel:</strong> If ID is blank but name is provided, a new Personnel record will be created</li>
+                                <li><strong>Automatic roles:</strong> Personnel are automatically assigned roles (contact, supervisor, physician) based on the CSV fields they appear in</li>
+                                <li><strong>Email updates:</strong> If existing personnel have different emails, the CSV email will update their record</li>
+                                <li><strong>Human readability:</strong> Names and emails are included for CSV readability but matching is done by ID</li>
                             </ul>
                         </div>
                         

@@ -67,6 +67,54 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Database migration functions
+def ensure_personnel_role(person, role_name):
+    """Ensure a person has a specific role assigned"""
+    if person.roles:
+        current_roles = [role.strip().lower() for role in person.roles.split(',')]
+        if role_name.lower() not in current_roles:
+            person.roles = f"{person.roles}, {role_name}"
+    else:
+        person.roles = role_name
+
+def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
+    """Get existing personnel by ID or create new personnel with role assignment"""
+    contact = None
+    
+    # First try to match by ID if provided
+    if contact_id and str(contact_id).strip() and not pd.isna(contact_id):
+        try:
+            contact = Personnel.query.get(int(contact_id))
+        except (ValueError, TypeError):
+            pass
+    
+    # If no ID match and we have a name, try to find or create
+    if not contact and contact_name and str(contact_name).strip():
+        contact_name = str(contact_name).strip()
+        contact_email = str(contact_email).strip() if contact_email else None
+        
+        # Try to find existing by name
+        contact = Personnel.query.filter_by(name=contact_name).first()
+        
+        if not contact:
+            # Create new personnel record
+            contact = Personnel(
+                name=contact_name, 
+                email=contact_email,
+                roles=role_name,
+                is_active=True,
+                login_required=False
+            )
+            db.session.add(contact)
+            db.session.flush()
+        else:
+            # Update email if provided and different
+            if contact_email and contact.email != contact_email:
+                contact.email = contact_email
+            # Ensure role is assigned
+            ensure_personnel_role(contact, role_name)
+    
+    return contact
+
 def check_and_migrate_db():
     """Check database schema and apply migrations if needed"""
     try:
@@ -1595,7 +1643,7 @@ def export_equipment():
     # Write header - using relational field names
     headers = [
         'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
-        'contact_person', 'contact_email', 'supervisor', 'supervisor_email', 'physician', 'physician_email',
+        'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
         'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capcat', 'eq_capcst', 'eq_notes'
@@ -1615,10 +1663,13 @@ def export_equipment():
             eq.eq_phone or '',
             eq.facility.name if eq.facility else '',
             eq.facility.address if eq.facility else '',
+            eq.contact_id if eq.contact_id else '',
             eq.contact.name if eq.contact else '',
             eq.contact.email if eq.contact else '',
+            eq.supervisor_id if eq.supervisor_id else '',
             eq.supervisor.name if eq.supervisor else '',
             eq.supervisor.email if eq.supervisor else '',
+            eq.physician_id if eq.physician_id else '',
             eq.physician.name if eq.physician else '',
             eq.physician.email if eq.physician else '',
             eq.eq_assetid or '', eq.eq_sn or '', eq.eq_mefac or '', eq.eq_mereg or '', eq.eq_mefacreg or '', eq.eq_manid or '',
@@ -1741,17 +1792,13 @@ def bulk_edit():
                                 db.session.flush()
                             equipment.facility_id = facility.id
                         
-                        # Contact Personnel
-                        contact_val = row.get('Primary Contact') or row.get('eq_contact')
-                        contact_email_val = row.get('Contact Email') or row.get('eq_contactinfo')
-                        if contact_val and str(contact_val).strip():
-                            contact_name = str(contact_val).strip()
-                            contact_email = str(contact_email_val).strip() if contact_email_val else ''
-                            contact = Personnel.query.filter_by(name=contact_name).first()
-                            if not contact:
-                                contact = Personnel(name=contact_name, email=contact_email if contact_email else None)
-                                db.session.add(contact)
-                                db.session.flush()
+                        # Contact Personnel (using ID-based matching)
+                        contact_id = row.get('contact_id')
+                        contact_name = row.get('contact_person') or row.get('Primary Contact') or row.get('eq_contact')
+                        contact_email = row.get('contact_email') or row.get('Contact Email') or row.get('eq_contactinfo')
+                        
+                        contact = get_or_create_personnel(contact_id, contact_name, contact_email, 'contact')
+                        if contact:
                             equipment.contact_id = contact.id
                         
                         # Direct fields
@@ -1973,43 +2020,31 @@ def import_data():
                             db.session.flush()
                         equipment.facility_id = facility.id
                     
-                    # Contact Personnel (match export format)
-                    contact_val = row.get('contact_person') or row.get('Primary Contact') or row.get('eq_contact')
-                    contact_email_val = row.get('contact_email') or row.get('Contact Email') or row.get('eq_contactinfo')
-                    if contact_val and str(contact_val).strip():
-                        contact_name = str(contact_val).strip()
-                        contact_email = str(contact_email_val).strip() if contact_email_val else ''
-                        contact = Personnel.query.filter_by(name=contact_name).first()
-                        if not contact:
-                            contact = Personnel(name=contact_name, email=contact_email if contact_email else None)
-                            db.session.add(contact)
-                            db.session.flush()
+                    # Contact Personnel (using ID-based matching)
+                    contact_id = row.get('contact_id')
+                    contact_name = row.get('contact_person') or row.get('Primary Contact') or row.get('eq_contact')
+                    contact_email = row.get('contact_email') or row.get('Contact Email') or row.get('eq_contactinfo')
+                    
+                    contact = get_or_create_personnel(contact_id, contact_name, contact_email, 'contact')
+                    if contact:
                         equipment.contact_id = contact.id
                     
-                    # Supervisor Personnel (match export format)
-                    supervisor_val = row.get('supervisor') or row.get('eq_sup')
-                    supervisor_email_val = row.get('supervisor_email') or row.get('eq_supinfo')
-                    if supervisor_val and str(supervisor_val).strip():
-                        supervisor_name = str(supervisor_val).strip()
-                        supervisor_email = str(supervisor_email_val).strip() if supervisor_email_val else ''
-                        supervisor = Personnel.query.filter_by(name=supervisor_name).first()
-                        if not supervisor:
-                            supervisor = Personnel(name=supervisor_name, email=supervisor_email if supervisor_email else None)
-                            db.session.add(supervisor)
-                            db.session.flush()
+                    # Supervisor Personnel (using ID-based matching)
+                    supervisor_id = row.get('supervisor_id')
+                    supervisor_name = row.get('supervisor') or row.get('eq_sup')
+                    supervisor_email = row.get('supervisor_email') or row.get('eq_supinfo')
+                    
+                    supervisor = get_or_create_personnel(supervisor_id, supervisor_name, supervisor_email, 'supervisor')
+                    if supervisor:
                         equipment.supervisor_id = supervisor.id
                     
-                    # Physician Personnel (match export format)
-                    physician_val = row.get('physician') or row.get('eq_physician')
-                    physician_email_val = row.get('physician_email') or row.get('eq_physicianinfo')
-                    if physician_val and str(physician_val).strip():
-                        physician_name = str(physician_val).strip()
-                        physician_email = str(physician_email_val).strip() if physician_email_val else ''
-                        physician = Personnel.query.filter_by(name=physician_name).first()
-                        if not physician:
-                            physician = Personnel(name=physician_name, email=physician_email if physician_email else None)
-                            db.session.add(physician)
-                            db.session.flush()
+                    # Physician Personnel (using ID-based matching)
+                    physician_id = row.get('physician_id')
+                    physician_name = row.get('physician') or row.get('eq_physician')
+                    physician_email = row.get('physician_email') or row.get('eq_physicianinfo')
+                    
+                    physician = get_or_create_personnel(physician_id, physician_name, physician_email, 'physician')
+                    if physician:
                         equipment.physician_id = physician.id
                     
                     # Model and Room - direct fields
