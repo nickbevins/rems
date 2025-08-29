@@ -1185,6 +1185,17 @@ def equipment_edit(eq_id):
     physicians = Personnel.query.filter(Personnel.roles.ilike('%physician%')).order_by(Personnel.name).all()
     form.physician_id.choices = [('', 'Select Physician')] + [(str(p.id), p.name) for p in physicians]
     
+    # Set form field values from equipment (needed for foreign key fields)
+    if request.method == 'GET':
+        form.class_id.data = str(equipment.class_id) if equipment.class_id else ''
+        form.subclass_id.data = str(equipment.subclass_id) if equipment.subclass_id else ''
+        form.manufacturer_id.data = str(equipment.manufacturer_id) if equipment.manufacturer_id else ''
+        form.department_id.data = str(equipment.department_id) if equipment.department_id else ''
+        form.facility_id.data = str(equipment.facility_id) if equipment.facility_id else ''
+        form.contact_id.data = str(equipment.contact_id) if equipment.contact_id else ''
+        form.supervisor_id.data = str(equipment.supervisor_id) if equipment.supervisor_id else ''
+        form.physician_id.data = str(equipment.physician_id) if equipment.physician_id else ''
+    
     if form.validate_on_submit():
         form.populate_obj(equipment)
         
@@ -1213,6 +1224,12 @@ def equipment_edit(eq_id):
         db.session.commit()
         flash('Equipment updated successfully!', 'success')
         return redirect(url_for('equipment_detail', eq_id=eq_id))
+    else:
+        # Debug: Show form validation errors if form submission fails
+        if request.method == 'POST':
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    flash(f'Form validation error in {field_name}: {error}', 'error')
     
     return render_template('equipment_form.html', form=form, title='Edit Equipment', equipment=equipment)
 
