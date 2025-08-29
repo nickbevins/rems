@@ -70,51 +70,64 @@
                         <h5><i class="fas fa-table"></i> Expected CSV Format</h5>
                     </div>
                     <div class="card-body">
-                        <p><strong>Required columns:</strong></p>
+                        <p><strong>Expected columns (matches export format):</strong></p>
                         <div class="table-responsive">
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Column Name</th>
                                         <th>Type</th>
+                                        <th>Description</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>eq_class</td><td>Text</td></tr>
-                                    <tr><td>eq_subclass</td><td>Text</td></tr>
-                                    <tr><td>eq_manu</td><td>Text</td></tr>
-                                    <tr><td>eq_mod</td><td>Text</td></tr>
-                                    <tr><td>eq_dept</td><td>Text</td></tr>
-                                    <tr><td>eq_rm</td><td>Text</td></tr>
-                                    <tr><td>eq_fac</td><td>Text</td></tr>
-                                    <tr><td>eq_address</td><td>Text</td></tr>
-                                    <tr><td>eq_contact</td><td>Text</td></tr>
-                                    <tr><td>eq_contactinfo</td><td>Text</td></tr>
-                                    <tr><td>eq_sup</td><td>Text</td></tr>
-                                    <tr><td>eq_supinfo</td><td>Text</td></tr>
-                                    <tr><td>eq_physician</td><td>Text</td></tr>
-                                    <tr><td>eq_physicianinfo</td><td>Text</td></tr>
-                                    <tr><td>eq_assetid</td><td>Text</td></tr>
-                                    <tr><td>eq_sn</td><td>Text</td></tr>
-                                    <tr><td>eq_mefac</td><td>Text</td></tr>
-                                    <tr><td>eq_mereg</td><td>Text</td></tr>
-                                    <tr><td>eq_mefacreg</td><td>Text</td></tr>
-                                    <tr><td>eq_manid</td><td>Text</td></tr>
-                                    <tr><td>eq_mandt</td><td>Date</td></tr>
-                                    <tr><td>eq_instdt</td><td>Date</td></tr>
-                                    <tr><td>eq_eoldate</td><td>Date</td></tr>
-                                    <tr><td>eq_eeoldate</td><td>Date</td></tr>
-                                    <tr><td>eq_retdate</td><td>Date</td></tr>
-                                    <tr><td>eq_retired</td><td>Boolean</td></tr>
-                                    <tr><td>eq_auditfreq</td><td>Number</td></tr>
-                                    <tr><td>eq_acrsite</td><td>Text</td></tr>
-                                    <tr><td>eq_acrunit</td><td>Text</td></tr>
-                                    <tr><td>eq_radcap</td><td>Number</td></tr>
-                                    <tr><td>eq_capcat</td><td>Number</td></tr>
-                                    <tr><td>eq_capcst</td><td>Number</td></tr>
-                                    <tr><td>eq_notes</td><td>Text</td></tr>
+                                    <tr><td>eq_id</td><td>Number</td><td>Equipment ID (optional for new records)</td></tr>
+                                    <tr><td>equipment_class</td><td>Text</td><td>Required - Equipment class name</td></tr>
+                                    <tr><td>equipment_subclass</td><td>Text</td><td>Equipment subclass name</td></tr>
+                                    <tr><td>manufacturer</td><td>Text</td><td>Manufacturer name</td></tr>
+                                    <tr><td>eq_mod</td><td>Text</td><td>Model</td></tr>
+                                    <tr><td>department</td><td>Text</td><td>Department name</td></tr>
+                                    <tr><td>eq_rm</td><td>Text</td><td>Room</td></tr>
+                                    <tr><td>eq_phone</td><td>Text</td><td>Phone number</td></tr>
+                                    <tr><td>facility</td><td>Text</td><td>Facility name</td></tr>
+                                    <tr><td>facility_address</td><td>Text</td><td>Facility address</td></tr>
+                                    <tr><td>contact_person</td><td>Text</td><td>Primary contact name</td></tr>
+                                    <tr><td>contact_email</td><td>Text</td><td>Primary contact email</td></tr>
+                                    <tr><td>supervisor</td><td>Text</td><td>Supervisor name</td></tr>
+                                    <tr><td>supervisor_email</td><td>Text</td><td>Supervisor email</td></tr>
+                                    <tr><td>physician</td><td>Text</td><td>Physician name</td></tr>
+                                    <tr><td>physician_email</td><td>Text</td><td>Physician email</td></tr>
+                                    <tr><td>eq_assetid</td><td>Text</td><td>Asset ID</td></tr>
+                                    <tr><td>eq_sn</td><td>Text</td><td>Serial Number</td></tr>
+                                    <tr><td>eq_mefac</td><td>Text</td><td>ME Facility</td></tr>
+                                    <tr><td>eq_mereg</td><td>Text</td><td>ME Registration</td></tr>
+                                    <tr><td>eq_mefacreg</td><td>Text</td><td>ME Facility Registration</td></tr>
+                                    <tr><td>eq_manid</td><td>Text</td><td>Manufacturer ID</td></tr>
+                                    <tr><td>eq_mandt</td><td>Date</td><td>Manufacture Date (YYYY-MM-DD)</td></tr>
+                                    <tr><td>eq_instdt</td><td>Date</td><td>Installation Date (YYYY-MM-DD)</td></tr>
+                                    <tr><td>eq_eoldate</td><td>Date</td><td>End of Life Date (YYYY-MM-DD)</td></tr>
+                                    <tr><td>eq_eeoldate</td><td>Date</td><td>Extended EOL Date (YYYY-MM-DD)</td></tr>
+                                    <tr><td>eq_retdate</td><td>Date</td><td>Retirement Date (YYYY-MM-DD)</td></tr>
+                                    <tr><td>eq_retired</td><td>Boolean</td><td>TRUE/FALSE</td></tr>
+                                    <tr><td>eq_auditfreq</td><td>Text</td><td>Audit Frequency</td></tr>
+                                    <tr><td>eq_acrsite</td><td>Text</td><td>ACR Site</td></tr>
+                                    <tr><td>eq_acrunit</td><td>Text</td><td>ACR Unit</td></tr>
+                                    <tr><td>eq_radcap</td><td>Number</td><td>Radiology Owned (0/1)</td></tr>
+                                    <tr><td>eq_capcat</td><td>Number</td><td>Capital Category (0-3)</td></tr>
+                                    <tr><td>eq_capcst</td><td>Number</td><td>Capital Cost (thousands)</td></tr>
+                                    <tr><td>eq_notes</td><td>Text</td><td>Notes</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <h6><i class="fas fa-info-circle"></i> Contact Information Notes:</h6>
+                            <ul class="mb-0">
+                                <li>Contact personnel are automatically created/linked in the Personnel database</li>
+                                <li>If a contact name doesn't exist, a new Personnel record will be created</li>
+                                <li>Email addresses are stored with the Personnel record, not the equipment</li>
+                                <li>Use the current export format column names for best compatibility</li>
+                            </ul>
                         </div>
                         
                         <div class="mt-3">
