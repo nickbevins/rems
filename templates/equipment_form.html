@@ -83,7 +83,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.department_id.label(class="form-label") }}
                                 {{ form.department_id(class="form-control") }}
@@ -92,7 +92,7 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.eq_rm.label(class="form-label") }}
                                 {{ form.eq_rm(class="form-control") }}
@@ -101,7 +101,16 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                {{ form.eq_phone.label(class="form-label") }}
+                                {{ form.eq_phone(class="form-control") }}
+                                {% for error in form.eq_phone.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.facility_id.label(class="form-label") }}
                                 {{ form.facility_id(class="form-control") }}
