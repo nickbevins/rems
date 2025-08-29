@@ -562,14 +562,14 @@ class EquipmentForm(FlaskForm):
         ('', 'Select'),
         (0, 'No'),
         (1, 'Yes')
-    ], validators=[Optional()], coerce=lambda x: int(x) if x else None)
+    ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcat = SelectField('Capital Category', choices=[
         ('', 'Select'),
         (0, 'N/A'),
         (1, 'Category 1'),
         (2, 'Category 2'), 
         (3, 'Category 3')
-    ], validators=[Optional()], coerce=lambda x: int(x) if x else None)
+    ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
     eq_notes = TextAreaField('Notes', validators=[Optional()])
 
