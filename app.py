@@ -1173,7 +1173,19 @@ def equipment_new():
 @login_required
 def equipment_detail(eq_id):
     equipment = Equipment.query.get_or_404(eq_id)
-    tests = ComplianceTest.query.filter_by(eq_id=eq_id).order_by(ComplianceTest.test_date.desc()).all()
+    
+    # Add pagination for compliance tests
+    test_page = request.args.get('test_page', 1, type=int)
+    test_per_page = request.args.get('test_per_page', 10, type=int)
+    
+    # Query compliance tests with pagination
+    tests_query = ComplianceTest.query.filter_by(eq_id=eq_id).order_by(ComplianceTest.test_date.desc())
+    tests = tests_query.paginate(
+        page=test_page,
+        per_page=test_per_page,
+        error_out=False,
+        max_per_page=50
+    )
     
     # Preserve search parameters for back navigation
     search_params = {
