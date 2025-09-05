@@ -152,13 +152,14 @@
                         <table class="table table-striped table-hover" id="overdueTable">
                             <thead>
                                 <tr>
-                                    <th class="sortable" data-column="equipment" style="width: 22%;">Equipment <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="facility" style="width: 11%;">Facility <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="department" style="width: 13%;">Department <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="room" style="width: 10%;">Room <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="test_type" style="width: 12%;">Test Type <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="equipment" style="width: 20%;">Equipment <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="facility" style="width: 10%;">Facility <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="department" style="width: 12%;">Department <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="room" style="width: 8%;">Room <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="test_type" style="width: 10%;">Test Type <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="last_tested" style="width: 10%;">Last Tested <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="due_date" style="width: 10%;">Due Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="days_overdue" style="width: 12%;">Days Overdue <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="days_overdue" style="width: 10%;">Days Overdue <i class="fas fa-sort"></i></th>
                                     <th style="width: 10%;">Actions</th>
                                 </tr>
                             </thead>
@@ -170,6 +171,7 @@
                                     data-department="{{ equipment.eq_dept or '' }}" 
                                     data-room="{{ equipment.eq_rm or '' }}" 
                                     data-test-type="{{ test.get_test_type_display() }}" 
+                                    data-last-tested="{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else '' }}" 
                                     data-due-date="{{ test.next_due_date.strftime('%Y-%m-%d') }}" 
                                     data-days-overdue="{{ (today - test.next_due_date).days }}">
                                     <td>
@@ -180,6 +182,7 @@
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.get_test_type_display() }}</td>
+                                    <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
                                     <td>{{ test.next_due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>
                                         {% set days_overdue = (today - test.next_due_date).days %}
@@ -239,13 +242,14 @@
                         <table class="table table-striped table-hover" id="upcomingTable">
                             <thead>
                                 <tr>
-                                    <th class="sortable" data-column="equipment" style="width: 22%;">Equipment <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="facility" style="width: 11%;">Facility <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="department" style="width: 13%;">Department <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="room" style="width: 10%;">Room <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="test_type" style="width: 12%;">Test Type <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="equipment" style="width: 20%;">Equipment <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="facility" style="width: 10%;">Facility <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="department" style="width: 12%;">Department <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="room" style="width: 8%;">Room <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="test_type" style="width: 10%;">Test Type <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="last_tested" style="width: 10%;">Last Tested <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="due_date" style="width: 10%;">Due Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="days_until" style="width: 12%;">Days Until Due <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="days_until" style="width: 10%;">Days Until Due <i class="fas fa-sort"></i></th>
                                     <th style="width: 10%;">Actions</th>
                                 </tr>
                             </thead>
@@ -258,6 +262,7 @@
                                     data-department="{{ equipment.eq_dept or '' }}" 
                                     data-room="{{ equipment.eq_rm or '' }}" 
                                     data-test-type="{{ test.get_test_type_display() }}" 
+                                    data-last-tested="{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else '' }}" 
                                     data-due-date="{{ test.next_due_date.strftime('%Y-%m-%d') }}" 
                                     data-days-until="{{ days_until }}">
                                     <td>
@@ -268,6 +273,7 @@
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.get_test_type_display() }}</td>
+                                    <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
                                     <td>{{ test.next_due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>
                                         {% if days_until <= 7 %}
@@ -539,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bValue = parseInt(bValue) || 0;
             }
             // Handle date sorting
-            else if (column.includes('date')) {
+            else if (column.includes('date') || column === 'last_tested') {
                 aValue = new Date(aValue || '1900-01-01');
                 bValue = new Date(bValue || '1900-01-01');
             }
