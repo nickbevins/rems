@@ -327,6 +327,21 @@ class Equipment(db.Model):
         # No acceptance or annual test found, or no audit frequency set
         return None
     
+    def get_last_tested_date(self):
+        """Get the date of the most recent acceptance or annual test."""
+        from datetime import datetime
+        
+        today = datetime.now().date()
+        
+        # Find the most recent acceptance or annual test (excluding future dates)
+        latest_test = ComplianceTest.query.filter(
+            ComplianceTest.eq_id == self.eq_id,
+            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual']),
+            ComplianceTest.test_date <= today
+        ).order_by(ComplianceTest.test_date.desc()).first()
+        
+        return latest_test.test_date if latest_test else None
+    
     def to_dict(self):
         return {
             'eq_id': self.eq_id,
@@ -1414,14 +1429,16 @@ def compliance_dashboard():
         if next_due:
             # Create a fake test object to maintain template compatibility
             class FakeComplianceTest:
-                def __init__(self, next_due_date):
+                def __init__(self, next_due_date, last_tested_date):
                     self.test_type = 'Annual'
                     self.next_due_date = next_due_date
+                    self.last_tested_date = last_tested_date
                 
                 def get_test_type_display(self):
                     return 'Annual'
             
-            fake_test = FakeComplianceTest(next_due)
+            last_tested = equipment.get_last_tested_date()
+            fake_test = FakeComplianceTest(next_due, last_tested)
             
             if next_due < today:
                 # Overdue
