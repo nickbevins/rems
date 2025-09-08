@@ -22,7 +22,7 @@
                             <div class="card-body text-center">
                                 <i class="fas fa-check fa-2x mb-2"></i>
                                 <h3>{{ compliant_count }}</h3>
-                                <p class="mb-0">Compliant</p>
+                                <p class="mb-0">No Action</p>
                                 <small>Tests current & up-to-date</small>
                             </div>
                         </div>
@@ -55,8 +55,8 @@
                             <div class="card-body text-center">
                                 <i class="fas fa-question fa-2x mb-2"></i>
                                 <h3>{{ no_frequency_count }}</h3>
-                                <p class="mb-0">No Frequency</p>
-                                <small>No testing schedule set</small>
+                                <p class="mb-0">No History/Frequency</p>
+                                <small>No test history or schedule</small>
                             </div>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                                 {% set overdue_pct = (overdue_count / total_active * 100)|round(1) %}
                                 {% set no_freq_pct = (no_frequency_count / total_active * 100)|round(1) %}
                                 
-                                <div class="progress-bar bg-success" style="width: {{ compliant_pct }}%" title="Compliant: {{ compliant_pct }}%">
+                                <div class="progress-bar bg-success" style="width: {{ compliant_pct }}%" title="No Action: {{ compliant_pct }}%">
                                     {% if compliant_pct >= 10 %}{{ compliant_pct }}%{% endif %}
                                 </div>
                                 <div class="progress-bar bg-warning text-dark" style="width: {{ upcoming_pct }}%" title="Upcoming: {{ upcoming_pct }}%">
@@ -81,7 +81,7 @@
                                 <div class="progress-bar bg-danger" style="width: {{ overdue_pct }}%" title="Overdue: {{ overdue_pct }}%">
                                     {% if overdue_pct >= 10 %}{{ overdue_pct }}%{% endif %}
                                 </div>
-                                <div class="progress-bar bg-secondary" style="width: {{ no_freq_pct }}%" title="No Frequency: {{ no_freq_pct }}%">
+                                <div class="progress-bar bg-secondary" style="width: {{ no_freq_pct }}%" title="No History/Frequency: {{ no_freq_pct }}%">
                                     {% if no_freq_pct >= 10 %}{{ no_freq_pct }}%{% endif %}
                                 </div>
                             {% else %}

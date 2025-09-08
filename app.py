@@ -848,12 +848,8 @@ def index():
     for equipment in active_equipment:
         next_due = equipment.get_next_due_date()
         if next_due is None:
-            if equipment.eq_auditfreq:
-                # Has frequency but no tests yet - could be new equipment
-                upcoming_count += 1
-            else:
-                # No frequency set
-                no_frequency_count += 1
+            # No test history or no frequency set
+            no_frequency_count += 1
         elif next_due < today:
             # Overdue
             overdue_count += 1
