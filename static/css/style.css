@@ -459,3 +459,14 @@ footer {
     background-color: rgba(0, 123, 255, 0.15) !important;
     color: #212529 !important;
 }
+
+/* Smaller action button icons */
+.btn-icon {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.btn-icon i {
+    font-size: 0.75rem;
+}

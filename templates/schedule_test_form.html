@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-calendar-plus"></i> {{ title }}</h1>
+            {% if redirect_to == 'compliance' %}
+                <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Compliance Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Equipment
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Equipment Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Equipment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+                        <strong>Equipment Class:</strong><br>
+                        {{ equipment.eq_class or 'N/A' }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Manufacturer:</strong><br>
+                        {{ equipment.eq_manu or 'N/A' }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Model:</strong><br>
+                        {{ equipment.eq_mod or 'N/A' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Facility:</strong><br>
+                        {{ equipment.eq_fac or 'N/A' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Location:</strong><br>
+                        {{ equipment.eq_dept or 'N/A' }} - {{ equipment.eq_rm or 'N/A' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Form -->
+        <form method="POST" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar-alt"></i> Schedule Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.scheduled_date.label(class="form-label") }}
+                                {{ form.scheduled_date(class="form-control") }}
+                                {% for error in form.scheduled_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                <small class="form-text text-muted">When the compliance test is scheduled to occur</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form.scheduling_date.label(class="form-label") }}
+                                {{ form.scheduling_date(class="form-control") }}
+                                {% for error in form.scheduling_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                <small class="form-text text-muted">When this schedule was created/set</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control", rows="4") }}
+                        {% for error in form.notes.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Information (for existing records only) -->
+            {% if scheduled_test %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Audit Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Created By:</strong><br>
+                            {% if scheduled_test.created_by %}
+                                <span class="badge bg-secondary">{{ scheduled_test.created_by.name }}</span>
+                                {% if scheduled_test.created_at %}
+                                    <small class="text-muted d-block">{{ scheduled_test.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Last Modified By:</strong><br>
+                            {% if scheduled_test.modified_by %}
+                                <span class="badge bg-secondary">{{ scheduled_test.modified_by.name }}</span>
+                                {% if scheduled_test.updated_at %}
+                                    <small class="text-muted d-block">{{ scheduled_test.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            {% if redirect_to == 'compliance' %}
+                                <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            {% endif %}
+                            {% if scheduled_test %}
+                                <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                    <i class="fas fa-trash"></i> Delete Schedule
+                                </button>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% if scheduled_test %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this scheduled test?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('schedule_test_delete', schedule_id=scheduled_test.schedule_id) }}" style="display: inline;">
+                    <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

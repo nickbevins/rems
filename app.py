@@ -286,14 +286,13 @@ class Equipment(db.Model):
         from datetime import timedelta, datetime
         from dateutil.relativedelta import relativedelta
         import calendar
-        
+
         today = datetime.now().date()
-        
-        # Find the most recent acceptance or annual test (excluding future dates)
+
+        # Find the most recent acceptance or annual test
         latest_test = ComplianceTest.query.filter(
             ComplianceTest.eq_id == self.eq_id,
-            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual']),
-            ComplianceTest.test_date <= today
+            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
         ).order_by(ComplianceTest.test_date.desc()).first()
         
         if latest_test and self.eq_auditfreq:
@@ -330,16 +329,15 @@ class Equipment(db.Model):
     def get_last_tested_date(self):
         """Get the date of the most recent acceptance or annual test."""
         from datetime import datetime
-        
+
         today = datetime.now().date()
-        
-        # Find the most recent acceptance or annual test (excluding future dates)
+
+        # Find the most recent acceptance or annual test
         latest_test = ComplianceTest.query.filter(
             ComplianceTest.eq_id == self.eq_id,
-            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual']),
-            ComplianceTest.test_date <= today
+            ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
         ).order_by(ComplianceTest.test_date.desc()).first()
-        
+
         return latest_test.test_date if latest_test else None
     
     def to_dict(self):
@@ -529,6 +527,29 @@ class ComplianceTest(db.Model):
     def __repr__(self):
         return f'<ComplianceTest {self.test_id}: {self.test_type} for Equipment {self.eq_id}>'
 
+class ScheduledTest(db.Model):
+    __tablename__ = 'scheduled_tests'
+
+    schedule_id = db.Column(db.Integer, primary_key=True)
+    eq_id = db.Column(db.Integer, db.ForeignKey('equipment.eq_id'), nullable=False)
+    scheduled_date = db.Column(db.Date, nullable=False)
+    scheduling_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text)
+
+    # Audit fields
+    created_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    equipment = db.relationship('Equipment', backref='scheduled_tests')
+    created_by = db.relationship('Personnel', foreign_keys=[created_by_id], backref='schedules_created')
+    modified_by = db.relationship('Personnel', foreign_keys=[modified_by_id], backref='schedules_modified')
+
+    def __repr__(self):
+        return f'<ScheduledTest {self.schedule_id}: Equipment {self.eq_id} scheduled for {self.scheduled_date}>'
+
 # Standardized Options Models
 class EquipmentClass(db.Model):
     __tablename__ = 'equipment_classes'
@@ -663,6 +684,11 @@ class ComplianceTestForm(FlaskForm):
     performed_by_id = SelectField('Performed By', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
     reviewed_by_id = SelectField('Reviewing Physicist', choices=[], validators=[Optional()], coerce=lambda x: int(x) if x else None)
     notes = TextAreaField('Comments', validators=[Optional()])
+
+class ScheduleTestForm(FlaskForm):
+    scheduled_date = DateField('Scheduled Test Date', validators=[DataRequired()])
+    scheduling_date = DateField('Scheduling Date', validators=[DataRequired()], default=datetime.now().date())
+    notes = TextAreaField('Notes', validators=[Optional()])
 
 class PersonnelForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired(), Length(max=200)])
@@ -1216,7 +1242,7 @@ def equipment_detail(eq_id):
     next_test = None
     today = datetime.now().date()
     is_retired = equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)
-    
+
     if not is_retired:
         next_due_date = equipment.get_next_due_date()
         if next_due_date:
@@ -1225,13 +1251,19 @@ def equipment_detail(eq_id):
                 def __init__(self):
                     self.test_type = 'Annual'
                     self.next_due_date = next_due_date
-                
+
                 def get_test_type_display(self):
                     return 'Annual'
-            
+
             next_test = FakeTest()
-    
-    return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params)
+
+    # Get scheduled tests (today and future only)
+    scheduled_tests = ScheduledTest.query.filter(
+        ScheduledTest.eq_id == eq_id,
+        ScheduledTest.scheduled_date >= today
+    ).order_by(ScheduledTest.scheduled_date.asc()).all()
+
+    return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params, scheduled_tests=scheduled_tests)
 
 @app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1406,15 +1438,14 @@ def compliance_dashboard():
     
     facilities = db.session.query(Facility.name).join(Equipment).filter(Facility.is_active == True).distinct().order_by(Facility.name).all()
     facilities = [f[0] for f in facilities if f[0]]
-    
-    # Check for scheduled tests (future test dates in ComplianceTest table)
-    future_compliance_tests = ComplianceTest.query.filter(
-        ComplianceTest.test_date > today,
-        ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
+
+    # Get scheduled tests (today and future only) from ScheduledTest table
+    all_scheduled_tests = ScheduledTest.query.filter(
+        ScheduledTest.scheduled_date >= today
     ).all()
-    
+
     # Add scheduled tests to the scheduled_tests list
-    for test in future_compliance_tests:
+    for test in all_scheduled_tests:
         equipment = Equipment.query.get(test.eq_id)
         if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
             scheduled_tests.append((test, equipment))
@@ -1446,7 +1477,7 @@ def compliance_dashboard():
     # Sort by due date
     overdue_tests.sort(key=lambda x: x[0].next_due_date)
     upcoming_tests.sort(key=lambda x: x[0].next_due_date)
-    scheduled_tests.sort(key=lambda x: x[0].test_date)
+    scheduled_tests.sort(key=lambda x: x[0].scheduled_date)
     
     return render_template('compliance_dashboard.html', 
                          overdue_tests=overdue_tests,
@@ -1558,14 +1589,95 @@ def compliance_test_edit(test_id):
 def compliance_test_delete(test_id):
     test = ComplianceTest.query.get_or_404(test_id)
     eq_id = test.eq_id
-    
+
     # Get redirect parameter from form or URL
     redirect_to = request.form.get('redirect_to') or request.args.get('redirect_to', 'equipment')
-    
+
     db.session.delete(test)
     db.session.commit()
     flash('Compliance test deleted successfully!', 'success')
-    
+
+    # Redirect based on parameter
+    if redirect_to == 'compliance':
+        return redirect(url_for('compliance_dashboard'))
+    else:
+        return redirect(url_for('equipment_detail', eq_id=eq_id))
+
+@app.route('/schedule/test/<int:eq_id>/new', methods=['GET', 'POST'])
+@login_required
+@manage_compliance_required
+def schedule_test_new(eq_id):
+    equipment = Equipment.query.get_or_404(eq_id)
+    form = ScheduleTestForm()
+
+    # Get redirect parameter from URL
+    redirect_to = request.args.get('redirect_to', 'equipment')
+
+    if form.validate_on_submit():
+        scheduled_test = ScheduledTest()
+        form.populate_obj(scheduled_test)
+        scheduled_test.eq_id = eq_id
+
+        # Add user stamp
+        if current_user.is_authenticated:
+            scheduled_test.created_by_id = current_user.id
+            scheduled_test.modified_by_id = current_user.id
+
+        db.session.add(scheduled_test)
+        db.session.commit()
+        flash('Test scheduled successfully!', 'success')
+
+        # Redirect based on parameter
+        if redirect_to == 'compliance':
+            return redirect(url_for('compliance_dashboard'))
+        else:
+            return redirect(url_for('equipment_detail', eq_id=eq_id))
+
+    return render_template('schedule_test_form.html', form=form, equipment=equipment, title='Schedule Test', redirect_to=redirect_to, scheduled_test=None)
+
+@app.route('/schedule/test/<int:schedule_id>/edit', methods=['GET', 'POST'])
+@login_required
+@manage_compliance_required
+def schedule_test_edit(schedule_id):
+    scheduled_test = ScheduledTest.query.get_or_404(schedule_id)
+    equipment = Equipment.query.get_or_404(scheduled_test.eq_id)
+    form = ScheduleTestForm(obj=scheduled_test)
+
+    # Get redirect parameter from URL
+    redirect_to = request.args.get('redirect_to', 'equipment')
+
+    if form.validate_on_submit():
+        form.populate_obj(scheduled_test)
+
+        # Update user stamp
+        if current_user.is_authenticated:
+            scheduled_test.modified_by_id = current_user.id
+
+        db.session.commit()
+        flash('Scheduled test updated successfully!', 'success')
+
+        # Redirect based on parameter
+        if redirect_to == 'compliance':
+            return redirect(url_for('compliance_dashboard'))
+        else:
+            return redirect(url_for('equipment_detail', eq_id=scheduled_test.eq_id))
+
+    return render_template('schedule_test_form.html', form=form, equipment=equipment, title='Edit Scheduled Test', redirect_to=redirect_to, scheduled_test=scheduled_test)
+
+@app.route('/schedule/test/<int:schedule_id>/delete', methods=['POST'])
+@login_required
+@manage_compliance_required
+def schedule_test_delete(schedule_id):
+    scheduled_test = ScheduledTest.query.get_or_404(schedule_id)
+    eq_id = scheduled_test.eq_id
+
+    # Get redirect parameter from form or URL
+    redirect_to = request.form.get('redirect_to') or request.args.get('redirect_to', 'equipment')
+
+    db.session.delete(scheduled_test)
+    db.session.commit()
+    flash('Scheduled test deleted successfully!', 'success')
+
     # Redirect based on parameter
     if redirect_to == 'compliance':
         return redirect(url_for('compliance_dashboard'))
@@ -2696,10 +2808,151 @@ def import_compliance():
     
     reviewed_by_personnel = Personnel.query.filter(Personnel.roles.ilike('%physicist%')).order_by(Personnel.name).all()
     
-    return render_template('import_compliance.html', 
+    return render_template('import_compliance.html',
                          form=form,
                          performed_by_personnel=performed_by_personnel,
                          reviewed_by_personnel=reviewed_by_personnel)
+
+@app.route('/export-scheduled-tests')
+@login_required
+def export_scheduled_tests():
+    # Create CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Headers matching the ScheduledTest model
+    headers = ['schedule_id', 'eq_id', 'scheduled_date', 'scheduling_date', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
+    writer.writerow(headers)
+
+    # Write data for all scheduled tests
+    scheduled_tests = ScheduledTest.query.all()
+    for test in scheduled_tests:
+        writer.writerow([
+            test.schedule_id,
+            test.eq_id,
+            test.scheduled_date.strftime('%Y-%m-%d') if test.scheduled_date else '',
+            test.scheduling_date.strftime('%Y-%m-%d') if test.scheduling_date else '',
+            test.notes if test.notes else '',
+            test.created_by.name if test.created_by else '',
+            test.created_at.strftime('%Y-%m-%d %H:%M:%S') if test.created_at else '',
+            test.modified_by.name if test.modified_by else '',
+            test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else ''
+        ])
+
+    # Create response for full export
+    response = make_response(output.getvalue())
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'scheduled_tests_{timestamp}.csv'
+
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.headers['Content-Type'] = 'text/csv'
+
+    return response
+
+@app.route('/import-scheduled-tests', methods=['POST'])
+@login_required
+@manage_compliance_required
+def import_scheduled_tests():
+    if 'file' not in request.files:
+        flash('No file uploaded', 'error')
+        return redirect(url_for('compliance_dashboard'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('compliance_dashboard'))
+
+    if file and file.filename.endswith('.csv'):
+        try:
+            # Read CSV
+            df = pd.read_csv(file)
+
+            # Expected columns
+            required_columns = ['eq_id', 'scheduled_date', 'scheduling_date']
+            optional_columns = ['schedule_id', 'notes']
+
+            # Check required columns
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
+                return redirect(url_for('compliance_dashboard'))
+
+            # Process each row
+            imported_count = 0
+            updated_count = 0
+            error_count = 0
+
+            for index, row in df.iterrows():
+                try:
+                    # Check if updating existing scheduled test
+                    schedule_id = row.get('schedule_id')
+                    is_update = False
+                    if schedule_id and not pd.isna(schedule_id):
+                        test = ScheduledTest.query.get(int(schedule_id))
+                        if not test:
+                            # Create new test
+                            test = ScheduledTest()
+                        else:
+                            is_update = True
+                    else:
+                        # Create new test
+                        test = ScheduledTest()
+
+                    # Set fields
+                    eq_id = int(row['eq_id'])
+                    equipment = Equipment.query.get(eq_id)
+                    if not equipment:
+                        error_count += 1
+                        print(f"Row {index + 1}: Equipment ID {eq_id} not found")
+                        continue
+
+                    test.eq_id = eq_id
+                    test.scheduled_date = pd.to_datetime(row['scheduled_date']).date()
+                    test.scheduling_date = pd.to_datetime(row['scheduling_date']).date()
+
+                    # Optional fields
+                    if 'notes' in row and not pd.isna(row['notes']):
+                        test.notes = row['notes']
+
+                    # Add user stamps
+                    if current_user.is_authenticated:
+                        if not is_update:
+                            # New record
+                            test.created_by_id = current_user.id
+                            test.modified_by_id = current_user.id
+                        else:
+                            # Updating existing record
+                            test.modified_by_id = current_user.id
+
+                    db.session.add(test)
+
+                    if is_update:
+                        updated_count += 1
+                    else:
+                        imported_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    print(f"Error processing row {index + 1}: {str(e)}")
+                    continue
+
+            # Commit all changes
+            db.session.commit()
+
+            if error_count > 0:
+                flash(f'Import completed with errors. Imported: {imported_count}, Updated: {updated_count}, Errors: {error_count}', 'warning')
+            else:
+                flash(f'Successfully imported {imported_count} and updated {updated_count} scheduled tests!', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error importing CSV: {str(e)}', 'error')
+
+    else:
+        flash('Please upload a CSV file', 'error')
+
+    return redirect(url_for('compliance_dashboard'))
 
 @app.route('/export-facilities')
 @login_required

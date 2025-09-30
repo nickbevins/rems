@@ -187,12 +187,31 @@
                                 </p>
                             </div>
                             {% endif %}
-                            
+
+                            {% if scheduled_tests %}
+                                {% for scheduled in scheduled_tests %}
+                                <div class="alert alert-info" style="cursor: pointer;" ondblclick="window.location.href='{{ url_for('schedule_test_edit', schedule_id=scheduled.schedule_id) }}'" title="Double-click to edit">
+                                    <h6><i class="fas fa-calendar-check"></i> Scheduled Test</h6>
+                                    <p class="mb-0">
+                                        <strong>Scheduled for:</strong> {{ scheduled.scheduled_date.strftime('%Y-%m-%d') }}<br>
+                                        <small class="text-muted">Set on: {{ scheduled.scheduling_date.strftime('%Y-%m-%d') }}</small>
+                                        {% if scheduled.notes %}
+                                        <br><small>{{ scheduled.notes }}</small>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+
                             {% if current_user.can_manage_compliance() %}
                                 <div class="text-center">
-                                    <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}" 
-                                       class="btn btn-warning">
+                                    <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id) }}"
+                                       class="btn btn-warning me-2">
                                         <i class="fas fa-plus"></i> Add New Test
+                                    </a>
+                                    <a href="{{ url_for('schedule_test_new', eq_id=equipment.eq_id) }}"
+                                       class="btn btn-success">
+                                        <i class="fas fa-calendar-plus"></i> Schedule
                                     </a>
                                 </div>
                             {% endif %}
