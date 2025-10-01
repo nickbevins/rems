@@ -16,9 +16,9 @@
                 <h5><i class="fas fa-clipboard-check"></i> Compliance Status</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-2">
-                        <div class="card bg-success text-white">
+                <div class="row g-3">
+                    <div class="col">
+                        <div class="card bg-success text-white h-100">
                             <div class="card-body text-center">
                                 <i class="fas fa-check fa-2x mb-2"></i>
                                 <h3>{{ compliant_count }}</h3>
@@ -28,9 +28,9 @@
                         </div>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col">
                         <a href="{{ url_for('compliance_dashboard') }}#upcoming-tests" class="text-decoration-none">
-                            <div class="card bg-warning text-dark">
+                            <div class="card bg-warning text-dark h-100">
                                 <div class="card-body text-center">
                                     <i class="fas fa-clock fa-2x mb-2"></i>
                                     <h3>{{ upcoming_count }}</h3>
@@ -41,9 +41,9 @@
                         </a>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col">
                         <a href="{{ url_for('compliance_dashboard') }}#overdue-tests" class="text-decoration-none">
-                            <div class="card bg-danger text-white">
+                            <div class="card bg-danger text-white h-100">
                                 <div class="card-body text-center">
                                     <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                                     <h3>{{ overdue_count }}</h3>
@@ -54,8 +54,8 @@
                         </a>
                     </div>
 
-                    <div class="col-md-3">
-                        <div class="card bg-secondary text-white">
+                    <div class="col">
+                        <div class="card bg-secondary text-white h-100">
                             <div class="card-body text-center">
                                 <i class="fas fa-question fa-2x mb-2"></i>
                                 <h3>{{ no_frequency_count }}</h3>
@@ -65,9 +65,9 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col">
                         <a href="{{ url_for('compliance_dashboard') }}#scheduled-tests" class="text-decoration-none">
-                            <div class="card bg-info text-white">
+                            <div class="card text-white h-100" style="background-color: #0066cc;">
                                 <div class="card-body text-center">
                                     <i class="fas fa-calendar-check fa-2x mb-2"></i>
                                     <h3>{{ scheduled_tests_count }}</h3>
