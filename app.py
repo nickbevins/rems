@@ -1605,8 +1605,8 @@ def compliance_test_delete(test_id):
     if redirect_to == 'compliance':
         return redirect(url_for('compliance_dashboard'))
     else:
-        # Preserve filter parameters when redirecting back
-        filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+        # Preserve filter parameters from POST form data
+        filter_params = {k: v for k, v in request.form.items() if k not in ['redirect_to', 'csrf_token']}
         return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
 @app.route('/schedule/test/<int:eq_id>/new', methods=['GET', 'POST'])
@@ -1692,8 +1692,8 @@ def schedule_test_delete(schedule_id):
     if redirect_to == 'compliance':
         return redirect(url_for('compliance_dashboard'))
     else:
-        # Preserve filter parameters when redirecting back
-        filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+        # Preserve filter parameters from POST form data
+        filter_params = {k: v for k, v in request.form.items() if k not in ['redirect_to', 'csrf_token']}
         return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
 @app.route('/api/equipment')

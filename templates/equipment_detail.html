@@ -583,7 +583,7 @@ function deleteComplianceTest(testId, testType, testDate) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/compliance/test/${testId}/delete`;
-        
+
         // Add CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         if (csrfToken) {
@@ -593,7 +593,17 @@ function deleteComplianceTest(testId, testType, testDate) {
             csrfInput.value = csrfToken.getAttribute('content');
             form.appendChild(csrfInput);
         }
-        
+
+        // Preserve filter parameters from current URL
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.forEach((value, key) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            form.appendChild(input);
+        });
+
         // Submit the form
         document.body.appendChild(form);
         form.submit();
