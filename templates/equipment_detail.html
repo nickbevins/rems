@@ -190,7 +190,7 @@
 
                             {% if scheduled_tests %}
                                 {% for scheduled in scheduled_tests %}
-                                <div class="card text-dark mb-2" style="background-color: #d1f2d1 !important; cursor: pointer;" ondblclick="window.location.href='{{ url_for('schedule_test_edit', schedule_id=scheduled.schedule_id) }}'" title="Double-click to edit">
+                                <div class="card text-dark mb-2" style="background-color: #d1f2d1 !important; color: #000 !important; cursor: pointer;" ondblclick="window.location.href='{{ url_for('schedule_test_edit', schedule_id=scheduled.schedule_id) }}'" title="Double-click to edit">
                                     <div class="card-body py-2">
                                         <h6><i class="fas fa-calendar-check"></i> Scheduled Test</h6>
                                         <p class="mb-0">
