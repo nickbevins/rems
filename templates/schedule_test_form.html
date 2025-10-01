@@ -172,6 +172,11 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form method="POST" action="{{ url_for('schedule_test_delete', schedule_id=scheduled_test.schedule_id) }}" style="display: inline;">
                     <input type="hidden" name="redirect_to" value="{{ redirect_to }}">
+                    {% for key, value in request.args.items() %}
+                        {% if key != 'redirect_to' %}
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endif %}
+                    {% endfor %}
                     <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </div>
