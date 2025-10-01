@@ -1,7 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="48" fill="#ffa500"/>
-  <circle cx="50" cy="50" r="8" fill="#000"/>
-  <path d="M 50 50 L 50 15 A 35 35 0 0 1 65 22 Z" fill="#000"/>
-  <path d="M 50 50 L 20 70 A 35 35 0 0 1 27.5 80 Z" fill="#000"/>
-  <path d="M 50 50 L 80 70 A 35 35 0 0 1 72.5 80 Z" fill="#000"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#ffa500"/>
+
+  <!-- Central circle -->
+  <circle cx="256" cy="256" r="60" fill="#000"/>
+
+  <!-- Top blade -->
+  <circle cx="256" cy="100" r="50" fill="#000"/>
+  <path d="M 256 160 L 220 180 A 120 120 0 0 1 292 180 Z" fill="#000"/>
+
+  <!-- Bottom-left blade -->
+  <circle cx="156" cy="350" r="50" fill="#000"/>
+  <path d="M 196 330 L 220 370 A 120 120 0 0 1 170 300 Z" fill="#000"/>
+
+  <!-- Bottom-right blade -->
+  <circle cx="356" cy="350" r="50" fill="#000"/>
+  <path d="M 316 330 L 342 300 A 120 120 0 0 1 292 370 Z" fill="#000"/>
 </svg>
