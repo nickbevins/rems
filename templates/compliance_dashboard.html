@@ -90,59 +90,65 @@
         <!-- Statistics Cards -->
         <div class="row mb-4">
             <div class="col-md-4">
-                <div class="card bg-danger text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h5 class="card-title">Overdue Tests</h5>
-                                <h2>{{ overdue_tests|length }}</h2>
-                                <p class="mb-0">Require immediate attention</p>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-exclamation-triangle fa-3x"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-4">
-                <div class="card bg-warning text-dark">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h5 class="card-title">Upcoming Tests</h5>
-                                <h2>{{ upcoming_tests|length }}</h2>
-                                <p class="mb-0">Due within {{ days_ahead }} days</p>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-clock fa-3x"></i>
+                <a href="#overdue-tests" class="text-decoration-none">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Overdue Tests</h5>
+                                    <h2>{{ overdue_tests|length }}</h2>
+                                    <p class="mb-0">Require immediate attention</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="col-md-4">
-                <div class="card text-white" style="background-color: #0066cc;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h5 class="card-title">Scheduled Tests</h5>
-                                <h2>{{ scheduled_tests|length }}</h2>
-                                <p class="mb-0">Future test dates</p>
-                            </div>
-                            <div class="align-self-center">
-                                <i class="fas fa-calendar-alt fa-3x"></i>
+                <a href="#upcoming-tests" class="text-decoration-none">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Upcoming Tests</h5>
+                                    <h2>{{ upcoming_tests|length }}</h2>
+                                    <p class="mb-0">Due within {{ days_ahead }} days</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-clock fa-3x"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="#scheduled-tests" class="text-decoration-none">
+                    <div class="card text-white" style="background-color: #0066cc;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Scheduled Tests</h5>
+                                    <h2>{{ scheduled_tests|length }}</h2>
+                                    <p class="mb-0">Future test dates</p>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-calendar-alt fa-3x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
             </div>
         </div>
-        
+
         <!-- Overdue Tests -->
-        <div class="card mb-4">
+        <div class="card mb-4" id="overdue-tests">
             <div class="card-header bg-danger text-white">
                 <h5><i class="fas fa-exclamation-triangle"></i> Overdue Tests - Immediate Action Required</h5>
             </div>
@@ -215,7 +221,7 @@
         </div>
         
         <!-- Upcoming Tests -->
-        <div class="card mb-4">
+        <div class="card mb-4" id="upcoming-tests">
             <div class="card-header bg-warning text-dark">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="text-dark mb-0"><i class="fas fa-clock"></i> Upcoming Tests ({{ upcoming_tests|length }} within {{ days_ahead }} days)</h5>
@@ -312,7 +318,7 @@
         </div>
 
         <!-- Scheduled Tests -->
-        <div class="card">
+        <div class="card" id="scheduled-tests">
             <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #0066cc;">
                 <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> Scheduled Tests</h5>
                 {% if current_user.can_manage_compliance() %}
