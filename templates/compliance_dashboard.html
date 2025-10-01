@@ -364,15 +364,11 @@
                                     <td>{{ due_date.strftime('%Y-%m-%d') if due_date else 'N/A' }}</td>
                                     <td>
                                         {% if test.created_by %}
-                                            {% set name_parts = test.created_by.name.split(',') %}
-                                            {% if name_parts|length > 1 %}
-                                                {% set first_initial = name_parts[1].strip()[0] if name_parts[1].strip() else '' %}
-                                                {% set last_initial = name_parts[0].strip()[0] if name_parts[0].strip() else '' %}
-                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ first_initial }}{{ last_initial }}</span>
+                                            {% if ',' in test.created_by.name %}
+                                                {% set parts = test.created_by.name.split(',') %}
+                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ parts[1].strip()[0] if parts[1].strip() else '' }}{{ parts[0].strip()[0] if parts[0].strip() else '' }}</span>
                                             {% else %}
-                                                {% set name_words = test.created_by.name.split() %}
-                                                {% set initials = ''.join([word[0] for word in name_words if word]) %}
-                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ initials }}</span>
+                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ test.created_by.name[:2].upper() }}</span>
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted">N/A</span>
