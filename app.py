@@ -1532,12 +1532,14 @@ def compliance_test_new(eq_id):
         db.session.add(test)
         db.session.commit()
         flash('Compliance test added successfully!', 'success')
-        
+
         # Redirect based on parameter
         if redirect_to == 'compliance':
             return redirect(url_for('compliance_dashboard'))
         else:
-            return redirect(url_for('equipment_detail', eq_id=eq_id))
+            # Preserve filter parameters when redirecting back
+            filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+            return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
     
     return render_template('compliance_test_form.html', form=form, equipment=equipment, title='Add Compliance Test', redirect_to=redirect_to, test=None)
 
@@ -1574,12 +1576,14 @@ def compliance_test_edit(test_id):
         
         db.session.commit()
         flash('Compliance test updated successfully!', 'success')
-        
+
         # Redirect based on parameter
         if redirect_to == 'compliance':
             return redirect(url_for('compliance_dashboard'))
         else:
-            return redirect(url_for('equipment_detail', eq_id=test.eq_id))
+            # Preserve filter parameters when redirecting back
+            filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+            return redirect(url_for('equipment_detail', eq_id=test.eq_id, **filter_params))
     
     return render_template('compliance_test_form.html', form=form, equipment=equipment, title='Edit Compliance Test', redirect_to=redirect_to, test=test)
 
@@ -1601,7 +1605,9 @@ def compliance_test_delete(test_id):
     if redirect_to == 'compliance':
         return redirect(url_for('compliance_dashboard'))
     else:
-        return redirect(url_for('equipment_detail', eq_id=eq_id))
+        # Preserve filter parameters when redirecting back
+        filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+        return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
 @app.route('/schedule/test/<int:eq_id>/new', methods=['GET', 'POST'])
 @login_required
@@ -1631,7 +1637,9 @@ def schedule_test_new(eq_id):
         if redirect_to == 'compliance':
             return redirect(url_for('compliance_dashboard'))
         else:
-            return redirect(url_for('equipment_detail', eq_id=eq_id))
+            # Preserve filter parameters when redirecting back
+            filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+            return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
     return render_template('schedule_test_form.html', form=form, equipment=equipment, title='Schedule Test', redirect_to=redirect_to, scheduled_test=None)
 
@@ -1660,7 +1668,9 @@ def schedule_test_edit(schedule_id):
         if redirect_to == 'compliance':
             return redirect(url_for('compliance_dashboard'))
         else:
-            return redirect(url_for('equipment_detail', eq_id=scheduled_test.eq_id))
+            # Preserve filter parameters when redirecting back
+            filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+            return redirect(url_for('equipment_detail', eq_id=scheduled_test.eq_id, **filter_params))
 
     return render_template('schedule_test_form.html', form=form, equipment=equipment, title='Edit Scheduled Test', redirect_to=redirect_to, scheduled_test=scheduled_test)
 
@@ -1682,7 +1692,9 @@ def schedule_test_delete(schedule_id):
     if redirect_to == 'compliance':
         return redirect(url_for('compliance_dashboard'))
     else:
-        return redirect(url_for('equipment_detail', eq_id=eq_id))
+        # Preserve filter parameters when redirecting back
+        filter_params = {k: v for k, v in request.args.items() if k != 'redirect_to'}
+        return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
 @app.route('/api/equipment')
 def api_equipment():
