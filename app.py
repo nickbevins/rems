@@ -885,12 +885,16 @@ def index():
         else:
             # Compliant (next due date is more than 90 days away)
             compliant_count += 1
-    
+
+    # Get scheduled tests count
+    scheduled_tests_count = ScheduledTest.query.count()
+
     return render_template('index.html',
                          overdue_count=overdue_count,
                          upcoming_count=upcoming_count,
                          compliant_count=compliant_count,
-                         no_frequency_count=no_frequency_count)
+                         no_frequency_count=no_frequency_count,
+                         scheduled_tests_count=scheduled_tests_count)
 
 @app.route('/equipment')
 @login_required
