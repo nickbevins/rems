@@ -189,7 +189,7 @@
                                         {% if current_user.can_manage_compliance() %}
                                             <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, redirect_to='compliance') }}"
                                                class="btn btn-sm btn-outline-warning btn-icon" title="Add Test">
-                                                <i class="fas fa-plus"></i>
+                                                <i class="fas fa-check-circle"></i>
                                             </a>
                                             <a href="{{ url_for('schedule_test_new', eq_id=equipment.eq_id, redirect_to='compliance') }}"
                                                class="btn btn-sm btn-outline-success btn-icon" title="Schedule Test">
@@ -286,7 +286,7 @@
                                         {% if current_user.can_manage_compliance() %}
                                             <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, redirect_to='compliance') }}"
                                                class="btn btn-sm btn-outline-warning btn-icon" title="Add Test">
-                                                <i class="fas fa-plus"></i>
+                                                <i class="fas fa-check-circle"></i>
                                             </a>
                                             <a href="{{ url_for('schedule_test_new', eq_id=equipment.eq_id, redirect_to='compliance') }}"
                                                class="btn btn-sm btn-outline-success btn-icon" title="Schedule Test">
@@ -332,14 +332,13 @@
                         <table class="table table-striped table-hover" id="scheduledTable" style="table-layout: fixed; width: 100%;">
                             <thead>
                                 <tr>
-                                    <th class="sortable" data-column="equipment" style="width: 16%;">Equipment <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="facility" style="width: 10%;">Facility <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="department" style="width: 10%;">Department <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="room" style="width: 8%;">Room <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="scheduled_date" style="width: 11%;">Scheduled Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="due_date" style="width: 11%;">Due Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="scheduling_date" style="width: 11%;">Scheduling Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="created_by" style="width: 11%;">Created By <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="equipment" style="width: 20%;">Equipment <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="facility" style="width: 12%;">Facility <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="department" style="width: 12%;">Department <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="room" style="width: 10%;">Room <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="scheduled_date" style="width: 13%;">Scheduled Date <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="due_date" style="width: 13%;">Due Date <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="created_by" style="width: 8%;">By <i class="fas fa-sort"></i></th>
                                     <th style="width: 12%;">Actions</th>
                                 </tr>
                             </thead>
@@ -353,7 +352,6 @@
                                     data-room="{{ equipment.eq_rm or '' }}"
                                     data-scheduled-date="{{ test.scheduled_date.strftime('%Y-%m-%d') }}"
                                     data-due-date="{{ due_date.strftime('%Y-%m-%d') if due_date else '' }}"
-                                    data-scheduling-date="{{ test.scheduling_date.strftime('%Y-%m-%d') }}"
                                     data-created-by="{{ test.created_by.name if test.created_by else '' }}">
                                     <td>
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else 'N/A' }}</div>
@@ -364,10 +362,18 @@
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.scheduled_date.strftime('%Y-%m-%d') }}</td>
                                     <td>{{ due_date.strftime('%Y-%m-%d') if due_date else 'N/A' }}</td>
-                                    <td>{{ test.scheduling_date.strftime('%Y-%m-%d') }}</td>
                                     <td>
                                         {% if test.created_by %}
-                                            <span class="badge bg-secondary" title="Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ test.created_by.name }}</span>
+                                            {% set name_parts = test.created_by.name.split(',') %}
+                                            {% if name_parts|length > 1 %}
+                                                {% set first_initial = name_parts[1].strip()[0] if name_parts[1].strip() else '' %}
+                                                {% set last_initial = name_parts[0].strip()[0] if name_parts[0].strip() else '' %}
+                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ first_initial }}{{ last_initial }}</span>
+                                            {% else %}
+                                                {% set name_words = test.created_by.name.split() %}
+                                                {% set initials = ''.join([word[0] for word in name_words if word]) %}
+                                                <span class="badge bg-secondary" title="{{ test.created_by.name }} - Created: {{ test.created_at.strftime('%Y-%m-%d %H:%M') if test.created_at else 'Unknown' }}">{{ initials }}</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-muted">N/A</span>
                                         {% endif %}
