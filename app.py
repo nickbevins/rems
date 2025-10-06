@@ -79,37 +79,39 @@ def ensure_personnel_role(person, role_name):
 def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     """Get existing personnel by ID or create new personnel with role assignment"""
     contact = None
-    
+
     # First try to match by ID if provided
     if contact_id and str(contact_id).strip() and not pd.isna(contact_id):
         try:
             contact = Personnel.query.get(int(contact_id))
         except (ValueError, TypeError):
             pass
-    
+
     # If no ID match and we have a name, try to find or create
-    if not contact and contact_name and str(contact_name).strip():
+    # Check for NaN before converting to string to avoid creating "nan" personnel
+    if not contact and contact_name and not pd.isna(contact_name):
         contact_name = str(contact_name).strip()
-        contact_email = str(contact_email).strip() if contact_email else None
-        
-        # Try to find existing by name
-        contact = Personnel.query.filter_by(name=contact_name).first()
-        
-        if not contact:
-            # Create new personnel record
-            contact = Personnel(
-                name=contact_name, 
-                email=contact_email,
-                roles=role_name,
-                is_active=True,
-                login_required=False
-            )
-            db.session.add(contact)
-            db.session.flush()
-        else:
-            # Ensure role is assigned (don't update email from equipment import)
-            ensure_personnel_role(contact, role_name)
-    
+        if contact_name:  # Ensure it's not an empty string after stripping
+            contact_email = str(contact_email).strip() if (contact_email and not pd.isna(contact_email)) else None
+
+            # Try to find existing by name
+            contact = Personnel.query.filter_by(name=contact_name).first()
+
+            if not contact:
+                # Create new personnel record
+                contact = Personnel(
+                    name=contact_name,
+                    email=contact_email,
+                    roles=role_name,
+                    is_active=True,
+                    login_required=False
+                )
+                db.session.add(contact)
+                db.session.flush()
+            else:
+                # Ensure role is assigned (don't update email from equipment import)
+                ensure_personnel_role(contact, role_name)
+
     return contact
 
 def check_and_migrate_db():
@@ -1274,34 +1276,51 @@ def equipment_detail(eq_id):
 @manage_equipment_required
 def equipment_edit(eq_id):
     equipment = Equipment.query.get_or_404(eq_id)
-    form = EquipmentForm(obj=equipment)
-    
+
+    # For GET requests, pre-process the equipment data to ensure proper form population
+    if request.method == 'GET':
+        # Create a copy of equipment data with proper type conversions for SelectFields
+        form_data = {}
+        for field in equipment.__table__.columns:
+            value = getattr(equipment, field.name)
+            form_data[field.name] = value
+
+        # Convert integer fields to strings for SelectField compatibility
+        if equipment.eq_radcap is not None:
+            form_data['eq_radcap'] = str(equipment.eq_radcap)
+        if equipment.eq_capcat is not None:
+            form_data['eq_capcat'] = str(equipment.eq_capcat)
+
+        form = EquipmentForm(data=form_data)
+    else:
+        form = EquipmentForm()
+
     # Populate choices from standardized lists using IDs
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
     form.class_id.choices = [('', 'Select Class')] + [(str(c.id), c.name) for c in classes]
-    
+
     subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
     form.subclass_id.choices = [('', 'Select Subclass')] + [(str(s.id), s.name) for s in subclasses]
-    
+
     manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
     form.manufacturer_id.choices = [('', 'Select Manufacturer')] + [(str(m.id), m.name) for m in manufacturers]
-    
+
     departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
     form.department_id.choices = [('', 'Select Department')] + [(str(d.id), d.name) for d in departments]
-    
+
     facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
     form.facility_id.choices = [('', 'Select Facility')] + [(str(f.id), f.name) for f in facilities]
-    
+
     # Populate personnel choices by role
     contacts = Personnel.query.filter(Personnel.roles.ilike('%contact%')).order_by(Personnel.name).all()
     form.contact_id.choices = [('', 'Select Contact')] + [(str(p.id), p.name) for p in contacts]
-    
+
     supervisors = Personnel.query.filter(Personnel.roles.ilike('%supervisor%')).order_by(Personnel.name).all()
     form.supervisor_id.choices = [('', 'Select Supervisor')] + [(str(p.id), p.name) for p in supervisors]
-    
+
     physicians = Personnel.query.filter(Personnel.roles.ilike('%physician%')).order_by(Personnel.name).all()
     form.physician_id.choices = [('', 'Select Physician')] + [(str(p.id), p.name) for p in physicians]
-    
+
     # Set form field values from equipment (needed for foreign key fields)
     if request.method == 'GET':
         form.class_id.data = str(equipment.class_id) if equipment.class_id else ''
@@ -1312,8 +1331,6 @@ def equipment_edit(eq_id):
         form.contact_id.data = str(equipment.contact_id) if equipment.contact_id else ''
         form.supervisor_id.data = str(equipment.supervisor_id) if equipment.supervisor_id else ''
         form.physician_id.data = str(equipment.physician_id) if equipment.physician_id else ''
-        form.eq_radcap.data = str(equipment.eq_radcap) if equipment.eq_radcap is not None else ''
-        form.eq_capcat.data = str(equipment.eq_capcat) if equipment.eq_capcat is not None else ''
     
     if form.validate_on_submit():
         form.populate_obj(equipment)
