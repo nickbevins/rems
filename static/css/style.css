@@ -28,8 +28,24 @@ body {
 }
 
 /* Ensure Bootstrap color classes work properly */
+.card.bg-primary {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.card.bg-secondary {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
 .card.bg-success {
     background-color: #198754 !important;
+    color: #fff !important;
+}
+
+.card.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #000 !important;
 }
 
 .card.bg-warning {
@@ -39,10 +55,7 @@ body {
 
 .card.bg-danger {
     background-color: #dc3545 !important;
-}
-
-.card.bg-secondary {
-    background-color: #6c757d !important;
+    color: #fff !important;
 }
 
 /* Scheduled tests card - blue background */
