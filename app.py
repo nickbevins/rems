@@ -641,7 +641,7 @@ class EquipmentForm(FlaskForm):
     eq_mandt = DateField('Manufacture Date', validators=[Optional()])
     eq_instdt = DateField('Installation Date', validators=[Optional()])
     eq_eoldate = DateField('End of Life Date', validators=[Optional()])
-    eq_eeoldate = DateField('Extended End of Life Date', validators=[Optional()])
+    eq_eeoldate = DateField('Estimated End of Life Date', validators=[Optional()])
     eq_retdate = DateField('Retirement Date', validators=[Optional()])
     eq_retired = BooleanField('Retired')
     eq_auditfreq = SelectField('Audit Frequency', choices=[
