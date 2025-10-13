@@ -370,6 +370,10 @@
 }
 /* Override Bootstrap table-secondary to keep text dark */
 .table-secondary {
+    --bs-table-color: #212529 !important;
+    --bs-table-bg: #e2e3e5 !important;
+    --bs-table-hover-color: #212529 !important;
+    --bs-table-hover-bg: #d4d5d7 !important;
     color: #212529 !important;
 }
 .table-secondary td {
@@ -378,15 +382,18 @@
 .table-secondary .text-muted {
     color: #6c757d !important;
 }
-/* Keep text dark on hover for retired equipment */
-.table-hover .table-secondary:hover {
+/* Keep text dark on hover for retired equipment - more specific selectors */
+.table-hover tbody .table-secondary:hover {
     color: #212529 !important;
 }
-.table-hover .table-secondary:hover td {
+.table-hover tbody .table-secondary:hover td {
     color: #212529 !important;
 }
-.table-hover .table-secondary:hover .text-muted {
+.table-hover tbody .table-secondary:hover .text-muted {
     color: #6c757d !important;
+}
+.table-hover tbody .table-secondary:hover > * {
+    color: #212529 !important;
 }
 .btn-icon {
     padding: 0.25rem 0.5rem !important;
