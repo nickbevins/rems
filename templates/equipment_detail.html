@@ -171,14 +171,14 @@
                     </div>
                     <div class="card-body">
                         {% if is_retired %}
-                        <div class="card text-dark mb-2" style="background-color: #d1ecf1 !important; border-color: #bee5eb !important;">
+                        <div class="card mb-2" style="background-color: #d1ecf1 !important; border-color: #bee5eb !important; color: #212529 !important;">
                             <div class="card-body">
-                                <h6><i class="fas fa-info-circle"></i> Equipment Status</h6>
-                                <p class="mb-0">
+                                <h6 style="color: #212529 !important;"><i class="fas fa-info-circle"></i> Equipment Status</h6>
+                                <p class="mb-0" style="color: #212529 !important;">
                                     <strong>Retired Equipment</strong><br>
                                     No further compliance testing required.
                                     {% if equipment.eq_retdate %}
-                                    <br><small class="text-muted">Retired: {{ equipment.eq_retdate.strftime('%Y-%m-%d') }}</small>
+                                    <br><small style="color: #6c757d !important;">Retired: {{ equipment.eq_retdate.strftime('%Y-%m-%d') }}</small>
                                     {% endif %}
                                 </p>
                             </div>
