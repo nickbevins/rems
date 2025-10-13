@@ -93,6 +93,10 @@
                                         <td>{{ equipment.eq_sn or 'N/A' }}</td>
                                     </tr>
                                     <tr>
+                                        <th>Manufacturer ID:</th>
+                                        <td>{{ equipment.eq_manid or 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
                                         <th>Install Date:</th>
                                         <td>{{ equipment.eq_instdt.strftime('%Y-%m-%d') if equipment.eq_instdt else 'N/A' }}</td>
                                     </tr>
@@ -700,7 +704,7 @@ function generateEquipmentDetailsForm(eq, choices) {
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Equipment ID</label>
-                        <input type="text" class="form-control" value="${eq.eq_id}" disabled>
+                        <input type="text" class="form-control" value="${eq.eq_id}" disabled style="color: #495057;">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Equipment Class *</label>
@@ -760,6 +764,10 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_sn" value="${eq.eq_sn || ''}">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Manufacturer ID</label>
+                        <input type="text" class="form-control" name="eq_manid" value="${eq.eq_manid || ''}">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Installation Date</label>
                         <input type="date" class="form-control" name="eq_instdt" value="${eq.eq_instdt || ''}">
                     </div>
@@ -809,10 +817,6 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_mereg" value="${eq.eq_mereg || ''}">
                     </div>
                 </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Manufacturer ID</label>
-                <input type="text" class="form-control" name="eq_manid" value="${eq.eq_manid || ''}">
             </div>
             <div class="mb-3">
                 <label class="form-label">Notes</label>
