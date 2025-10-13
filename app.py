@@ -1204,7 +1204,24 @@ def equipment_new():
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
-            
+
+        # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
+        if equipment.eq_mefac and equipment.eq_mereg:
+            # Extract trailing numbers from eq_mefac (e.g., "ME-12345" -> "12345", "ABC123" -> "123")
+            import re
+            mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
+            mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
+            # Extract trailing numbers from eq_mereg (e.g., "REG-67890" -> "67890", "XYZ890" -> "890")
+            mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
+            mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
+            # Combine them with hyphen (e.g., "123-456" format)
+            if mefac_suffix and mereg_suffix:
+                equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
+            else:
+                equipment.eq_mefacreg = None
+        else:
+            equipment.eq_mefacreg = None
+
         db.session.add(equipment)
         db.session.commit()
         flash('Equipment added successfully!', 'success')
@@ -1356,10 +1373,30 @@ def equipment_edit(eq_id):
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
-            
+
+        # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
+        if equipment.eq_mefac and equipment.eq_mereg:
+            # Extract trailing numbers from eq_mefac (e.g., "ME-12345" -> "12345", "ABC123" -> "123")
+            import re
+            mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
+            mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
+            # Extract trailing numbers from eq_mereg (e.g., "REG-67890" -> "67890", "XYZ890" -> "890")
+            mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
+            mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
+            # Combine them with hyphen (e.g., "123-456" format)
+            if mefac_suffix and mereg_suffix:
+                equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
+            else:
+                equipment.eq_mefacreg = None
+        else:
+            equipment.eq_mefacreg = None
+
         db.session.commit()
         flash('Equipment updated successfully!', 'success')
-        return redirect(url_for('equipment_detail', eq_id=eq_id))
+
+        # Preserve filter parameters when redirecting back
+        filter_params = {k: v for k, v in request.args.items()}
+        return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
     else:
         # Debug: Show form validation errors if form submission fails
         if request.method == 'POST':
@@ -1368,6 +1405,167 @@ def equipment_edit(eq_id):
                     flash(f'Form validation error in {field_name}: {error}', 'error')
     
     return render_template('equipment_form.html', form=form, title='Edit Equipment', equipment=equipment)
+
+@app.route('/api/equipment/<int:eq_id>/update-details', methods=['POST'])
+@login_required
+@manage_equipment_required
+def update_equipment_details(eq_id):
+    """AJAX endpoint to update equipment details card"""
+    equipment = Equipment.query.get_or_404(eq_id)
+
+    # Get form data from JSON
+    data = request.get_json()
+
+    # Update equipment fields
+    equipment.class_id = int(data.get('class_id')) if data.get('class_id') else None
+    equipment.subclass_id = int(data.get('subclass_id')) if data.get('subclass_id') else None
+    equipment.manufacturer_id = int(data.get('manufacturer_id')) if data.get('manufacturer_id') else None
+    equipment.eq_mod = data.get('eq_mod', '')
+    equipment.department_id = int(data.get('department_id')) if data.get('department_id') else None
+    equipment.eq_rm = data.get('eq_rm', '')
+    equipment.eq_phone = data.get('eq_phone', '')
+    equipment.facility_id = int(data.get('facility_id')) if data.get('facility_id') else None
+    equipment.eq_assetid = data.get('eq_assetid', '')
+    equipment.eq_sn = data.get('eq_sn', '')
+    equipment.eq_mefac = data.get('eq_mefac', '')
+    equipment.eq_mereg = data.get('eq_mereg', '')
+    equipment.eq_manid = data.get('eq_manid', '')
+    equipment.eq_auditfreq = data.get('eq_auditfreq', '')
+    equipment.eq_acrsite = data.get('eq_acrsite', '')
+    equipment.eq_acrunit = data.get('eq_acrunit', '')
+    equipment.eq_notes = data.get('eq_notes', '')
+
+    # Handle dates
+    from dateutil import parser
+    try:
+        equipment.eq_mandt = parser.parse(data.get('eq_mandt')).date() if data.get('eq_mandt') else None
+        equipment.eq_instdt = parser.parse(data.get('eq_instdt')).date() if data.get('eq_instdt') else None
+        equipment.eq_eoldate = parser.parse(data.get('eq_eoldate')).date() if data.get('eq_eoldate') else None
+        equipment.eq_eeoldate = parser.parse(data.get('eq_eeoldate')).date() if data.get('eq_eeoldate') else None
+        equipment.eq_retdate = parser.parse(data.get('eq_retdate')).date() if data.get('eq_retdate') else None
+    except:
+        pass
+
+    # Handle retired checkbox
+    equipment.eq_retired = data.get('eq_retired') == 'true' or data.get('eq_retired') == True
+
+    # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
+    if equipment.eq_mefac and equipment.eq_mereg:
+        import re
+        mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
+        mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
+        mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
+        mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
+        if mefac_suffix and mereg_suffix:
+            equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
+        else:
+            equipment.eq_mefacreg = None
+    else:
+        equipment.eq_mefacreg = None
+
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Equipment details updated successfully'})
+
+@app.route('/api/equipment/<int:eq_id>/update-capital', methods=['POST'])
+@login_required
+@manage_equipment_required
+def update_capital_details(eq_id):
+    """AJAX endpoint to update capital details card"""
+    equipment = Equipment.query.get_or_404(eq_id)
+
+    # Get form data from JSON
+    data = request.get_json()
+
+    # Update capital fields
+    equipment.eq_radcap = int(data.get('eq_radcap')) if data.get('eq_radcap') and data.get('eq_radcap') != '' else None
+    equipment.eq_capcat = int(data.get('eq_capcat')) if data.get('eq_capcat') and data.get('eq_capcat') != '' else None
+    equipment.eq_capcst = int(data.get('eq_capcst')) if data.get('eq_capcst') else None
+
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Capital details updated successfully'})
+
+@app.route('/api/equipment/<int:eq_id>/update-contacts', methods=['POST'])
+@login_required
+@manage_equipment_required
+def update_contact_info(eq_id):
+    """AJAX endpoint to update contact information card"""
+    equipment = Equipment.query.get_or_404(eq_id)
+
+    # Get form data from JSON
+    data = request.get_json()
+
+    # Update contact fields
+    equipment.contact_id = int(data.get('contact_id')) if data.get('contact_id') else None
+    equipment.supervisor_id = int(data.get('supervisor_id')) if data.get('supervisor_id') else None
+    equipment.physician_id = int(data.get('physician_id')) if data.get('physician_id') else None
+
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Contact information updated successfully'})
+
+@app.route('/api/equipment/<int:eq_id>/form-data', methods=['GET'])
+@login_required
+def get_equipment_form_data(eq_id):
+    """AJAX endpoint to get dropdown choices and current values for edit forms"""
+    equipment = Equipment.query.get_or_404(eq_id)
+
+    # Get all dropdown choices
+    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    contacts = Personnel.query.filter(Personnel.roles.ilike('%contact%')).order_by(Personnel.name).all()
+    supervisors = Personnel.query.filter(Personnel.roles.ilike('%supervisor%')).order_by(Personnel.name).all()
+    physicians = Personnel.query.filter(Personnel.roles.ilike('%physician%')).order_by(Personnel.name).all()
+
+    return jsonify({
+        'equipment': {
+            'eq_id': equipment.eq_id,
+            'class_id': equipment.class_id,
+            'subclass_id': equipment.subclass_id,
+            'manufacturer_id': equipment.manufacturer_id,
+            'eq_mod': equipment.eq_mod,
+            'department_id': equipment.department_id,
+            'eq_rm': equipment.eq_rm,
+            'eq_phone': equipment.eq_phone,
+            'facility_id': equipment.facility_id,
+            'eq_assetid': equipment.eq_assetid,
+            'eq_sn': equipment.eq_sn,
+            'eq_mefac': equipment.eq_mefac,
+            'eq_mereg': equipment.eq_mereg,
+            'eq_manid': equipment.eq_manid,
+            'eq_mandt': equipment.eq_mandt.strftime('%Y-%m-%d') if equipment.eq_mandt else '',
+            'eq_instdt': equipment.eq_instdt.strftime('%Y-%m-%d') if equipment.eq_instdt else '',
+            'eq_eoldate': equipment.eq_eoldate.strftime('%Y-%m-%d') if equipment.eq_eoldate else '',
+            'eq_eeoldate': equipment.eq_eeoldate.strftime('%Y-%m-%d') if equipment.eq_eeoldate else '',
+            'eq_retdate': equipment.eq_retdate.strftime('%Y-%m-%d') if equipment.eq_retdate else '',
+            'eq_retired': equipment.eq_retired,
+            'eq_auditfreq': equipment.eq_auditfreq,
+            'eq_acrsite': equipment.eq_acrsite,
+            'eq_acrunit': equipment.eq_acrunit,
+            'eq_notes': equipment.eq_notes,
+            'eq_radcap': equipment.eq_radcap,
+            'eq_capcat': equipment.eq_capcat,
+            'eq_capcst': equipment.eq_capcst,
+            'contact_id': equipment.contact_id,
+            'supervisor_id': equipment.supervisor_id,
+            'physician_id': equipment.physician_id,
+        },
+        'choices': {
+            'classes': [{'id': c.id, 'name': c.name} for c in classes],
+            'subclasses': [{'id': s.id, 'name': s.name} for s in subclasses],
+            'manufacturers': [{'id': m.id, 'name': m.name} for m in manufacturers],
+            'departments': [{'id': d.id, 'name': d.name} for d in departments],
+            'facilities': [{'id': f.id, 'name': f.name} for f in facilities],
+            'contacts': [{'id': p.id, 'name': p.name} for p in contacts],
+            'supervisors': [{'id': p.id, 'name': p.name} for p in supervisors],
+            'physicians': [{'id': p.id, 'name': p.name} for p in physicians],
+            'audit_frequencies': ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME'],
+        }
+    })
 
 @app.route('/compliance')
 @login_required

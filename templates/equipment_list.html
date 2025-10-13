@@ -237,7 +237,7 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         {% if current_user.can_manage_equipment() %}
-                                            <a href="{{ url_for('equipment_edit', eq_id=eq.eq_id) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
+                                            <a href="{{ url_for('equipment_detail', eq_id=eq.eq_id, edit='equipment_details', **request.args) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                         {% endif %}

@@ -152,7 +152,7 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.eq_mefac.label(class="form-label") }}
                                 {{ form.eq_mefac(class="form-control") }}
@@ -161,20 +161,11 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 {{ form.eq_mereg.label(class="form-label") }}
                                 {{ form.eq_mereg(class="form-control") }}
                                 {% for error in form.eq_mereg.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                {{ form.eq_mefacreg.label(class="form-label") }}
-                                {{ form.eq_mefacreg(class="form-control") }}
-                                {% for error in form.eq_mefacreg.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}
                             </div>
