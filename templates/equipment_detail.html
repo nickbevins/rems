@@ -638,9 +638,13 @@ async function enterEditMode(cardName) {
 
     // Hide compliance status if editing equipment details
     if (cardName === 'equipment-details') {
-        const complianceCard = document.querySelector('#equipment-details-card').parentElement.nextElementSibling;
-        if (complianceCard) {
-            complianceCard.style.display = 'none';
+        // Find the Compliance Status card in the sidebar (col-md-4)
+        const sidebar = document.querySelector('.col-md-4');
+        if (sidebar) {
+            const complianceCard = sidebar.querySelector('.card:not(#capital-details-card)');
+            if (complianceCard) {
+                complianceCard.style.display = 'none';
+            }
         }
     }
 
@@ -695,6 +699,10 @@ function generateEquipmentDetailsForm(eq, choices) {
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
+                        <label class="form-label">Equipment ID</label>
+                        <input type="text" class="form-control" value="${eq.eq_id}" disabled>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Equipment Class *</label>
                         <select class="form-control" name="class_id" required>
                             <option value="">Select Class</option>
@@ -731,15 +739,15 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_rm" value="${eq.eq_rm || ''}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Phone</label>
-                        <input type="text" class="form-control" name="eq_phone" value="${eq.eq_phone || ''}">
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Facility</label>
                         <select class="form-control" name="facility_id">
                             <option value="">Select Facility</option>
                             ${choices.facilities.map(f => `<option value="${f.id}" ${eq.facility_id == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control" name="eq_phone" value="${eq.eq_phone || ''}">
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -752,12 +760,12 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_sn" value="${eq.eq_sn || ''}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Manufacture Date</label>
-                        <input type="date" class="form-control" name="eq_mandt" value="${eq.eq_mandt || ''}">
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Installation Date</label>
                         <input type="date" class="form-control" name="eq_instdt" value="${eq.eq_instdt || ''}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Manufacture Date</label>
+                        <input type="date" class="form-control" name="eq_mandt" value="${eq.eq_mandt || ''}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">End of Life Date</label>
@@ -777,10 +785,6 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <label class="form-label">Retirement Date</label>
                         <input type="date" class="form-control" name="eq_retdate" value="${eq.eq_retdate || ''}">
                     </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4">
                     <div class="mb-3">
                         <label class="form-label">Audit Frequency</label>
                         <select class="form-control" name="eq_auditfreq">
@@ -788,28 +792,18 @@ function generateEquipmentDetailsForm(eq, choices) {
                             ${choices.audit_frequencies.map(f => `<option value="${f}" ${eq.eq_auditfreq == f ? 'selected' : ''}>${f}</option>`).join('')}
                         </select>
                     </div>
-                </div>
-                <div class="col-md-4">
                     <div class="mb-3">
                         <label class="form-label">ACR Site</label>
                         <input type="text" class="form-control" name="eq_acrsite" value="${eq.eq_acrsite || ''}">
                     </div>
-                </div>
-                <div class="col-md-4">
                     <div class="mb-3">
                         <label class="form-label">ACR Unit</label>
                         <input type="text" class="form-control" name="eq_acrunit" value="${eq.eq_acrunit || ''}">
                     </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">ME Facility</label>
                         <input type="text" class="form-control" name="eq_mefac" value="${eq.eq_mefac || ''}">
                     </div>
-                </div>
-                <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">ME Registration</label>
                         <input type="text" class="form-control" name="eq_mereg" value="${eq.eq_mereg || ''}">
@@ -960,9 +954,12 @@ function cancelEdit(cardName) {
 
     // Show compliance status if it was hidden
     if (cardName === 'equipment-details') {
-        const complianceCard = document.querySelector('#equipment-details-card').parentElement.nextElementSibling;
-        if (complianceCard) {
-            complianceCard.style.display = '';
+        const sidebar = document.querySelector('.col-md-4');
+        if (sidebar) {
+            const complianceCard = sidebar.querySelector('.card:not(#capital-details-card)');
+            if (complianceCard) {
+                complianceCard.style.display = '';
+            }
         }
     }
 
