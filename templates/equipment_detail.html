@@ -622,6 +622,63 @@ function initCardEditing() {
     });
 }
 
+function setupSubclassFilter() {
+    const classSelect = document.getElementById('edit-class-id');
+    const subclassSelect = document.getElementById('edit-subclass-id');
+
+    if (classSelect && subclassSelect) {
+        const currentSubclassId = subclassSelect.value;
+
+        async function updateSubclasses() {
+            const selectedClassId = classSelect.value;
+
+            if (!selectedClassId) {
+                // If no class selected, show all subclasses
+                return;
+            }
+
+            const url = `/api/subclasses?class_id=${encodeURIComponent(selectedClassId)}`;
+
+            try {
+                const response = await fetch(url);
+                const subclasses = await response.json();
+
+                // Save current selection
+                const currentValue = subclassSelect.value;
+
+                // Clear existing options
+                subclassSelect.innerHTML = '<option value="">Select Subclass</option>';
+
+                // Add new options
+                subclasses.forEach(subclass => {
+                    const option = document.createElement('option');
+                    option.value = subclass.id;
+                    option.textContent = subclass.name;
+
+                    // Restore selection if it's still valid for this class
+                    if (subclass.id == currentValue) {
+                        option.selected = true;
+                    }
+
+                    subclassSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading subclasses:', error);
+            }
+        }
+
+        // Update subclasses when class changes
+        classSelect.addEventListener('change', function() {
+            updateSubclasses();
+        });
+
+        // Initial load - update subclasses for current class selection
+        if (classSelect.value) {
+            updateSubclasses();
+        }
+    }
+}
+
 async function enterEditMode(cardName) {
     if (currentlyEditingCard) {
         alert('Please save or cancel the current edit before editing another section.');
@@ -670,6 +727,11 @@ async function enterEditMode(cardName) {
     // Generate and inject edit form
     cardBody.innerHTML = generateEditForm(cardName);
 
+    // Setup cascading filter for equipment details card
+    if (cardName === 'equipment-details') {
+        setupSubclassFilter();
+    }
+
     // Replace edit button with save/cancel buttons
     const editBtn = card.querySelector('.edit-card-btn');
     editBtn.outerHTML = `
@@ -708,14 +770,14 @@ function generateEquipmentDetailsForm(eq, choices) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Equipment Class *</label>
-                        <select class="form-control" name="class_id" required>
+                        <select class="form-control" name="class_id" id="edit-class-id" required>
                             <option value="">Select Class</option>
                             ${choices.classes.map(c => `<option value="${c.id}" ${eq.class_id == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subclass</label>
-                        <select class="form-control" name="subclass_id">
+                        <select class="form-control" name="subclass_id" id="edit-subclass-id">
                             <option value="">Select Subclass</option>
                             ${choices.subclasses.map(s => `<option value="${s.id}" ${eq.subclass_id == s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
                         </select>

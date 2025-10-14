@@ -1923,9 +1923,10 @@ def api_equipment():
 @app.route('/api/subclasses')
 def api_subclasses():
     eq_class = request.args.get('eq_class')
-    
+    class_id = request.args.get('class_id')
+
     if eq_class:
-        # Get subclasses for specific class
+        # Get subclasses for specific class (by name - for equipment list filtering)
         class_obj = EquipmentClass.query.filter_by(name=eq_class).first()
         if class_obj:
             subclasses = EquipmentSubclass.query.filter_by(
@@ -1933,12 +1934,23 @@ def api_subclasses():
             ).order_by(EquipmentSubclass.name).all()
         else:
             subclasses = []
+    elif class_id:
+        # Get subclasses for specific class (by ID - for equipment forms)
+        subclasses = EquipmentSubclass.query.filter_by(
+            class_id=int(class_id), is_active=True
+        ).order_by(EquipmentSubclass.name).all()
     else:
         # Get all subclasses
         subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
-    
-    # Return subclass names
-    subclass_list = [s.name for s in subclasses]
+
+    # Return different format based on request
+    if class_id:
+        # Return id/name pairs for forms
+        subclass_list = [{'id': s.id, 'name': s.name} for s in subclasses]
+    else:
+        # Return names only for list filtering (backward compatibility)
+        subclass_list = [s.name for s in subclasses]
+
     return jsonify(subclass_list)
 
 @app.route('/api/facility/<int:facility_id>/address')
