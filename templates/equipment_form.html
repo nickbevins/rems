@@ -450,6 +450,64 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('Could not find facility select or address textarea elements');
     }
+
+    // Cascading filter: Update subclasses when class changes
+    const classSelect = document.getElementById('class_id');
+    const subclassSelect = document.getElementById('subclass_id');
+
+    if (classSelect && subclassSelect) {
+        const currentSubclassId = subclassSelect.value;
+
+        function updateSubclasses() {
+            const selectedClassId = classSelect.value;
+
+            if (!selectedClassId) {
+                // If no class selected, show all subclasses
+                return;
+            }
+
+            const url = '/api/subclasses?class_id=' + encodeURIComponent(selectedClassId);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(subclasses => {
+                    // Save current selection
+                    const currentValue = subclassSelect.value;
+
+                    // Clear existing options except the first "Select Subclass" option
+                    subclassSelect.innerHTML = '<option value="">Select Subclass</option>';
+
+                    // Add new options
+                    subclasses.forEach(subclass => {
+                        const option = document.createElement('option');
+                        option.value = subclass.id;
+                        option.textContent = subclass.name;
+
+                        // Restore selection if it's still valid for this class
+                        if (subclass.id == currentValue) {
+                            option.selected = true;
+                        }
+
+                        subclassSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading subclasses:', error);
+                });
+        }
+
+        // Update subclasses when class changes
+        classSelect.addEventListener('change', function() {
+            updateSubclasses();
+        });
+
+        // Initial load - update subclasses for current class selection
+        if (classSelect.value) {
+            updateSubclasses();
+        }
+    } else {
+        console.error('Could not find class or subclass select elements');
+    }
 });
 </script>
 {% endblock %}
