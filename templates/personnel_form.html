@@ -15,7 +15,8 @@
                     
                     <div class="mb-3">
                         {{ form.name.label(class="form-label") }}
-                        {{ form.name(class="form-control") }}
+                        {{ form.name(class="form-control", placeholder="Last, First") }}
+                        <small class="form-text text-muted">Format: Last, First</small>
                         {% if form.name.errors %}
                             <div class="text-danger">
                                 {% for error in form.name.errors %}
@@ -39,7 +40,8 @@
 
                     <div class="mb-3">
                         {{ form.phone.label(class="form-label") }}
-                        {{ form.phone(class="form-control") }}
+                        {{ form.phone(class="form-control", placeholder="207-555-5555") }}
+                        <small class="form-text text-muted">Format: 207-555-5555</small>
                         {% if form.phone.errors %}
                             <div class="text-danger">
                                 {% for error in form.phone.errors %}
