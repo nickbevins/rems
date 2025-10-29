@@ -263,7 +263,7 @@
                             <tbody>
                                 {% for test, equipment in upcoming_tests %}
                                 {% set days_until = (test.next_due_date - today).days %}
-                                {% set scheduled_test = equipment.scheduled_tests.filter_by(is_completed=False).order_by(ComplianceTestSchedule.scheduled_date.asc()).first() %}
+                                {% set scheduled_test = equipment.scheduled_tests | selectattr('is_completed', 'equalto', False) | sort(attribute='scheduled_date') | first %}
                                 <tr data-equipment="{{ equipment.eq_class }} {{ equipment.eq_manu }} {{ equipment.eq_mod }}"
                                     data-equipment-id="{{ equipment.eq_id }}"
                                     data-facility="{{ equipment.eq_fac or '' }}"
