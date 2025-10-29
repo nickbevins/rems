@@ -1260,6 +1260,9 @@ def equipment_detail(eq_id):
         'order': request.args.get('order', ''),
         'page': request.args.get('page', '')
     }
+
+    # Check if user came from compliance page
+    redirect_to = request.args.get('redirect_to', '')
     
     # Calculate next due test based on equipment's audit frequency (only for active equipment)
     next_test = None
@@ -1286,7 +1289,7 @@ def equipment_detail(eq_id):
         ScheduledTest.scheduled_date >= today
     ).order_by(ScheduledTest.scheduled_date.asc()).all()
 
-    return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params, scheduled_tests=scheduled_tests)
+    return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params, scheduled_tests=scheduled_tests, redirect_to=redirect_to)
 
 @app.route('/equipment/<int:eq_id>/edit', methods=['GET', 'POST'])
 @login_required

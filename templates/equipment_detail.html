@@ -17,9 +17,15 @@
                 {% endif %}
             </h1>
             <div>
-                <a href="{{ url_for('equipment_list', **search_params) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to List
-                </a>
+                {% if redirect_to == 'compliance' %}
+                    <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('equipment_list', **search_params) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                {% endif %}
                 {% if not is_retired and current_user.can_manage_compliance() %}
                     <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, **request.args) }}" class="btn btn-warning">
                         <i class="fas fa-plus"></i> Add Test
