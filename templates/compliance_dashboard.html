@@ -254,8 +254,8 @@
                                     <th class="sortable" data-column="department" style="width: 12%;">Department <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="room" style="width: 8%;">Room <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="last_tested" style="width: 10%;">Last Test <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="scheduled_date" style="width: 10%;">Scheduled <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="due_date" style="width: 10%;">Due <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="scheduled_date" style="width: 10%;">Scheduled <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-column="days_until" style="width: 9%;">Due In <i class="fas fa-sort"></i></th>
                                     <th style="width: 11%;">Actions</th>
                                 </tr>
@@ -263,15 +263,15 @@
                             <tbody>
                                 {% for test, equipment in upcoming_tests %}
                                 {% set days_until = (test.next_due_date - today).days %}
-                                {% set scheduled_test = equipment.scheduled_tests | selectattr('is_completed', 'equalto', False) | sort(attribute='scheduled_date') | first %}
+                                {% set scheduled_test = scheduled_by_equipment.get(equipment.eq_id) %}
                                 <tr data-equipment="{{ equipment.eq_class }} {{ equipment.eq_manu }} {{ equipment.eq_mod }}"
                                     data-equipment-id="{{ equipment.eq_id }}"
                                     data-facility="{{ equipment.eq_fac or '' }}"
                                     data-department="{{ equipment.eq_dept or '' }}"
                                     data-room="{{ equipment.eq_rm or '' }}"
                                     data-last-tested="{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else '' }}"
-                                    data-scheduled-date="{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else '' }}"
                                     data-due-date="{{ test.next_due_date.strftime('%Y-%m-%d') }}"
+                                    data-scheduled-date="{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else '' }}"
                                     data-days-until="{{ days_until }}">
                                     <td>
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else equipment.eq_class }}</div>
@@ -281,8 +281,8 @@
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
-                                    <td>{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else 'N/A' }}</td>
                                     <td>{{ test.next_due_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else 'N/A' }}</td>
                                     <td>
                                         {% if days_until <= 7 %}
                                             <span class="badge bg-danger">{{ days_until }} days</span>
