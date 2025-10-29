@@ -1663,15 +1663,22 @@ def compliance_dashboard():
 
     # Get scheduled tests (today and future only) from ScheduledTest table
     all_scheduled_tests = ScheduledTest.query.filter(
-        ScheduledTest.scheduled_date >= today
-    ).all()
+        ScheduledTest.scheduled_date >= today,
+        ScheduledTest.is_completed == False
+    ).order_by(ScheduledTest.scheduled_date.asc()).all()
+
+    # Create a dictionary mapping equipment ID to earliest scheduled test
+    scheduled_by_equipment = {}
+    for test in all_scheduled_tests:
+        if test.eq_id not in scheduled_by_equipment:
+            scheduled_by_equipment[test.eq_id] = test
 
     # Add scheduled tests to the scheduled_tests list
     for test in all_scheduled_tests:
         equipment = Equipment.query.get(test.eq_id)
         if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
             scheduled_tests.append((test, equipment))
-    
+
     for equipment in active_equipment:
         next_due = equipment.get_next_due_date()
         
@@ -1701,10 +1708,11 @@ def compliance_dashboard():
     upcoming_tests.sort(key=lambda x: x[0].next_due_date)
     scheduled_tests.sort(key=lambda x: x[0].scheduled_date)
     
-    return render_template('compliance_dashboard.html', 
+    return render_template('compliance_dashboard.html',
                          overdue_tests=overdue_tests,
                          upcoming_tests=upcoming_tests,
                          scheduled_tests=scheduled_tests,
+                         scheduled_by_equipment=scheduled_by_equipment,
                          today=today,
                          days_ahead=days_ahead,
                          classes=classes,
