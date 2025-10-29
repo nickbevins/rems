@@ -1663,8 +1663,7 @@ def compliance_dashboard():
 
     # Get scheduled tests (today and future only) from ScheduledTest table
     all_scheduled_tests = ScheduledTest.query.filter(
-        ScheduledTest.scheduled_date >= today,
-        ScheduledTest.is_completed == False
+        ScheduledTest.scheduled_date >= today
     ).order_by(ScheduledTest.scheduled_date.asc()).all()
 
     # Create a dictionary mapping equipment ID to earliest scheduled test
