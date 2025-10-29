@@ -249,26 +249,29 @@
                         <table class="table table-striped table-hover" id="upcomingTable">
                             <thead>
                                 <tr>
-                                    <th class="sortable" data-column="equipment" style="width: 23%;">Equipment <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="facility" style="width: 11%;">Facility <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="department" style="width: 14%;">Department <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="room" style="width: 9%;">Room <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="last_tested" style="width: 11%;">Last Tested <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="due_date" style="width: 11%;">Due Date <i class="fas fa-sort"></i></th>
-                                    <th class="sortable" data-column="days_until" style="width: 11%;">Days Until Due <i class="fas fa-sort"></i></th>
-                                    <th style="width: 15%;">Actions</th>
+                                    <th class="sortable" data-column="equipment" style="width: 20%;">Equipment <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="facility" style="width: 10%;">Facility <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="department" style="width: 12%;">Department <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="room" style="width: 8%;">Room <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="last_tested" style="width: 10%;">Last Test <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="scheduled_date" style="width: 10%;">Scheduled <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="due_date" style="width: 10%;">Due <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-column="days_until" style="width: 9%;">Due In <i class="fas fa-sort"></i></th>
+                                    <th style="width: 11%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for test, equipment in upcoming_tests %}
                                 {% set days_until = (test.next_due_date - today).days %}
-                                <tr data-equipment="{{ equipment.eq_class }} {{ equipment.eq_manu }} {{ equipment.eq_mod }}" 
-                                    data-equipment-id="{{ equipment.eq_id }}" 
-                                    data-facility="{{ equipment.eq_fac or '' }}" 
-                                    data-department="{{ equipment.eq_dept or '' }}" 
-                                    data-room="{{ equipment.eq_rm or '' }}" 
-                                    data-last-tested="{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else '' }}" 
-                                    data-due-date="{{ test.next_due_date.strftime('%Y-%m-%d') }}" 
+                                {% set scheduled_test = equipment.scheduled_tests.filter_by(is_completed=False).order_by(ComplianceTestSchedule.scheduled_date.asc()).first() %}
+                                <tr data-equipment="{{ equipment.eq_class }} {{ equipment.eq_manu }} {{ equipment.eq_mod }}"
+                                    data-equipment-id="{{ equipment.eq_id }}"
+                                    data-facility="{{ equipment.eq_fac or '' }}"
+                                    data-department="{{ equipment.eq_dept or '' }}"
+                                    data-room="{{ equipment.eq_rm or '' }}"
+                                    data-last-tested="{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else '' }}"
+                                    data-scheduled-date="{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else '' }}"
+                                    data-due-date="{{ test.next_due_date.strftime('%Y-%m-%d') }}"
                                     data-days-until="{{ days_until }}">
                                     <td>
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else equipment.eq_class }}</div>
@@ -278,6 +281,7 @@
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
+                                    <td>{{ scheduled_test.scheduled_date.strftime('%Y-%m-%d') if scheduled_test else 'N/A' }}</td>
                                     <td>{{ test.next_due_date.strftime('%Y-%m-%d') }}</td>
                                     <td>
                                         {% if days_until <= 7 %}
@@ -611,17 +615,17 @@ document.addEventListener('DOMContentLoaded', function() {
     tables.forEach(tableId => {
         const table = document.getElementById(tableId);
         if (!table) return;
-        
+
         const rows = table.querySelectorAll('tbody tr');
         rows.forEach(row => {
             row.style.cursor = 'pointer';
             row.addEventListener('dblclick', function() {
                 const equipmentId = this.dataset.equipmentId;
                 if (equipmentId) {
-                    window.location.href = `/equipment/${equipmentId}`;
+                    window.location.href = `/equipment/${equipmentId}?redirect_to=compliance`;
                 }
             });
-            
+
             // No custom hover effects needed - Bootstrap table-hover handles this
         });
     });
