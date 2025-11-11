@@ -1283,11 +1283,18 @@ def equipment_detail(eq_id):
 
             next_test = FakeTest()
 
-    # Get scheduled tests (today and future only)
-    scheduled_tests = ScheduledTest.query.filter(
-        ScheduledTest.eq_id == eq_id,
-        ScheduledTest.scheduled_date >= today
+    # Get scheduled tests that are more than a month after the last test date
+    all_scheduled = ScheduledTest.query.filter(
+        ScheduledTest.eq_id == eq_id
     ).order_by(ScheduledTest.scheduled_date.asc()).all()
+
+    # Filter to only include scheduled tests more than 30 days after last test
+    scheduled_tests = []
+    last_tested = equipment.get_last_tested_date()
+    for test in all_scheduled:
+        # Include if no previous test, or scheduled date is more than 30 days after last test
+        if not last_tested or test.scheduled_date > last_tested + timedelta(days=30):
+            scheduled_tests.append(test)
 
     return render_template('equipment_detail.html', equipment=equipment, tests=tests, next_test=next_test, today=today, search_params=search_params, scheduled_tests=scheduled_tests, redirect_to=redirect_to)
 
@@ -1665,11 +1672,16 @@ def compliance_dashboard():
     all_scheduled_tests = ScheduledTest.query.order_by(ScheduledTest.scheduled_date.asc()).all()
 
     # Create a dictionary mapping equipment ID to earliest scheduled test
-    # Include past scheduled dates so they show in upcoming tests table
+    # Only include scheduled dates that are more than a month after the last test date (or if no test exists)
     scheduled_by_equipment = {}
     for test in all_scheduled_tests:
         if test.eq_id not in scheduled_by_equipment:
-            scheduled_by_equipment[test.eq_id] = test
+            equipment = Equipment.query.get(test.eq_id)
+            if equipment:
+                last_tested = equipment.get_last_tested_date()
+                # Include if no previous test, or scheduled date is more than 30 days after last test
+                if not last_tested or test.scheduled_date > last_tested + timedelta(days=30):
+                    scheduled_by_equipment[test.eq_id] = test
 
     # Add scheduled tests to the scheduled_tests list (future dates only)
     for test in all_scheduled_tests:
