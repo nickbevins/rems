@@ -1661,22 +1661,22 @@ def compliance_dashboard():
     facilities = db.session.query(Facility.name).join(Equipment).filter(Facility.is_active == True).distinct().order_by(Facility.name).all()
     facilities = [f[0] for f in facilities if f[0]]
 
-    # Get scheduled tests (today and future only) from ScheduledTest table
-    all_scheduled_tests = ScheduledTest.query.filter(
-        ScheduledTest.scheduled_date >= today
-    ).order_by(ScheduledTest.scheduled_date.asc()).all()
+    # Get all scheduled tests from ScheduledTest table
+    all_scheduled_tests = ScheduledTest.query.order_by(ScheduledTest.scheduled_date.asc()).all()
 
     # Create a dictionary mapping equipment ID to earliest scheduled test
+    # Include past scheduled dates so they show in upcoming tests table
     scheduled_by_equipment = {}
     for test in all_scheduled_tests:
         if test.eq_id not in scheduled_by_equipment:
             scheduled_by_equipment[test.eq_id] = test
 
-    # Add scheduled tests to the scheduled_tests list
+    # Add scheduled tests to the scheduled_tests list (future dates only)
     for test in all_scheduled_tests:
-        equipment = Equipment.query.get(test.eq_id)
-        if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
-            scheduled_tests.append((test, equipment))
+        if test.scheduled_date >= today:
+            equipment = Equipment.query.get(test.eq_id)
+            if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
+                scheduled_tests.append((test, equipment))
 
     for equipment in active_equipment:
         next_due = equipment.get_next_due_date()
