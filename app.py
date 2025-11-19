@@ -899,8 +899,16 @@ def index():
             # Compliant (next due date is more than 90 days away)
             compliant_count += 1
 
-    # Get scheduled tests count
-    scheduled_tests_count = ScheduledTest.query.count()
+    # Get scheduled tests count (future dates only, for non-retired equipment)
+    all_scheduled_tests = ScheduledTest.query.filter(
+        ScheduledTest.scheduled_date >= today
+    ).all()
+
+    scheduled_tests_count = 0
+    for test in all_scheduled_tests:
+        equipment = Equipment.query.get(test.eq_id)
+        if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
+            scheduled_tests_count += 1
 
     return render_template('index.html',
                          overdue_count=overdue_count,
