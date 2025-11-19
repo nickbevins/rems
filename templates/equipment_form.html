@@ -85,6 +85,15 @@
                     <div class="row">
                         <div class="col-md-3">
                             <div class="mb-3">
+                                {{ form.facility_id.label(class="form-label") }}
+                                {{ form.facility_id(class="form-control") }}
+                                {% for error in form.facility_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
                                 {{ form.department_id.label(class="form-label") }}
                                 {{ form.department_id(class="form-control") }}
                                 {% for error in form.department_id.errors %}
@@ -106,15 +115,6 @@
                                 {{ form.eq_phone.label(class="form-label") }}
                                 {{ form.eq_phone(class="form-control") }}
                                 {% for error in form.eq_phone.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                {{ form.facility_id.label(class="form-label") }}
-                                {{ form.facility_id(class="form-control") }}
-                                {% for error in form.facility_id.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}
                             </div>
@@ -297,7 +297,16 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_auditfreq.label(class="form-label") }}
-                                {{ form.eq_auditfreq(class="form-control") }}
+                                <div>
+                                    {% for choice in form.eq_auditfreq.choices %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="eq_auditfreq" value="{{ choice[0] }}" id="auditfreq_{{ loop.index }}" {% if choice[0] in form.eq_auditfreq.data %}checked{% endif %}>
+                                        <label class="form-check-label" for="auditfreq_{{ loop.index }}">
+                                            {{ choice[1] }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                                 {% for error in form.eq_auditfreq.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}
