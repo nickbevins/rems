@@ -71,16 +71,16 @@
                                         <td>{{ equipment.eq_mod or 'N/A' }}</td>
                                     </tr>
                                     <tr>
+                                        <th>Facility:</th>
+                                        <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
+                                    </tr>
+                                    <tr>
                                         <th>Department:</th>
                                         <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     </tr>
                                     <tr>
                                         <th>Room:</th>
                                         <td>{{ equipment.eq_rm or 'N/A' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Facility:</th>
-                                        <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
                                     </tr>
                                     <tr>
                                         <th>Phone:</th>
@@ -129,7 +129,7 @@
                                     </tr>
                                     {% endif %}
                                     <tr>
-                                        <th>Audit Frequency:</th>
+                                        <th>Audit Frequencies:</th>
                                         <td>{{ equipment.eq_auditfreq or 'N/A' }}</td>
                                     </tr>
                                     <tr>
@@ -800,6 +800,13 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_mod" value="${eq.eq_mod || ''}">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Facility</label>
+                        <select class="form-control" name="facility_id">
+                            <option value="">Select Facility</option>
+                            ${choices.facilities.map(f => `<option value="${f.id}" ${eq.facility_id == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Department</label>
                         <select class="form-control" name="department_id">
                             <option value="">Select Department</option>
@@ -809,13 +816,6 @@ function generateEquipmentDetailsForm(eq, choices) {
                     <div class="mb-3">
                         <label class="form-label">Room</label>
                         <input type="text" class="form-control" name="eq_rm" value="${eq.eq_rm || ''}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Facility</label>
-                        <select class="form-control" name="facility_id">
-                            <option value="">Select Facility</option>
-                            ${choices.facilities.map(f => `<option value="${f.id}" ${eq.facility_id == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
-                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone</label>
@@ -862,11 +862,21 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="date" class="form-control" name="eq_retdate" value="${eq.eq_retdate || ''}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Audit Frequency</label>
-                        <select class="form-control" name="eq_auditfreq">
-                            <option value="">Select Frequency</option>
-                            ${choices.audit_frequencies.map(f => `<option value="${f}" ${eq.eq_auditfreq == f ? 'selected' : ''}>${f}</option>`).join('')}
-                        </select>
+                        <label class="form-label">Audit Frequencies</label>
+                        <div>
+                            ${choices.audit_frequencies.map(f => {
+                                const frequencies = eq.eq_auditfreq ? eq.eq_auditfreq.split(',').map(x => x.trim()) : [];
+                                const isChecked = frequencies.includes(f);
+                                return `
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="eq_auditfreq" value="${f}" ${isChecked ? 'checked' : ''} id="freq_${f.replace(/\s+/g, '_')}">
+                                        <label class="form-check-label" for="freq_${f.replace(/\s+/g, '_')}">
+                                            ${f}
+                                        </label>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ACR Site</label>
@@ -969,9 +979,23 @@ async function saveCard(cardName) {
     // Collect form data
     const formDataObj = new FormData(formElement);
     const data = {};
+
+    // Handle checkboxes (audit frequencies) separately
+    const auditFreqs = [];
     formDataObj.forEach((value, key) => {
-        data[key] = value;
+        if (key === 'eq_auditfreq') {
+            auditFreqs.push(value);
+        } else {
+            data[key] = value;
+        }
     });
+
+    // Join audit frequencies with comma
+    if (auditFreqs.length > 0) {
+        data['eq_auditfreq'] = auditFreqs.join(', ');
+    } else {
+        data['eq_auditfreq'] = '';
+    }
 
     // Get CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]');

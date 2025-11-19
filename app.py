@@ -245,7 +245,7 @@ class Equipment(db.Model):
     eq_retired = db.Column(db.Boolean, default=False)
     
     # Compliance Information
-    eq_auditfreq = db.Column(db.String(50), default='Annual - TJC')
+    eq_auditfreq = db.Column(db.String(200), default='Annual - TJC')  # Comma-separated list of frequencies
     eq_acrsite = db.Column(db.String(100))
     eq_acrunit = db.Column(db.String(100))
     eq_servlogin = db.Column(db.String(100))
@@ -284,7 +284,8 @@ class Equipment(db.Model):
         return f'<Equipment {self.eq_id}: {class_name} - {manu_name} {self.eq_mod}>'
     
     def get_next_due_date(self):
-        """Get the next due date based on the most recent acceptance or annual test."""
+        """Get the next due date based on the most recent acceptance or annual test.
+        If multiple audit frequencies are set, returns the earliest due date."""
         from datetime import timedelta, datetime
         from dateutil.relativedelta import relativedelta
         import calendar
@@ -296,35 +297,46 @@ class Equipment(db.Model):
             ComplianceTest.eq_id == self.eq_id,
             ComplianceTest.test_type.in_(['acceptance', 'annual', 'Acceptance', 'Annual'])
         ).order_by(ComplianceTest.test_date.desc()).first()
-        
+
         if latest_test and self.eq_auditfreq:
             test_date = latest_test.test_date
-            
-            if self.eq_auditfreq == 'Quarterly':
-                # End of month 3 months from test date
-                next_month = test_date + relativedelta(months=3)
-                last_day = calendar.monthrange(next_month.year, next_month.month)[1]
-                return next_month.replace(day=last_day)
-                
-            elif self.eq_auditfreq == 'Semiannual':
-                # End of month 6 months from test date
-                next_month = test_date + relativedelta(months=6)
-                last_day = calendar.monthrange(next_month.year, next_month.month)[1]
-                return next_month.replace(day=last_day)
-                
-            elif self.eq_auditfreq == 'Annual - ACR':
-                # 1 year + 2 months from test date
-                return test_date + relativedelta(months=14)
-                
-            elif self.eq_auditfreq == 'Annual - TJC':
-                # 1 year + 30 days from test date
-                return test_date + relativedelta(years=1) + timedelta(days=30)
-                
-            elif self.eq_auditfreq == 'Annual - ME':
-                # End of next calendar year
-                next_year = test_date.year + 1
-                return datetime(next_year, 12, 31).date()
-                
+
+            # Parse multiple audit frequencies (comma-separated)
+            frequencies = [f.strip() for f in self.eq_auditfreq.split(',') if f.strip()]
+
+            # Calculate due date for each frequency
+            due_dates = []
+
+            for freq in frequencies:
+                if freq == 'Quarterly':
+                    # End of month 3 months from test date
+                    next_month = test_date + relativedelta(months=3)
+                    last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                    due_dates.append(next_month.replace(day=last_day))
+
+                elif freq == 'Semiannual':
+                    # End of month 6 months from test date
+                    next_month = test_date + relativedelta(months=6)
+                    last_day = calendar.monthrange(next_month.year, next_month.month)[1]
+                    due_dates.append(next_month.replace(day=last_day))
+
+                elif freq == 'Annual - ACR':
+                    # 1 year + 2 months from test date
+                    due_dates.append(test_date + relativedelta(months=14))
+
+                elif freq == 'Annual - TJC':
+                    # 1 year + 30 days from test date
+                    due_dates.append(test_date + relativedelta(years=1) + timedelta(days=30))
+
+                elif freq == 'Annual - ME':
+                    # End of next calendar year
+                    next_year = test_date.year + 1
+                    due_dates.append(datetime(next_year, 12, 31).date())
+
+            # Return the earliest due date
+            if due_dates:
+                return min(due_dates)
+
         # No acceptance or annual test found, or no audit frequency set
         return None
     
@@ -644,10 +656,9 @@ class EquipmentForm(FlaskForm):
     eq_eeoldate = DateField('Estimated End of Life Date', validators=[Optional()])
     eq_retdate = DateField('Retirement Date', validators=[Optional()])
     eq_retired = BooleanField('Retired')
-    eq_auditfreq = SelectField('Audit Frequency', choices=[
-        ('', 'Select Frequency'),
+    eq_auditfreq = SelectMultipleField('Audit Frequencies', choices=[
         ('Quarterly', 'Quarterly'),
-        ('Semiannual', 'Semiannual'), 
+        ('Semiannual', 'Semiannual'),
         ('Annual - ACR', 'Annual - ACR'),
         ('Annual - TJC', 'Annual - TJC'),
         ('Annual - ME', 'Annual - ME')
@@ -689,7 +700,7 @@ class ComplianceTestForm(FlaskForm):
 
 class ScheduleTestForm(FlaskForm):
     scheduled_date = DateField('Scheduled Test Date', validators=[DataRequired()])
-    scheduling_date = DateField('Scheduling Date', validators=[DataRequired()], default=datetime.now().date())
+    scheduling_date = DateField('Scheduling Date', validators=[DataRequired()], default=lambda: datetime.now().date())
     notes = TextAreaField('Notes', validators=[Optional()])
 
 class PersonnelForm(FlaskForm):
@@ -1182,7 +1193,11 @@ def equipment_new():
     if form.validate_on_submit():
         equipment = Equipment()
         form.populate_obj(equipment)
-        
+
+        # Convert audit frequency list to comma-separated string
+        if isinstance(equipment.eq_auditfreq, list):
+            equipment.eq_auditfreq = ', '.join(equipment.eq_auditfreq) if equipment.eq_auditfreq else None
+
         # Convert empty string foreign keys to None
         if not equipment.class_id:
             equipment.class_id = None
@@ -1318,6 +1333,12 @@ def equipment_edit(eq_id):
         if equipment.eq_capcat is not None:
             form_data['eq_capcat'] = str(equipment.eq_capcat)
 
+        # Convert comma-separated audit frequencies to list for SelectMultipleField
+        if equipment.eq_auditfreq:
+            form_data['eq_auditfreq'] = [f.strip() for f in equipment.eq_auditfreq.split(',')]
+        else:
+            form_data['eq_auditfreq'] = []
+
         form = EquipmentForm(data=form_data)
     else:
         form = EquipmentForm()
@@ -1361,7 +1382,11 @@ def equipment_edit(eq_id):
     
     if form.validate_on_submit():
         form.populate_obj(equipment)
-        
+
+        # Convert audit frequency list to comma-separated string
+        if isinstance(equipment.eq_auditfreq, list):
+            equipment.eq_auditfreq = ', '.join(equipment.eq_auditfreq) if equipment.eq_auditfreq else None
+
         # Convert empty string foreign keys to None
         if not equipment.class_id:
             equipment.class_id = None
@@ -2234,12 +2259,22 @@ def bulk_edit():
                         retired_val = str(row.get('eq_retired', '')).strip().upper()
                         equipment.eq_retired = retired_val in ('TRUE', 'YES', '1')
                         
-                        # Handle audit frequency (string field)
+                        # Handle audit frequency (string field - can be comma-separated)
                         audit_freq = str(row.get('eq_auditfreq', '')).strip()
                         if audit_freq and audit_freq != '':
-                            # Check if it's a valid frequency type
                             valid_frequencies = ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME']
-                            if audit_freq in valid_frequencies:
+
+                            # Check if it's comma-separated (multiple frequencies)
+                            if ',' in audit_freq:
+                                # Validate all frequencies in the list
+                                freq_list = [f.strip() for f in audit_freq.split(',')]
+                                valid_freqs = [f for f in freq_list if f in valid_frequencies]
+                                if valid_freqs:
+                                    equipment.eq_auditfreq = ', '.join(valid_freqs)
+                                else:
+                                    equipment.eq_auditfreq = 'Annual - TJC'  # Default
+                            elif audit_freq in valid_frequencies:
+                                # Single valid frequency
                                 equipment.eq_auditfreq = audit_freq
                             else:
                                 # Try to convert from old integer format
@@ -2487,13 +2522,23 @@ def import_data():
                     if equipment.eq_retired and not equipment.eq_retdate:
                         equipment.eq_retdate = datetime.now().date()
                     
-                    # Handle audit frequency (string field)
+                    # Handle audit frequency (string field - can be comma-separated)
                     audit_freq = row.get('eq_auditfreq')
                     if pd.notna(audit_freq) and audit_freq != '':
                         audit_freq_str = str(audit_freq).strip()
-                        # Check if it's a valid frequency type
                         valid_frequencies = ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME']
-                        if audit_freq_str in valid_frequencies:
+
+                        # Check if it's comma-separated (multiple frequencies)
+                        if ',' in audit_freq_str:
+                            # Validate all frequencies in the list
+                            freq_list = [f.strip() for f in audit_freq_str.split(',')]
+                            valid_freqs = [f for f in freq_list if f in valid_frequencies]
+                            if valid_freqs:
+                                equipment.eq_auditfreq = ', '.join(valid_freqs)
+                            else:
+                                equipment.eq_auditfreq = 'Annual - TJC'  # Default
+                        elif audit_freq_str in valid_frequencies:
+                            # Single valid frequency
                             equipment.eq_auditfreq = audit_freq_str
                         else:
                             # Try to convert from old integer format
@@ -2576,7 +2621,10 @@ def personnel_list():
     
     if role_filter:
         query = query.filter(Personnel.roles.ilike(f'%{role_filter}%'))
-    
+
+    # Sort alphabetically by name
+    query = query.order_by(Personnel.name)
+
     # Pagination
     personnel = query.paginate(page=page, per_page=per_page, error_out=False)
     
