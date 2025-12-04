@@ -2773,15 +2773,16 @@ def new_personnel():
             phone=form.phone.data,
             username=form.username.data if form.username.data else None,
             is_admin=form.is_admin.data,
-            is_active=form.is_active.data
+            is_active=form.is_active.data,
+            login_required=form.login_required.data
         )
         personnel.set_roles_list(form.roles.data)
-        
+
         # Set password - use provided password or default to "radiology"
         password = form.password.data if form.password.data else "radiology"
         if form.username.data:  # Only set password if username is provided
             personnel.set_password(password)
-        
+
         try:
             db.session.add(personnel)
             db.session.commit()
@@ -2790,7 +2791,7 @@ def new_personnel():
         except Exception as e:
             db.session.rollback()
             flash('Error adding personnel. Email or username may already exist.', 'error')
-    
+
     return render_template('personnel_form.html', form=form, title='Add Personnel')
 
 @app.route('/personnel/<int:id>')
@@ -2811,7 +2812,8 @@ def edit_personnel(id):
         form.username.data = personnel.username
         form.is_admin.data = personnel.is_admin
         form.is_active.data = personnel.is_active
-    
+        form.login_required.data = personnel.login_required
+
     if form.validate_on_submit():
         personnel.name = form.name.data
         personnel.email = form.email.data
@@ -2819,11 +2821,12 @@ def edit_personnel(id):
         personnel.username = form.username.data if form.username.data else None
         personnel.is_admin = form.is_admin.data
         personnel.is_active = form.is_active.data
+        personnel.login_required = form.login_required.data
         personnel.set_roles_list(form.roles.data)
-        
+
         if form.password.data:
             personnel.set_password(form.password.data)
-        
+
         try:
             db.session.commit()
             flash('Personnel updated successfully!', 'success')
@@ -2831,7 +2834,7 @@ def edit_personnel(id):
         except Exception as e:
             db.session.rollback()
             flash('Error updating personnel.', 'error')
-    
+
     return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel)
 
 @app.route('/personnel/<int:id>/delete', methods=['POST'])
