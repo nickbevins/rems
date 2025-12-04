@@ -31,7 +31,13 @@
                         </select>
                         <div class="form-text">Select the parent equipment class for this subclass</div>
                     </div>
-                    
+
+                    <div class="mb-3">
+                        <label for="estimated_capital_cost" class="form-label">Estimated Capital Cost (thousands $)</label>
+                        <input type="number" class="form-control" id="estimated_capital_cost" name="estimated_capital_cost" min="0">
+                        <div class="form-text">Default estimated capital cost for equipment in this subclass (optional)</div>
+                    </div>
+
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('admin_equipment_subclasses') }}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancel
