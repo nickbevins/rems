@@ -170,7 +170,55 @@ def check_and_migrate_db():
                         conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_phone VARCHAR(20)"))
                         conn.commit()
                     print("Successfully added eq_phone column")
-                    
+
+                # Add new equipment columns for capital tracking
+                if 'eq_rfrbdt' not in equipment_columns:
+                    print("Adding eq_rfrbdt column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_rfrbdt DATE"))
+                        conn.commit()
+                    print("Successfully added eq_rfrbdt column")
+
+                if 'eq_physcov' not in equipment_columns:
+                    print("Adding eq_physcov column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_physcov BOOLEAN DEFAULT 1"))
+                        # Set existing equipment to have physics coverage by default
+                        conn.execute(db.text("UPDATE equipment SET eq_physcov = 1 WHERE eq_physcov IS NULL"))
+                        conn.commit()
+                    print("Successfully added eq_physcov column")
+
+                if 'eq_capfund' not in equipment_columns:
+                    print("Adding eq_capfund column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_capfund INTEGER"))
+                        conn.commit()
+                    print("Successfully added eq_capfund column")
+
+                if 'eq_capecst' not in equipment_columns:
+                    print("Adding eq_capecst column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_capecst INTEGER"))
+                        conn.commit()
+                    print("Successfully added eq_capecst column")
+
+                if 'eq_capnote' not in equipment_columns:
+                    print("Adding eq_capnote column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_capnote VARCHAR(140)"))
+                        conn.commit()
+                    print("Successfully added eq_capnote column")
+
+            # Add estimated_capital_cost to equipment_subclasses table
+            if inspector.has_table('equipment_subclasses'):
+                subclass_columns = [col['name'] for col in inspector.get_columns('equipment_subclasses')]
+                if 'estimated_capital_cost' not in subclass_columns:
+                    print("Adding estimated_capital_cost column to equipment_subclasses table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment_subclasses ADD COLUMN estimated_capital_cost INTEGER"))
+                        conn.commit()
+                    print("Successfully added estimated_capital_cost column")
+
     except Exception as e:
         print(f"Error during database migration: {e}")
 
@@ -238,6 +286,7 @@ class Equipment(db.Model):
     
     # Important Dates
     eq_mandt = db.Column(db.Date)
+    eq_rfrbdt = db.Column(db.Date)  # Refurbish Date
     eq_instdt = db.Column(db.Date)
     eq_eoldate = db.Column(db.Date)
     eq_eeoldate = db.Column(db.Date)
@@ -245,16 +294,20 @@ class Equipment(db.Model):
     eq_retired = db.Column(db.Boolean, default=False)
     
     # Compliance Information
+    eq_physcov = db.Column(db.Boolean, default=True)  # Physics Coverage - default True for existing equipment
     eq_auditfreq = db.Column(db.String(200), default='Annual - TJC')  # Comma-separated list of frequencies
     eq_acrsite = db.Column(db.String(100))
     eq_acrunit = db.Column(db.String(100))
     eq_servlogin = db.Column(db.String(100))
     eq_servpwd = db.Column(db.String(100))
-    
-    # Technical Specifications
-    eq_radcap = db.Column(db.Integer)
+
+    # Technical Specifications / Capital Information
+    eq_radcap = db.Column(db.Integer)  # Radiology Owned: 1=Yes, 0=No, NULL=N/A
+    eq_capfund = db.Column(db.Integer)  # Replacement Funded: 1=Yes, 0=No, NULL=N/A
     eq_capcat = db.Column(db.Integer)
-    eq_capcst = db.Column(db.Integer)
+    eq_capcst = db.Column(db.Integer)  # Capital Cost (in thousands)
+    eq_capecst = db.Column(db.Integer)  # Estimated Capital Cost from subclass (in thousands)
+    eq_capnote = db.Column(db.String(140))  # Capital notes (max 140 chars)
     
     # Notes
     eq_notes = db.Column(db.Text)
@@ -578,16 +631,17 @@ class EquipmentClass(db.Model):
 
 class EquipmentSubclass(db.Model):
     __tablename__ = 'equipment_subclasses'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('equipment_classes.id'), nullable=False)
+    estimated_capital_cost = db.Column(db.Integer)  # Estimated capital cost in thousands
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     equipment_class = db.relationship('EquipmentClass', backref='subclasses')
-    
+
     def __repr__(self):
         return f'<EquipmentSubclass {self.id}: {self.name}>'
 
@@ -651,11 +705,13 @@ class EquipmentForm(FlaskForm):
     eq_mefacreg = StringField('ME Facility Registration', validators=[Optional(), Length(max=100)])
     eq_manid = StringField('Manufacturer ID', validators=[Optional(), Length(max=100)])
     eq_mandt = DateField('Manufacture Date', validators=[Optional()])
+    eq_rfrbdt = DateField('Refurbish Date', validators=[Optional()])
     eq_instdt = DateField('Installation Date', validators=[Optional()])
     eq_eoldate = DateField('End of Life Date', validators=[Optional()])
     eq_eeoldate = DateField('Estimated End of Life Date', validators=[Optional()])
     eq_retdate = DateField('Retirement Date', validators=[Optional()])
     eq_retired = BooleanField('Retired')
+    eq_physcov = BooleanField('Physics Coverage', default=True)
     eq_auditfreq = SelectMultipleField('Audit Frequencies', choices=[
         ('Quarterly', 'Quarterly'),
         ('Semiannual', 'Semiannual'),
@@ -666,7 +722,12 @@ class EquipmentForm(FlaskForm):
     eq_acrsite = StringField('ACR Site', validators=[Optional(), Length(max=100)])
     eq_acrunit = StringField('ACR Unit', validators=[Optional(), Length(max=100)])
     eq_radcap = SelectField('Radiology Owned', choices=[
-        ('', 'Select'),
+        ('', 'N/A'),
+        ('0', 'No'),
+        ('1', 'Yes')
+    ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
+    eq_capfund = SelectField('Replacement Funded', choices=[
+        ('', 'N/A'),
         ('0', 'No'),
         ('1', 'Yes')
     ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
@@ -674,10 +735,11 @@ class EquipmentForm(FlaskForm):
         ('', 'Select'),
         ('0', 'N/A'),
         ('1', 'Category 1'),
-        ('2', 'Category 2'), 
+        ('2', 'Category 2'),
         ('3', 'Category 3')
     ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
+    eq_capnote = StringField('Capital Notes', validators=[Optional(), Length(max=140)])
     eq_notes = TextAreaField('Notes', validators=[Optional()])
 
 class ComplianceTestForm(FlaskForm):
@@ -1227,7 +1289,13 @@ def equipment_new():
             equipment.supervisor_id = None
         if not equipment.physician_id:
             equipment.physician_id = None
-        
+
+        # Set estimated capital cost from subclass if subclass is selected
+        if equipment.subclass_id:
+            subclass = EquipmentSubclass.query.get(equipment.subclass_id)
+            if subclass and subclass.estimated_capital_cost:
+                equipment.eq_capecst = subclass.estimated_capital_cost
+
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
@@ -1253,7 +1321,7 @@ def equipment_new():
         db.session.commit()
         flash('Equipment added successfully!', 'success')
         return redirect(url_for('equipment_list'))
-    
+
     return render_template('equipment_form.html', form=form, title='Add New Equipment')
 
 @app.route('/equipment/<int:eq_id>')
@@ -1342,6 +1410,8 @@ def equipment_edit(eq_id):
         # Convert integer fields to strings for SelectField compatibility
         if equipment.eq_radcap is not None:
             form_data['eq_radcap'] = str(equipment.eq_radcap)
+        if equipment.eq_capfund is not None:
+            form_data['eq_capfund'] = str(equipment.eq_capfund)
         if equipment.eq_capcat is not None:
             form_data['eq_capcat'] = str(equipment.eq_capcat)
 
@@ -1416,7 +1486,15 @@ def equipment_edit(eq_id):
             equipment.supervisor_id = None
         if not equipment.physician_id:
             equipment.physician_id = None
-        
+
+        # Set estimated capital cost from subclass if subclass is selected
+        if equipment.subclass_id:
+            subclass = EquipmentSubclass.query.get(equipment.subclass_id)
+            if subclass and subclass.estimated_capital_cost:
+                equipment.eq_capecst = subclass.estimated_capital_cost
+        else:
+            equipment.eq_capecst = None
+
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()

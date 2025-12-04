@@ -189,7 +189,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_mandt.label(class="form-label") }}
                                 {{ form.eq_mandt(class="form-control") }}
@@ -198,7 +198,16 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.eq_rfrbdt.label(class="form-label") }}
+                                {{ form.eq_rfrbdt(class="form-control") }}
+                                {% for error in form.eq_rfrbdt.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_instdt.label(class="form-label") }}
                                 {{ form.eq_instdt(class="form-control") }}
@@ -208,7 +217,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -293,6 +302,17 @@
                     <h5><i class="fas fa-cogs"></i> Compliance & Technical Information</h5>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.eq_physcov(class="form-check-input") }}
+                            {{ form.eq_physcov.label(class="form-check-label") }}
+                            <small class="form-text text-muted d-block">Uncheck to exclude from physics coverage (will not appear in equipment lists or compliance counters by default)</small>
+                            {% for error in form.eq_physcov.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -341,7 +361,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.eq_radcap.label(class="form-label") }}
                                 {{ form.eq_radcap(class="form-control") }}
@@ -350,7 +370,16 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                {{ form.eq_capfund.label(class="form-label") }}
+                                {{ form.eq_capfund(class="form-control") }}
+                                {% for error in form.eq_capfund.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.eq_capcat.label(class="form-label") }}
                                 {{ form.eq_capcat(class="form-control") }}
@@ -359,7 +388,7 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 {{ form.eq_capcst.label(class="form-label") }}
                                 {{ form.eq_capcst(class="form-control") }}
@@ -369,9 +398,21 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                {{ form.eq_capnote.label(class="form-label") }}
+                                {{ form.eq_capnote(class="form-control", maxlength="140") }}
+                                <small class="form-text text-muted">Maximum 140 characters</small>
+                                {% for error in form.eq_capnote.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
+
             <!-- Notes -->
             <div class="card mb-4">
                 <div class="card-header">
