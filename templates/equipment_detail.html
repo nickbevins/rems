@@ -110,6 +110,12 @@
                                         <th>Manufacture Date:</th>
                                         <td>{{ equipment.eq_mandt.strftime('%Y-%m-%d') if equipment.eq_mandt else 'N/A' }}</td>
                                     </tr>
+                                    {% if equipment.eq_rfrbdt %}
+                                    <tr>
+                                        <th>Refurbish Date:</th>
+                                        <td>{{ equipment.eq_rfrbdt.strftime('%Y-%m-%d') }}</td>
+                                    </tr>
+                                    {% endif %}
                                     <tr>
                                         <th>End of Life:</th>
                                         <td>
@@ -259,6 +265,12 @@
                                 <td>{% if equipment.eq_radcap == 1 %}Yes{% else %}No{% endif %}</td>
                             </tr>
                             {% endif %}
+                            {% if equipment.eq_capfund is not none %}
+                            <tr>
+                                <th>Replacement Funded:</th>
+                                <td>{% if equipment.eq_capfund == 1 %}Yes{% else %}No{% endif %}</td>
+                            </tr>
+                            {% endif %}
                             {% if equipment.eq_capcat is not none %}
                             <tr>
                                 <th>Capital Cost Category:</th>
@@ -271,10 +283,22 @@
                                 </td>
                             </tr>
                             {% endif %}
-                            {% if equipment.eq_capcst %}
                             <tr>
                                 <th>Capital Cost:</th>
-                                <td>${{ "{:,}".format(equipment.eq_capcst * 1000) }}</td>
+                                <td>
+                                    {% if equipment.eq_capcst %}
+                                        ${{ "{:,}".format(equipment.eq_capcst * 1000) }}
+                                    {% elif equipment.eq_capecst %}
+                                        ${{ "{:,}".format(equipment.eq_capecst * 1000) }} <span class="text-muted">(estimated)</span>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if equipment.eq_capnote %}
+                            <tr>
+                                <th>Capital Notes:</th>
+                                <td>{{ equipment.eq_capnote }}</td>
                             </tr>
                             {% endif %}
                         </table>
@@ -910,9 +934,17 @@ function generateCapitalDetailsForm(eq) {
             <div class="mb-3">
                 <label class="form-label">Radiology Owned</label>
                 <select class="form-control" name="eq_radcap">
-                    <option value="">Select</option>
+                    <option value="">N/A</option>
                     <option value="0" ${eq.eq_radcap === 0 ? 'selected' : ''}>No</option>
                     <option value="1" ${eq.eq_radcap === 1 ? 'selected' : ''}>Yes</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Replacement Funded</label>
+                <select class="form-control" name="eq_capfund">
+                    <option value="">N/A</option>
+                    <option value="0" ${eq.eq_capfund === 0 ? 'selected' : ''}>No</option>
+                    <option value="1" ${eq.eq_capfund === 1 ? 'selected' : ''}>Yes</option>
                 </select>
             </div>
             <div class="mb-3">
@@ -928,6 +960,11 @@ function generateCapitalDetailsForm(eq) {
             <div class="mb-3">
                 <label class="form-label">Capital Cost (thousands $)</label>
                 <input type="number" class="form-control" name="eq_capcst" value="${eq.eq_capcst || ''}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Capital Notes</label>
+                <input type="text" class="form-control" name="eq_capnote" maxlength="140" value="${eq.eq_capnote || ''}">
+                <small class="form-text text-muted">Maximum 140 characters</small>
             </div>
         </form>
     `;

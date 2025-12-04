@@ -929,11 +929,12 @@ create_default_admin()
 def index():
     today = datetime.now().date()
     
-    # Get active equipment (not retired and not past retirement date)
+    # Get active equipment (not retired, not past retirement date, and physics covered)
     from sqlalchemy import and_, or_
     active_equipment = Equipment.query.filter(
         and_(
             Equipment.eq_retired == False,
+            Equipment.eq_physcov == True,
             or_(
                 Equipment.eq_retdate.is_(None),
                 Equipment.eq_retdate > today
@@ -996,6 +997,7 @@ def equipment_list():
     eq_dept = request.args.get('eq_dept')
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')  # Default to false
+    include_noncovered = request.args.get('include_noncovered', 'false')  # Default to false
     
     # Multi-level sorting
     sort_fields = request.args.get('sort', 'eq_id').split(',')
@@ -1051,7 +1053,7 @@ def equipment_list():
         query = query.filter(Department.name == eq_dept)
     if eq_fac:
         query = query.filter(Facility.name == eq_fac)
-    
+
     # By default, only show active equipment unless include_retired is checked
     if include_retired != 'true':
         query = query.filter(
@@ -1063,7 +1065,11 @@ def equipment_list():
                 )
             )
         )
-    
+
+    # By default, only show physics-covered equipment unless include_noncovered is checked
+    if include_noncovered != 'true':
+        query = query.filter(Equipment.eq_physcov == True)
+
     # Apply multi-level sorting - map legacy sort fields to relational fields
     sort_mapping = {
         'eq_class': EquipmentClass.name,
@@ -1714,11 +1720,12 @@ def compliance_dashboard():
     except (ValueError, TypeError):
         days_ahead = 90
     
-    # Build base query for active equipment (not retired and not past retirement date)
+    # Build base query for active equipment (not retired, not past retirement date, and physics covered)
     from sqlalchemy import and_, or_
     query = Equipment.query.filter(
         and_(
             Equipment.eq_retired == False,
+            Equipment.eq_physcov == True,
             or_(
                 Equipment.eq_retdate.is_(None),
                 Equipment.eq_retdate > today
@@ -2159,8 +2166,8 @@ def export_equipment():
         'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
-        'eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
-        'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capcat', 'eq_capcst', 'eq_notes'
+        'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
+        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcat', 'eq_capcst', 'eq_capecst', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
     
@@ -2188,12 +2195,21 @@ def export_equipment():
             eq.physician.email if eq.physician else '',
             eq.eq_assetid or '', eq.eq_sn or '', eq.eq_mefac or '', eq.eq_mereg or '', eq.eq_mefacreg or '', eq.eq_manid or '',
             eq.eq_mandt.strftime('%Y-%m-%d') if eq.eq_mandt else '',
+            eq.eq_rfrbdt.strftime('%Y-%m-%d') if eq.eq_rfrbdt else '',
             eq.eq_instdt.strftime('%Y-%m-%d') if eq.eq_instdt else '',
             eq.eq_eoldate.strftime('%Y-%m-%d') if eq.eq_eoldate else '',
             eq.eq_eeoldate.strftime('%Y-%m-%d') if eq.eq_eeoldate else '',
             eq.eq_retdate.strftime('%Y-%m-%d') if eq.eq_retdate else '',
             'TRUE' if eq.eq_retired else 'FALSE',
-            eq.eq_auditfreq or '', eq.eq_acrsite or '', eq.eq_acrunit or '', eq.eq_radcap or '', eq.eq_capcat or '', eq.eq_capcst or '', eq.eq_notes or ''
+            'TRUE' if eq.eq_physcov else 'FALSE',
+            eq.eq_auditfreq or '', eq.eq_acrsite or '', eq.eq_acrunit or '',
+            eq.eq_radcap if eq.eq_radcap is not None else '',
+            eq.eq_capfund if eq.eq_capfund is not None else '',
+            eq.eq_capcat if eq.eq_capcat is not None else '',
+            eq.eq_capcst or '',
+            eq.eq_capecst or '',
+            eq.eq_capnote or '',
+            eq.eq_notes or ''
         ]
         writer.writerow(row)
     
@@ -2583,7 +2599,7 @@ def import_data():
                     equipment.eq_manid = row.get('eq_manid')
                     
                     # Handle dates
-                    date_fields = ['eq_mandt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate']
+                    date_fields = ['eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate']
                     for field in date_fields:
                         date_val = row.get(field)
                         if pd.notna(date_val) and date_val != '':
@@ -2591,8 +2607,8 @@ def import_data():
                                 setattr(equipment, field, pd.to_datetime(date_val).date())
                             except:
                                 pass
-                    
-                    # Handle boolean
+
+                    # Handle boolean fields
                     retired_val = row.get('eq_retired')
                     if pd.notna(retired_val):
                         # Handle various boolean representations
@@ -2607,6 +2623,18 @@ def import_data():
                             equipment.eq_retired = str_val in ['TRUE', '1', 'YES', 'Y']
                     else:
                         equipment.eq_retired = False
+
+                    physcov_val = row.get('eq_physcov')
+                    if pd.notna(physcov_val):
+                        if isinstance(physcov_val, bool):
+                            equipment.eq_physcov = physcov_val
+                        elif isinstance(physcov_val, (int, float)):
+                            equipment.eq_physcov = bool(physcov_val)
+                        else:
+                            str_val = str(physcov_val).strip().upper()
+                            equipment.eq_physcov = str_val in ['TRUE', '1', 'YES', 'Y']
+                    else:
+                        equipment.eq_physcov = True  # Default to covered
                     
                     # If equipment is retired but has no retirement date, set it to today
                     if equipment.eq_retired and not equipment.eq_retdate:
@@ -2646,7 +2674,7 @@ def import_data():
                                 equipment.eq_auditfreq = 'Annual - TJC'  # Default
                     
                     # Handle integers
-                    int_fields = ['eq_radcap', 'eq_capcat', 'eq_capcst']
+                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcat', 'eq_capcst', 'eq_capecst']
                     for field in int_fields:
                         val = row.get(field)
                         if pd.notna(val) and val != '':
@@ -2654,9 +2682,10 @@ def import_data():
                                 setattr(equipment, field, int(val))
                             except:
                                 pass
-                    
+
                     equipment.eq_acrsite = row.get('eq_acrsite')
                     equipment.eq_acrunit = row.get('eq_acrunit')
+                    equipment.eq_capnote = row.get('eq_capnote')
                     equipment.eq_notes = row.get('eq_notes')
                     
                     if not is_update:
@@ -3573,7 +3602,8 @@ def admin_add_equipment_subclass():
     if request.method == 'POST':
         name = request.form['name'].strip()
         class_id = request.form.get('equipment_class_id')
-        
+        estimated_capital_cost = request.form.get('estimated_capital_cost')
+
         if name and class_id:
             try:
                 class_id = int(class_id)
@@ -3584,10 +3614,22 @@ def admin_add_equipment_subclass():
                         flash('Subclass already exists for this class', 'error')
                     else:
                         existing.is_active = True
+                        # Update estimated capital cost if provided
+                        if estimated_capital_cost and estimated_capital_cost.strip():
+                            try:
+                                existing.estimated_capital_cost = int(estimated_capital_cost)
+                            except ValueError:
+                                pass
                         db.session.commit()
                         flash('Subclass reactivated', 'success')
                 else:
                     new_subclass = EquipmentSubclass(name=name, class_id=class_id)
+                    # Set estimated capital cost if provided
+                    if estimated_capital_cost and estimated_capital_cost.strip():
+                        try:
+                            new_subclass.estimated_capital_cost = int(estimated_capital_cost)
+                        except ValueError:
+                            pass
                     db.session.add(new_subclass)
                     db.session.commit()
                     flash('Subclass added', 'success')
@@ -3607,7 +3649,8 @@ def admin_edit_equipment_subclass(subclass_id):
     if request.method == 'POST':
         name = request.form['name'].strip()
         class_id = request.form.get('equipment_class_id')
-        
+        estimated_capital_cost = request.form.get('estimated_capital_cost')
+
         if name and class_id:
             try:
                 class_id = int(class_id)
@@ -3618,12 +3661,20 @@ def admin_edit_equipment_subclass(subclass_id):
                 else:
                     subclass.name = name
                     subclass.class_id = class_id
+                    # Update estimated capital cost
+                    if estimated_capital_cost and estimated_capital_cost.strip():
+                        try:
+                            subclass.estimated_capital_cost = int(estimated_capital_cost)
+                        except ValueError:
+                            subclass.estimated_capital_cost = None
+                    else:
+                        subclass.estimated_capital_cost = None
                     db.session.commit()
                     flash('Subclass updated', 'success')
                     return redirect(url_for('admin_equipment_subclasses'))
             except ValueError:
                 flash('Invalid class selection', 'error')
-    
+
     return render_template('admin_edit_equipment_subclass.html', subclass=subclass, classes=classes)
 
 @app.route('/admin/equipment-subclasses/<int:subclass_id>/delete', methods=['POST'])
