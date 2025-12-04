@@ -1171,7 +1171,11 @@ def equipment_list():
 @manage_equipment_required
 def equipment_new():
     form = EquipmentForm()
-    
+
+    # Initialize eq_auditfreq to empty list for new equipment
+    if request.method == 'GET':
+        form.eq_auditfreq.data = []
+
     # Populate choices from standardized lists using IDs
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
     form.class_id.choices = [('', 'Select Class')] + [(str(c.id), c.name) for c in classes]
