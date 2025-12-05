@@ -1045,6 +1045,16 @@ async function saveCard(cardName) {
         data['eq_auditfreq'] = '';
     }
 
+    // Handle boolean checkboxes explicitly (unchecked boxes don't appear in FormData)
+    const retiredCheckbox = formElement.querySelector('input[name="eq_retired"]');
+    if (retiredCheckbox) {
+        data['eq_retired'] = retiredCheckbox.checked;
+    }
+    const physcovCheckbox = formElement.querySelector('input[name="eq_physcov"]');
+    if (physcovCheckbox) {
+        data['eq_physcov'] = physcovCheckbox.checked;
+    }
+
     // Get CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
 
