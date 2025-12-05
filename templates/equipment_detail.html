@@ -970,6 +970,7 @@ function generateCapitalDetailsForm(eq) {
             <div class="mb-3">
                 <label class="form-label">Capital Cost (thousands $)</label>
                 <input type="number" class="form-control" name="eq_capcst" value="${eq.eq_capcst || ''}">
+                ${eq.eq_capecst && !eq.eq_capcst ? `<small class="form-text text-muted">Estimated: $${(eq.eq_capecst * 1000).toLocaleString()} (from subclass)</small>` : ''}
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Notes</label>
