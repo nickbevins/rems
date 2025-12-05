@@ -1582,6 +1582,14 @@ def update_equipment_details(eq_id):
     equipment.eq_retired = data.get('eq_retired') == 'true' or data.get('eq_retired') == True
     equipment.eq_physcov = data.get('eq_physcov') == 'true' or data.get('eq_physcov') == True
 
+    # Set estimated capital cost from subclass if subclass is selected
+    if equipment.subclass_id:
+        subclass = EquipmentSubclass.query.get(equipment.subclass_id)
+        if subclass and subclass.estimated_capital_cost:
+            equipment.eq_capecst = subclass.estimated_capital_cost
+    else:
+        equipment.eq_capecst = None
+
     # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
     if equipment.eq_mefac and equipment.eq_mereg:
         import re
