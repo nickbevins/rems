@@ -868,6 +868,10 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="date" class="form-control" name="eq_mandt" value="${eq.eq_mandt || ''}">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Refurbish Date</label>
+                        <input type="date" class="form-control" name="eq_rfrbdt" value="${eq.eq_rfrbdt || ''}">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">End of Life Date</label>
                         <input type="date" class="form-control" name="eq_eoldate" value="${eq.eq_eoldate || ''}">
                     </div>
@@ -884,6 +888,12 @@ function generateEquipmentDetailsForm(eq, choices) {
                     <div class="mb-3">
                         <label class="form-label">Retirement Date</label>
                         <input type="date" class="form-control" name="eq_retdate" value="${eq.eq_retdate || ''}">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="eq_physcov" ${eq.eq_physcov ? 'checked' : ''}>
+                            <label class="form-check-label">Physics Coverage</label>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Audit Frequencies</label>

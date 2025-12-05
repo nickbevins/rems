@@ -26,6 +26,7 @@
                                 <tr>
                                     <th>Name</th>
                                     <th>Equipment Class</th>
+                                    <th>Est. Capital Cost</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -36,6 +37,13 @@
                                     <td>{{ subclass.name }}</td>
                                     <td>
                                         <span class="badge bg-secondary">{{ subclass.equipment_class.name }}</span>
+                                    </td>
+                                    <td>
+                                        {% if subclass.estimated_capital_cost %}
+                                            ${{ "{:,}".format(subclass.estimated_capital_cost * 1000) }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ subclass.created_at.strftime('%Y-%m-%d') if subclass.created_at else 'N/A' }}</td>
                                     <td>
