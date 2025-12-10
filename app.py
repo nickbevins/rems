@@ -3582,13 +3582,15 @@ def admin_dashboard():
     departments_count = Department.query.filter_by(is_active=True).count()
     facilities_count = Facility.query.filter_by(is_active=True).count()
     manufacturers_count = Manufacturer.query.filter_by(is_active=True).count()
-    
+    capital_categories_count = CapitalCategory.query.filter_by(is_active=True).count()
+
     return render_template('admin_dashboard.html',
                          classes_count=classes_count,
                          subclasses_count=subclasses_count,
                          departments_count=departments_count,
                          facilities_count=facilities_count,
-                         manufacturers_count=manufacturers_count)
+                         manufacturers_count=manufacturers_count,
+                         capital_categories_count=capital_categories_count)
 
 @app.route('/admin/equipment-classes')
 @login_required
