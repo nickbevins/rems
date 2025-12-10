@@ -321,28 +321,31 @@ class Equipment(db.Model):
     # Technical Specifications / Capital Information
     eq_radcap = db.Column(db.Integer)  # Radiology Owned: 1=Yes, 0=No, NULL=N/A
     eq_capfund = db.Column(db.Integer)  # Replacement Funded: 1=Yes, 0=No, NULL=N/A
-    eq_capcat = db.Column(db.Integer)
+    eq_capcat = db.Column(db.Integer)  # Capital Category ID
     eq_capcst = db.Column(db.Integer)  # Capital Cost (in thousands)
     eq_capecst = db.Column(db.Integer)  # Estimated Capital Cost from subclass (in thousands)
     eq_capnote = db.Column(db.String(140))  # Capital notes (max 140 chars)
-    
+
     # Notes
     eq_notes = db.Column(db.Text)
-    
+
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     compliance_tests = db.relationship('ComplianceTest', backref='equipment', lazy=True, cascade='all, delete-orphan')
-    
+
     # Foreign Key Relationships
     equipment_class = db.relationship('EquipmentClass', backref='equipment')
     equipment_subclass = db.relationship('EquipmentSubclass', backref='equipment')
     manufacturer = db.relationship('Manufacturer', backref='equipment')
     department = db.relationship('Department', backref='equipment')
     facility = db.relationship('Facility', backref='equipment')
-    capital_category = db.relationship('CapitalCategory', foreign_keys=[eq_capcat], backref='equipment')
+    capital_category = db.relationship('CapitalCategory',
+                                      primaryjoin='Equipment.eq_capcat == CapitalCategory.id',
+                                      foreign_keys=[eq_capcat],
+                                      backref='equipment')
 
     # Personnel Relationships (multiple foreign keys to same table)
     contact = db.relationship('Personnel', foreign_keys=[contact_id], backref='contact_equipment')
