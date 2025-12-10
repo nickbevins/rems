@@ -361,7 +361,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_radcap.label(class="form-label") }}
                                 {{ form.eq_radcap(class="form-control") }}
@@ -370,7 +370,7 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_capfund.label(class="form-label") }}
                                 {{ form.eq_capfund(class="form-control") }}
@@ -379,19 +379,11 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                {{ form.eq_capcat.label(class="form-label") }}
-                                {{ form.eq_capcat(class="form-control") }}
-                                {% for error in form.eq_capcat.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 {{ form.eq_capcst.label(class="form-label") }}
                                 {{ form.eq_capcst(class="form-control") }}
+                                <small class="form-text text-muted">Capital category will be automatically assigned based on cost</small>
                                 {% for error in form.eq_capcst.errors %}
                                     <div class="invalid-feedback d-block">{{ error }}</div>
                                 {% endfor %}

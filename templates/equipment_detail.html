@@ -958,19 +958,10 @@ function generateCapitalDetailsForm(eq) {
                 </select>
             </div>
             <div class="mb-3">
-                <label class="form-label">Capital Category</label>
-                <select class="form-control" name="eq_capcat">
-                    <option value="">Select</option>
-                    <option value="0" ${eq.eq_capcat === 0 ? 'selected' : ''}>N/A</option>
-                    <option value="1" ${eq.eq_capcat === 1 ? 'selected' : ''}>Category 1</option>
-                    <option value="2" ${eq.eq_capcat === 2 ? 'selected' : ''}>Category 2</option>
-                    <option value="3" ${eq.eq_capcat === 3 ? 'selected' : ''}>Category 3</option>
-                </select>
-            </div>
-            <div class="mb-3">
                 <label class="form-label">Capital Cost (thousands $)</label>
                 <input type="number" class="form-control" name="eq_capcst" value="${eq.eq_capcst || ''}">
                 ${eq.eq_capecst && !eq.eq_capcst ? `<small class="form-text text-muted">Estimated: $${(eq.eq_capecst * 1000).toLocaleString()} (from subclass)</small>` : ''}
+                <small class="form-text text-muted">Capital category will be automatically assigned based on cost</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Notes</label>
