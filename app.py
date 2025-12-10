@@ -2757,6 +2757,12 @@ def import_data():
                             except:
                                 pass
 
+                    # Auto-populate estimated capital cost from subclass if not provided
+                    if equipment.subclass_id and not equipment.eq_capecst:
+                        subclass = EquipmentSubclass.query.get(equipment.subclass_id)
+                        if subclass and subclass.estimated_capital_cost:
+                            equipment.eq_capecst = subclass.estimated_capital_cost
+
                     # Auto-assign capital category based on costs
                     assign_capital_category(equipment)
 
