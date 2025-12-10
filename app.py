@@ -342,7 +342,8 @@ class Equipment(db.Model):
     manufacturer = db.relationship('Manufacturer', backref='equipment')
     department = db.relationship('Department', backref='equipment')
     facility = db.relationship('Facility', backref='equipment')
-    
+    capital_category = db.relationship('CapitalCategory', foreign_keys=[eq_capcat], backref='equipment')
+
     # Personnel Relationships (multiple foreign keys to same table)
     contact = db.relationship('Personnel', foreign_keys=[contact_id], backref='contact_equipment')
     supervisor = db.relationship('Personnel', foreign_keys=[supervisor_id], backref='supervised_equipment')
@@ -2466,8 +2467,8 @@ def bulk_edit():
                         else:
                             equipment.eq_auditfreq = None
                         
-                        # Handle integers
-                        int_fields = ['eq_radcap', 'eq_capcat', 'eq_capcst']
+                        # Handle integers (skip eq_capcat as it's auto-assigned)
+                        int_fields = ['eq_radcap', 'eq_capcst']
                         for field in int_fields:
                             val = str(row.get(field, '')).strip()
                             if val and val != '':
@@ -2477,6 +2478,9 @@ def bulk_edit():
                                     setattr(equipment, field, None)
                             else:
                                 setattr(equipment, field, None)
+
+                        # Auto-assign capital category based on costs
+                        assign_capital_category(equipment)
                         
                         equipment.eq_acrsite = str(row.get('eq_acrsite', '')).strip()
                         equipment.eq_acrunit = str(row.get('eq_acrunit', '')).strip()
@@ -2740,8 +2744,8 @@ def import_data():
                             except:
                                 equipment.eq_auditfreq = 'Annual - TJC'  # Default
                     
-                    # Handle integers
-                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcat', 'eq_capcst', 'eq_capecst']
+                    # Handle integers (skip eq_capcat as it's auto-assigned)
+                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst']
                     for field in int_fields:
                         val = row.get(field)
                         if pd.notna(val) and val != '':
@@ -2749,6 +2753,9 @@ def import_data():
                                 setattr(equipment, field, int(val))
                             except:
                                 pass
+
+                    # Auto-assign capital category based on costs
+                    assign_capital_category(equipment)
 
                     equipment.eq_acrsite = row.get('eq_acrsite')
                     equipment.eq_acrunit = row.get('eq_acrunit')
