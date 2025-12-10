@@ -219,6 +219,23 @@ def check_and_migrate_db():
                         conn.commit()
                     print("Successfully added estimated_capital_cost column")
 
+            # Create capital_categories table if it doesn't exist
+            if not inspector.has_table('capital_categories'):
+                print("Creating capital_categories table...")
+                with db.engine.connect() as conn:
+                    conn.execute(db.text("""
+                        CREATE TABLE capital_categories (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name VARCHAR(50) NOT NULL UNIQUE,
+                            min_cost INTEGER NOT NULL,
+                            max_cost INTEGER,
+                            is_active BOOLEAN DEFAULT 1,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                    conn.commit()
+                print("Successfully created capital_categories table")
+
     except Exception as e:
         print(f"Error during database migration: {e}")
 
@@ -670,14 +687,36 @@ class Facility(db.Model):
 
 class Manufacturer(db.Model):
     __tablename__ = 'manufacturers'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def __repr__(self):
         return f'<Manufacturer {self.id}: {self.name}>'
+
+class CapitalCategory(db.Model):
+    __tablename__ = 'capital_categories'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    min_cost = db.Column(db.Integer, nullable=False)  # In thousands
+    max_cost = db.Column(db.Integer)  # In thousands, NULL means unlimited
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<CapitalCategory {self.id}: {self.name}>'
+
+    def cost_range_display(self):
+        """Return formatted cost range for display"""
+        min_display = f"${self.min_cost * 1000:,}"
+        if self.max_cost:
+            max_display = f"${self.max_cost * 1000:,}"
+            return f"{min_display} - {max_display}"
+        else:
+            return f"{min_display}+"
 
 # Forms
 class LoginForm(FlaskForm):
@@ -1302,6 +1341,9 @@ def equipment_new():
             if subclass and subclass.estimated_capital_cost:
                 equipment.eq_capecst = subclass.estimated_capital_cost
 
+        # Auto-assign capital category based on cost
+        assign_capital_category(equipment)
+
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
@@ -1501,6 +1543,9 @@ def equipment_edit(eq_id):
         else:
             equipment.eq_capecst = None
 
+        # Auto-assign capital category based on cost
+        assign_capital_category(equipment)
+
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
@@ -1590,6 +1635,9 @@ def update_equipment_details(eq_id):
     else:
         equipment.eq_capecst = None
 
+    # Auto-assign capital category based on cost
+    assign_capital_category(equipment)
+
     # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
     if equipment.eq_mefac and equipment.eq_mereg:
         import re
@@ -1621,9 +1669,11 @@ def update_capital_details(eq_id):
     # Update capital fields
     equipment.eq_radcap = int(data.get('eq_radcap')) if data.get('eq_radcap') and data.get('eq_radcap') != '' else None
     equipment.eq_capfund = int(data.get('eq_capfund')) if data.get('eq_capfund') and data.get('eq_capfund') != '' else None
-    equipment.eq_capcat = int(data.get('eq_capcat')) if data.get('eq_capcat') and data.get('eq_capcat') != '' else None
     equipment.eq_capcst = int(data.get('eq_capcst')) if data.get('eq_capcst') else None
     equipment.eq_capnote = data.get('eq_capnote') if data.get('eq_capnote') else None
+
+    # Auto-assign capital category based on cost (don't allow manual override via this endpoint)
+    assign_capital_category(equipment)
 
     db.session.commit()
 
@@ -3907,6 +3957,177 @@ def admin_delete_manufacturer(mfr_id):
     db.session.commit()
     flash('Manufacturer deactivated', 'success')
     return redirect(url_for('admin_manufacturers'))
+
+@app.route('/admin/capital-categories')
+@login_required
+@admin_required
+def admin_capital_categories():
+    categories = CapitalCategory.query.filter_by(is_active=True).order_by(CapitalCategory.min_cost).all()
+    return render_template('admin_capital_categories.html', categories=categories)
+
+@app.route('/admin/capital-categories/add', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_add_capital_category():
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        min_cost = request.form.get('min_cost')
+        max_cost = request.form.get('max_cost')
+
+        if name and min_cost:
+            try:
+                min_cost_int = int(min_cost)
+                max_cost_int = int(max_cost) if max_cost and max_cost.strip() else None
+
+                # Validate range
+                if max_cost_int and max_cost_int <= min_cost_int:
+                    flash('Maximum cost must be greater than minimum cost', 'error')
+                    return render_template('admin_add_capital_category.html')
+
+                # Check for overlapping ranges
+                overlap = check_capital_category_overlap(min_cost_int, max_cost_int, None)
+                if overlap:
+                    flash(f'Range overlaps with existing category "{overlap.name}" ({overlap.cost_range_display()})', 'error')
+                    return render_template('admin_add_capital_category.html')
+
+                # Check if name already exists
+                existing = CapitalCategory.query.filter_by(name=name).first()
+                if existing:
+                    if existing.is_active:
+                        flash('Category name already exists', 'error')
+                    else:
+                        existing.is_active = True
+                        existing.min_cost = min_cost_int
+                        existing.max_cost = max_cost_int
+                        db.session.commit()
+                        flash('Category reactivated', 'success')
+                else:
+                    new_category = CapitalCategory(name=name, min_cost=min_cost_int, max_cost=max_cost_int)
+                    db.session.add(new_category)
+                    db.session.commit()
+                    flash('Capital category added', 'success')
+
+                return redirect(url_for('admin_capital_categories'))
+
+            except ValueError:
+                flash('Invalid cost values', 'error')
+
+    return render_template('admin_add_capital_category.html')
+
+@app.route('/admin/capital-categories/<int:category_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_edit_capital_category(category_id):
+    category = CapitalCategory.query.get_or_404(category_id)
+
+    if request.method == 'POST':
+        name = request.form['name'].strip()
+        min_cost = request.form.get('min_cost')
+        max_cost = request.form.get('max_cost')
+
+        if name and min_cost:
+            try:
+                min_cost_int = int(min_cost)
+                max_cost_int = int(max_cost) if max_cost and max_cost.strip() else None
+
+                # Validate range
+                if max_cost_int and max_cost_int <= min_cost_int:
+                    flash('Maximum cost must be greater than minimum cost', 'error')
+                    return render_template('admin_edit_capital_category.html', category=category)
+
+                # Check for overlapping ranges (excluding this category)
+                overlap = check_capital_category_overlap(min_cost_int, max_cost_int, category_id)
+                if overlap:
+                    flash(f'Range overlaps with existing category "{overlap.name}" ({overlap.cost_range_display()})', 'error')
+                    return render_template('admin_edit_capital_category.html', category=category)
+
+                # Check if new name already exists
+                existing = CapitalCategory.query.filter_by(name=name).first()
+                if existing and existing.id != category_id:
+                    flash('Category name already exists', 'error')
+                    return render_template('admin_edit_capital_category.html', category=category)
+
+                category.name = name
+                category.min_cost = min_cost_int
+                category.max_cost = max_cost_int
+                db.session.commit()
+                flash('Capital category updated', 'success')
+                return redirect(url_for('admin_capital_categories'))
+
+            except ValueError:
+                flash('Invalid cost values', 'error')
+
+    return render_template('admin_edit_capital_category.html', category=category)
+
+@app.route('/admin/capital-categories/<int:category_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_capital_category(category_id):
+    category = CapitalCategory.query.get_or_404(category_id)
+    category.is_active = False
+    db.session.commit()
+    flash('Capital category deactivated', 'success')
+    return redirect(url_for('admin_capital_categories'))
+
+def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):
+    """Check if a cost range overlaps with any existing active categories"""
+    query = CapitalCategory.query.filter_by(is_active=True)
+    if exclude_id:
+        query = query.filter(CapitalCategory.id != exclude_id)
+
+    categories = query.all()
+
+    for cat in categories:
+        # Check if ranges overlap
+        # Range 1: [min_cost, max_cost or infinity]
+        # Range 2: [cat.min_cost, cat.max_cost or infinity]
+
+        # No overlap if: max_cost < cat.min_cost OR min_cost > cat.max_cost
+        # Overlap if: NOT (no overlap)
+
+        # If either range is unlimited (max is None), need special handling
+        if max_cost is None:
+            # New range is unlimited - overlaps if cat.max_cost is None or cat.max_cost >= min_cost
+            if cat.max_cost is None or cat.max_cost >= min_cost:
+                return cat
+        elif cat.max_cost is None:
+            # Existing range is unlimited - overlaps if min_cost <= cat.min_cost or max_cost > cat.min_cost
+            if max_cost > cat.min_cost:
+                return cat
+        else:
+            # Both ranges are limited
+            if not (max_cost < cat.min_cost or min_cost > cat.max_cost):
+                return cat
+
+    return None
+
+def assign_capital_category(equipment):
+    """Auto-assign capital category based on equipment cost (actual preferred, estimated fallback)"""
+    # Use actual capital cost if available, otherwise use estimated
+    cost = equipment.eq_capcst if equipment.eq_capcst else equipment.eq_capecst
+
+    if not cost:
+        equipment.eq_capcat = None
+        return
+
+    # Find matching category
+    categories = CapitalCategory.query.filter_by(is_active=True).order_by(CapitalCategory.min_cost).all()
+
+    for category in categories:
+        # Check if cost falls within this category's range
+        if category.max_cost is None:
+            # Unlimited range
+            if cost >= category.min_cost:
+                equipment.eq_capcat = category.id
+                return
+        else:
+            # Limited range
+            if category.min_cost <= cost <= category.max_cost:
+                equipment.eq_capcat = category.id
+                return
+
+    # No matching category found
+    equipment.eq_capcat = None
 
 # Auto-initialize database on import (for production)
 try:
