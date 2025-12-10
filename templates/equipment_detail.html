@@ -271,10 +271,11 @@
                                 <td>{% if equipment.eq_capfund == 1 %}Yes{% else %}No{% endif %}</td>
                             </tr>
                             {% endif %}
-                            {% if equipment.capital_category %}
+                            {% set category = equipment.get_capital_category() %}
+                            {% if category %}
                             <tr>
                                 <th>Capital Cost Category:</th>
-                                <td>{{ equipment.capital_category.name }}</td>
+                                <td>{{ category.name }}</td>
                             </tr>
                             {% endif %}
                             <tr>
@@ -282,8 +283,8 @@
                                 <td>
                                     {% if equipment.eq_capcst %}
                                         ${{ "{:,}".format(equipment.eq_capcst * 1000) }}
-                                    {% elif equipment.eq_capecst %}
-                                        ${{ "{:,}".format(equipment.eq_capecst * 1000) }} <span class="text-muted">(estimated)</span>
+                                    {% elif equipment.get_estimated_cost() %}
+                                        ${{ "{:,}".format(equipment.get_estimated_cost() * 1000) }} <span class="text-muted">(estimated)</span>
                                     {% else %}
                                         N/A
                                     {% endif %}

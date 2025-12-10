@@ -427,7 +427,35 @@ class Equipment(db.Model):
         ).order_by(ComplianceTest.test_date.desc()).first()
 
         return latest_test.test_date if latest_test else None
-    
+
+    def get_estimated_cost(self):
+        """Get estimated capital cost from subclass (dynamic)"""
+        if self.equipment_subclass:
+            return self.equipment_subclass.estimated_capital_cost
+        return None
+
+    def get_display_cost(self):
+        """Get display cost - actual if available, otherwise estimated"""
+        if self.eq_capcst:
+            return self.eq_capcst
+        return self.get_estimated_cost()
+
+    def get_capital_category(self):
+        """Calculate capital category dynamically based on costs"""
+        cost = self.get_display_cost()
+        if not cost:
+            return None
+
+        categories = CapitalCategory.query.filter_by(is_active=True).order_by(CapitalCategory.min_cost).all()
+        for category in categories:
+            if category.max_cost is None:
+                if cost >= category.min_cost:
+                    return category
+            else:
+                if category.min_cost <= cost <= category.max_cost:
+                    return category
+        return None
+
     def to_dict(self):
         return {
             'eq_id': self.eq_id,
@@ -1339,15 +1367,6 @@ def equipment_new():
         if not equipment.physician_id:
             equipment.physician_id = None
 
-        # Set estimated capital cost from subclass if subclass is selected
-        if equipment.subclass_id:
-            subclass = EquipmentSubclass.query.get(equipment.subclass_id)
-            if subclass and subclass.estimated_capital_cost:
-                equipment.eq_capecst = subclass.estimated_capital_cost
-
-        # Auto-assign capital category based on cost
-        assign_capital_category(equipment)
-
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
@@ -1539,17 +1558,6 @@ def equipment_edit(eq_id):
         if not equipment.physician_id:
             equipment.physician_id = None
 
-        # Set estimated capital cost from subclass if subclass is selected
-        if equipment.subclass_id:
-            subclass = EquipmentSubclass.query.get(equipment.subclass_id)
-            if subclass and subclass.estimated_capital_cost:
-                equipment.eq_capecst = subclass.estimated_capital_cost
-        else:
-            equipment.eq_capecst = None
-
-        # Auto-assign capital category based on cost
-        assign_capital_category(equipment)
-
         # If equipment is marked as retired but has no retirement date, set it to today
         if equipment.eq_retired and not equipment.eq_retdate:
             equipment.eq_retdate = datetime.now().date()
@@ -1631,17 +1639,6 @@ def update_equipment_details(eq_id):
     equipment.eq_retired = data.get('eq_retired') == 'true' or data.get('eq_retired') == True
     equipment.eq_physcov = data.get('eq_physcov') == 'true' or data.get('eq_physcov') == True
 
-    # Set estimated capital cost from subclass if subclass is selected
-    if equipment.subclass_id:
-        subclass = EquipmentSubclass.query.get(equipment.subclass_id)
-        if subclass and subclass.estimated_capital_cost:
-            equipment.eq_capecst = subclass.estimated_capital_cost
-    else:
-        equipment.eq_capecst = None
-
-    # Auto-assign capital category based on cost
-    assign_capital_category(equipment)
-
     # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
     if equipment.eq_mefac and equipment.eq_mereg:
         import re
@@ -1675,9 +1672,6 @@ def update_capital_details(eq_id):
     equipment.eq_capfund = int(data.get('eq_capfund')) if data.get('eq_capfund') and data.get('eq_capfund') != '' else None
     equipment.eq_capcst = int(data.get('eq_capcst')) if data.get('eq_capcst') else None
     equipment.eq_capnote = data.get('eq_capnote') if data.get('eq_capnote') else None
-
-    # Auto-assign capital category based on cost (don't allow manual override via this endpoint)
-    assign_capital_category(equipment)
 
     db.session.commit()
 
@@ -1748,9 +1742,8 @@ def get_equipment_form_data(eq_id):
             'eq_notes': equipment.eq_notes,
             'eq_radcap': equipment.eq_radcap,
             'eq_capfund': equipment.eq_capfund,
-            'eq_capcat': equipment.eq_capcat,
             'eq_capcst': equipment.eq_capcst,
-            'eq_capecst': equipment.eq_capecst,
+            'eq_capecst': equipment.get_estimated_cost(),
             'eq_capnote': equipment.eq_capnote,
             'contact_id': equipment.contact_id,
             'supervisor_id': equipment.supervisor_id,
@@ -2238,7 +2231,7 @@ def export_equipment():
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
-        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcat', 'eq_capcst', 'eq_capecst', 'eq_capnote', 'eq_notes'
+        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
     
@@ -2276,9 +2269,7 @@ def export_equipment():
             eq.eq_auditfreq or '', eq.eq_acrsite or '', eq.eq_acrunit or '',
             eq.eq_radcap if eq.eq_radcap is not None else '',
             eq.eq_capfund if eq.eq_capfund is not None else '',
-            eq.eq_capcat if eq.eq_capcat is not None else '',
             eq.eq_capcst or '',
-            eq.eq_capecst or '',
             eq.eq_capnote or '',
             eq.eq_notes or ''
         ]
@@ -2483,8 +2474,7 @@ def bulk_edit():
                                 setattr(equipment, field, None)
 
                         # Auto-assign capital category based on costs
-                        assign_capital_category(equipment)
-                        
+                                            
                         equipment.eq_acrsite = str(row.get('eq_acrsite', '')).strip()
                         equipment.eq_acrunit = str(row.get('eq_acrunit', '')).strip()
                         equipment.eq_notes = str(row.get('eq_notes', '')).strip()
@@ -2747,8 +2737,8 @@ def import_data():
                             except:
                                 equipment.eq_auditfreq = 'Annual - TJC'  # Default
                     
-                    # Handle integers (skip eq_capcat as it's auto-assigned)
-                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst']
+                    # Handle integers (eq_capcat and eq_capecst are calculated dynamically, not stored)
+                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst']
                     for field in int_fields:
                         val = row.get(field)
                         if pd.notna(val) and val != '':
@@ -2760,15 +2750,6 @@ def import_data():
                         elif val == '' or (pd.notna(val) and str(val).strip() == ''):
                             # Empty string means clear the field
                             setattr(equipment, field, None)
-
-                    # Auto-populate estimated capital cost from subclass if not provided
-                    if equipment.subclass_id and not equipment.eq_capecst:
-                        subclass = EquipmentSubclass.query.get(equipment.subclass_id)
-                        if subclass and subclass.estimated_capital_cost:
-                            equipment.eq_capecst = subclass.estimated_capital_cost
-
-                    # Auto-assign capital category based on costs
-                    assign_capital_category(equipment)
 
                     equipment.eq_acrsite = row.get('eq_acrsite')
                     equipment.eq_acrunit = row.get('eq_acrunit')
@@ -4122,34 +4103,6 @@ def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):
                 return cat
 
     return None
-
-def assign_capital_category(equipment):
-    """Auto-assign capital category based on equipment cost (actual preferred, estimated fallback)"""
-    # Use actual capital cost if available, otherwise use estimated
-    cost = equipment.eq_capcst if equipment.eq_capcst else equipment.eq_capecst
-
-    if not cost:
-        equipment.eq_capcat = None
-        return
-
-    # Find matching category
-    categories = CapitalCategory.query.filter_by(is_active=True).order_by(CapitalCategory.min_cost).all()
-
-    for category in categories:
-        # Check if cost falls within this category's range
-        if category.max_cost is None:
-            # Unlimited range
-            if cost >= category.min_cost:
-                equipment.eq_capcat = category.id
-                return
-        else:
-            # Limited range
-            if category.min_cost <= cost <= category.max_cost:
-                equipment.eq_capcat = category.id
-                return
-
-    # No matching category found
-    equipment.eq_capcat = None
 
 # Auto-initialize database on import (for production)
 try:
