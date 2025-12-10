@@ -2743,15 +2743,15 @@ def import_data():
                     int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst']
                     for field in int_fields:
                         val = row.get(field)
-                        if pd.notna(val) and val != '':
+                        if pd.isna(val) or val == '' or (isinstance(val, str) and val.strip() == ''):
+                            # Empty/blank means clear the field
+                            setattr(equipment, field, None)
+                        else:
                             try:
                                 setattr(equipment, field, int(val))
-                            except ValueError:
-                                # Invalid integer, skip
+                            except (ValueError, TypeError):
+                                # Invalid integer, leave unchanged
                                 pass
-                        elif val == '' or (pd.notna(val) and str(val).strip() == ''):
-                            # Empty string means clear the field
-                            setattr(equipment, field, None)
 
                     equipment.eq_acrsite = row.get('eq_acrsite')
                     equipment.eq_acrunit = row.get('eq_acrunit')
