@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Capital Categories - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-tags"></i> Capital Categories</h1>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Admin
+                </a>
+                <a href="{{ url_for('admin_add_capital_category') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Category
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                {% if categories %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Cost Range</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td><strong>{{ category.name }}</strong></td>
+                                    <td>{{ category.cost_range_display() }}</td>
+                                    <td>{{ category.created_at.strftime('%Y-%m-%d') if category.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin_edit_capital_category', category_id=category.id) }}" class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin_delete_capital_category', category_id=category.id) }}"
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Are you sure you want to deactivate this capital category?')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i> Deactivate
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tags fa-3x text-muted"></i>
+                        <h4 class="text-muted mt-3">No capital categories</h4>
+                        <p class="text-muted">
+                            <a href="{{ url_for('admin_add_capital_category') }}">Add the first capital category</a>
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
