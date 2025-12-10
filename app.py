@@ -2231,7 +2231,7 @@ def export_equipment():
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
-        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capnote', 'eq_notes'
+        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'estimated_capital_cost', 'capital_category', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
     
@@ -2270,6 +2270,8 @@ def export_equipment():
             eq.eq_radcap if eq.eq_radcap is not None else '',
             eq.eq_capfund if eq.eq_capfund is not None else '',
             eq.eq_capcst or '',
+            eq.get_estimated_cost() or '',
+            eq.get_capital_category().name if eq.get_capital_category() else '',
             eq.eq_capnote or '',
             eq.eq_notes or ''
         ]
