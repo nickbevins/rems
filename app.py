@@ -2754,8 +2754,12 @@ def import_data():
                         if pd.notna(val) and val != '':
                             try:
                                 setattr(equipment, field, int(val))
-                            except:
+                            except ValueError:
+                                # Invalid integer, skip
                                 pass
+                        elif val == '' or (pd.notna(val) and str(val).strip() == ''):
+                            # Empty string means clear the field
+                            setattr(equipment, field, None)
 
                     # Auto-populate estimated capital cost from subclass if not provided
                     if equipment.subclass_id and not equipment.eq_capecst:
