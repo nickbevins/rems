@@ -271,16 +271,10 @@
                                 <td>{% if equipment.eq_capfund == 1 %}Yes{% else %}No{% endif %}</td>
                             </tr>
                             {% endif %}
-                            {% if equipment.eq_capcat is not none %}
+                            {% if equipment.capital_category %}
                             <tr>
                                 <th>Capital Cost Category:</th>
-                                <td>
-                                    {% if equipment.eq_capcat == 0 %}N/A
-                                    {% elif equipment.eq_capcat == 1 %}Category 1
-                                    {% elif equipment.eq_capcat == 2 %}Category 2
-                                    {% elif equipment.eq_capcat == 3 %}Category 3
-                                    {% else %}{{ equipment.eq_capcat }}{% endif %}
-                                </td>
+                                <td>{{ equipment.capital_category.name }}</td>
                             </tr>
                             {% endif %}
                             <tr>
