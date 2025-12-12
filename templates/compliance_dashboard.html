@@ -182,7 +182,12 @@
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else equipment.eq_class }}</div>
                                         <div class="text-muted">{{ equipment.manufacturer.name if equipment.manufacturer else equipment.eq_manu }} {{ equipment.eq_mod }}</div>
                                     </td>
-                                    <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
+                                    <td>
+                                        {{ equipment.facility.name if equipment.facility else '' }}
+                                        {% if equipment.eq_mefacreg %}
+                                        <div class="text-muted">{{ equipment.eq_mefacreg }}</div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
@@ -277,7 +282,12 @@
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else equipment.eq_class }}</div>
                                         <div class="text-muted">{{ equipment.manufacturer.name if equipment.manufacturer else equipment.eq_manu }} {{ equipment.eq_mod }}</div>
                                     </td>
-                                    <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
+                                    <td>
+                                        {{ equipment.facility.name if equipment.facility else '' }}
+                                        {% if equipment.eq_mefacreg %}
+                                        <div class="text-muted">{{ equipment.eq_mefacreg }}</div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.last_tested_date.strftime('%Y-%m-%d') if test.last_tested_date else 'N/A' }}</td>
@@ -367,7 +377,12 @@
                                         <div class="fw-bold">{{ equipment.equipment_class.name if equipment.equipment_class else 'N/A' }}</div>
                                         <div class="text-muted">{{ equipment.manufacturer.name if equipment.manufacturer else '' }} {{ equipment.eq_mod }}</div>
                                     </td>
-                                    <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
+                                    <td>
+                                        {{ equipment.facility.name if equipment.facility else '' }}
+                                        {% if equipment.eq_mefacreg %}
+                                        <div class="text-muted">{{ equipment.eq_mefacreg }}</div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
                                     <td>{{ equipment.eq_rm or 'N/A' }}</td>
                                     <td>{{ test.scheduled_date.strftime('%Y-%m-%d') }}</td>

@@ -26,7 +26,7 @@
                         <i class="fas fa-arrow-left"></i> Back to List
                     </a>
                 {% endif %}
-                {% if not is_retired and current_user.can_manage_compliance() %}
+                {% if current_user.can_manage_compliance() %}
                     <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, **request.args) }}" class="btn btn-warning">
                         <i class="fas fa-plus"></i> Add Test
                     </a>
