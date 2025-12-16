@@ -2231,7 +2231,7 @@ def export_equipment():
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
-        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'estimated_capital_cost', 'capital_category', 'eq_capnote', 'eq_notes'
+        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst', 'eq_capcat', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
     
