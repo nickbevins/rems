@@ -883,6 +883,12 @@ function generateEquipmentDetailsForm(eq, choices) {
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="eq_planned" ${eq.eq_planned ? 'checked' : ''}>
+                            <label class="form-check-label">Planned (not yet installed)</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
                             <input type="checkbox" class="form-check-input" name="eq_physcov" ${eq.eq_physcov ? 'checked' : ''}>
                             <label class="form-check-label">Physics Coverage</label>
                         </div>
@@ -1032,6 +1038,10 @@ async function saveCard(cardName) {
     const retiredCheckbox = formElement.querySelector('input[name="eq_retired"]');
     if (retiredCheckbox) {
         data['eq_retired'] = retiredCheckbox.checked;
+    }
+    const plannedCheckbox = formElement.querySelector('input[name="eq_planned"]');
+    if (plannedCheckbox) {
+        data['eq_planned'] = plannedCheckbox.checked;
     }
     const physcovCheckbox = formElement.querySelector('input[name="eq_physcov"]');
     if (physcovCheckbox) {
