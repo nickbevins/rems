@@ -1057,8 +1057,10 @@ async function saveCard(cardName) {
         const result = await response.json();
 
         if (result.success) {
-            // Reload the page to show updated data
-            window.location.reload();
+            // Remove edit parameter from URL and reload to show updated data in view mode
+            const url = new URL(window.location);
+            url.searchParams.delete('edit');
+            window.location.href = url.toString();
         } else {
             alert('Error saving changes: ' + (result.message || 'Unknown error'));
         }
