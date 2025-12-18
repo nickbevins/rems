@@ -209,6 +209,13 @@ def check_and_migrate_db():
                         conn.commit()
                     print("Successfully added eq_capnote column")
 
+                if 'eq_planned' not in equipment_columns:
+                    print("Adding eq_planned column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_planned BOOLEAN DEFAULT 0"))
+                        conn.commit()
+                    print("Successfully added eq_planned column")
+
             # Add estimated_capital_cost to equipment_subclasses table
             if inspector.has_table('equipment_subclasses'):
                 subclass_columns = [col['name'] for col in inspector.get_columns('equipment_subclasses')]
@@ -316,7 +323,8 @@ class Equipment(db.Model):
     eq_eeoldate = db.Column(db.Date)
     eq_retdate = db.Column(db.Date)
     eq_retired = db.Column(db.Boolean, default=False)
-    
+    eq_planned = db.Column(db.Boolean, default=False)  # Planned equipment not yet installed
+
     # Compliance Information
     eq_physcov = db.Column(db.Boolean, default=True)  # Physics Coverage - default True for existing equipment
     eq_auditfreq = db.Column(db.String(200), default='Annual - TJC')  # Comma-separated list of frequencies
@@ -811,6 +819,7 @@ class EquipmentForm(FlaskForm):
     eq_eeoldate = DateField('Estimated End of Life Date', validators=[Optional()])
     eq_retdate = DateField('Retirement Date', validators=[Optional()])
     eq_retired = BooleanField('Retired')
+    eq_planned = BooleanField('Planned (not yet installed)')
     eq_physcov = BooleanField('Physics Coverage', default=True)
     eq_auditfreq = SelectMultipleField('Audit Frequencies', choices=[
         ('Quarterly', 'Quarterly'),
@@ -1098,7 +1107,8 @@ def equipment_list():
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')  # Default to false
     include_noncovered = request.args.get('include_noncovered', 'false')  # Default to false
-    
+    include_planned = request.args.get('include_planned', 'false')  # Default to false
+
     # Multi-level sorting
     sort_fields = request.args.get('sort', 'eq_id').split(',')
     sort_orders = request.args.get('order', 'asc').split(',')
@@ -1169,6 +1179,10 @@ def equipment_list():
     # By default, only show physics-covered equipment unless include_noncovered is checked
     if include_noncovered != 'true':
         query = query.filter(Equipment.eq_physcov == True)
+
+    # By default, exclude planned equipment unless include_planned is checked
+    if include_planned != 'true':
+        query = query.filter(Equipment.eq_planned == False)
 
     # Apply multi-level sorting - map legacy sort fields to relational fields
     sort_mapping = {
@@ -1666,6 +1680,7 @@ def update_equipment_details(eq_id):
 
     # Handle boolean checkboxes
     equipment.eq_retired = data.get('eq_retired') == 'true' or data.get('eq_retired') == True
+    equipment.eq_planned = data.get('eq_planned') == 'true' or data.get('eq_planned') == True
     equipment.eq_physcov = data.get('eq_physcov') == 'true' or data.get('eq_physcov') == True
 
     # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
@@ -1764,6 +1779,7 @@ def get_equipment_form_data(eq_id):
             'eq_eeoldate': equipment.eq_eeoldate.strftime('%Y-%m-%d') if equipment.eq_eeoldate else '',
             'eq_retdate': equipment.eq_retdate.strftime('%Y-%m-%d') if equipment.eq_retdate else '',
             'eq_retired': equipment.eq_retired,
+            'eq_planned': equipment.eq_planned,
             'eq_physcov': equipment.eq_physcov,
             'eq_auditfreq': equipment.eq_auditfreq,
             'eq_acrsite': equipment.eq_acrsite,
@@ -1813,11 +1829,12 @@ def compliance_dashboard():
     except (ValueError, TypeError):
         days_ahead = 90
     
-    # Build base query for active equipment (not retired, not past retirement date, and physics covered)
+    # Build base query for active equipment (not retired, not past retirement date, physics covered, and not planned)
     from sqlalchemy import and_, or_
     query = Equipment.query.filter(
         and_(
             Equipment.eq_retired == False,
+            Equipment.eq_planned == False,
             Equipment.eq_physcov == True,
             or_(
                 Equipment.eq_retdate.is_(None),
@@ -2259,7 +2276,7 @@ def export_equipment():
         'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
-        'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired',
+        'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired', 'eq_planned',
         'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst', 'eq_capcat', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
@@ -2294,6 +2311,7 @@ def export_equipment():
             eq.get_estimated_eol_date().strftime('%Y-%m-%d') if eq.get_estimated_eol_date() else '',
             eq.eq_retdate.strftime('%Y-%m-%d') if eq.eq_retdate else '',
             'TRUE' if eq.eq_retired else 'FALSE',
+            'TRUE' if eq.eq_planned else 'FALSE',
             'TRUE' if eq.eq_physcov else 'FALSE',
             eq.eq_auditfreq or '', eq.eq_acrsite or '', eq.eq_acrunit or '',
             eq.eq_radcap if eq.eq_radcap is not None else '',
@@ -2718,6 +2736,18 @@ def import_data():
                             equipment.eq_retired = str_val in ['TRUE', '1', 'YES', 'Y']
                     else:
                         equipment.eq_retired = False
+
+                    planned_val = row.get('eq_planned')
+                    if pd.notna(planned_val):
+                        if isinstance(planned_val, bool):
+                            equipment.eq_planned = planned_val
+                        elif isinstance(planned_val, (int, float)):
+                            equipment.eq_planned = bool(planned_val)
+                        else:
+                            str_val = str(planned_val).strip().upper()
+                            equipment.eq_planned = str_val in ['TRUE', '1', 'YES', 'Y']
+                    else:
+                        equipment.eq_planned = False
 
                     physcov_val = row.get('eq_physcov')
                     if pd.notna(physcov_val):

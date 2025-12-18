@@ -239,16 +239,24 @@
                         </div>
                     </div>
                     
-                    <div class="form-check">
+                    <div class="form-check mb-2">
                         {{ form.eq_retired(class="form-check-input") }}
                         {{ form.eq_retired.label(class="form-check-label") }}
                         {% for error in form.eq_retired.errors %}
                             <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                     </div>
+
+                    <div class="form-check">
+                        {{ form.eq_planned(class="form-check-input") }}
+                        {{ form.eq_planned.label(class="form-check-label") }}
+                        {% for error in form.eq_planned.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-            
+
             <!-- Contact Information -->
             <div class="card mb-4">
                 <div class="card-header">
