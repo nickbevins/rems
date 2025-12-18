@@ -27,6 +27,7 @@
                                     <th>Name</th>
                                     <th>Equipment Class</th>
                                     <th>Est. Capital Cost</th>
+                                    <th>Expected Lifetime</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -41,6 +42,13 @@
                                     <td>
                                         {% if subclass.estimated_capital_cost %}
                                             ${{ "{:,}".format(subclass.estimated_capital_cost * 1000) }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if subclass.expected_lifetime %}
+                                            {{ subclass.expected_lifetime }} years
                                         {% else %}
                                             <span class="text-muted">N/A</span>
                                         {% endif %}

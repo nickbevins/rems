@@ -219,6 +219,13 @@ def check_and_migrate_db():
                         conn.commit()
                     print("Successfully added estimated_capital_cost column")
 
+                if 'expected_lifetime' not in subclass_columns:
+                    print("Adding expected_lifetime column to equipment_subclasses table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment_subclasses ADD COLUMN expected_lifetime INTEGER"))
+                        conn.commit()
+                    print("Successfully added expected_lifetime column")
+
             # Create capital_categories table if it doesn't exist
             if not inspector.has_table('capital_categories'):
                 print("Creating capital_categories table...")
@@ -456,6 +463,27 @@ class Equipment(db.Model):
                     return category
         return None
 
+    def get_estimated_eol_date(self):
+        """Calculate estimated end of life date from subclass expected lifetime"""
+        if not self.equipment_subclass or not self.equipment_subclass.expected_lifetime:
+            return None
+
+        # Get the latest date from manufacture, install, or refurbish
+        latest_date = None
+        if self.eq_rfrbdt:
+            latest_date = self.eq_rfrbdt
+        if self.eq_instdt and (not latest_date or self.eq_instdt > latest_date):
+            latest_date = self.eq_instdt
+        if self.eq_mandt and (not latest_date or self.eq_mandt > latest_date):
+            latest_date = self.eq_mandt
+
+        if not latest_date:
+            return None
+
+        # Add expected lifetime in years
+        from dateutil.relativedelta import relativedelta
+        return latest_date + relativedelta(years=self.equipment_subclass.expected_lifetime)
+
     def to_dict(self):
         return {
             'eq_id': self.eq_id,
@@ -685,6 +713,7 @@ class EquipmentSubclass(db.Model):
     name = db.Column(db.String(100), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('equipment_classes.id'), nullable=False)
     estimated_capital_cost = db.Column(db.Integer)  # Estimated capital cost in thousands
+    expected_lifetime = db.Column(db.Integer)  # Expected lifetime in years
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -2262,7 +2291,7 @@ def export_equipment():
             eq.eq_rfrbdt.strftime('%Y-%m-%d') if eq.eq_rfrbdt else '',
             eq.eq_instdt.strftime('%Y-%m-%d') if eq.eq_instdt else '',
             eq.eq_eoldate.strftime('%Y-%m-%d') if eq.eq_eoldate else '',
-            eq.eq_eeoldate.strftime('%Y-%m-%d') if eq.eq_eeoldate else '',
+            eq.get_estimated_eol_date().strftime('%Y-%m-%d') if eq.get_estimated_eol_date() else '',
             eq.eq_retdate.strftime('%Y-%m-%d') if eq.eq_retdate else '',
             'TRUE' if eq.eq_retired else 'FALSE',
             'TRUE' if eq.eq_physcov else 'FALSE',
@@ -3678,6 +3707,7 @@ def admin_add_equipment_subclass():
         name = request.form['name'].strip()
         class_id = request.form.get('equipment_class_id')
         estimated_capital_cost = request.form.get('estimated_capital_cost')
+        expected_lifetime = request.form.get('expected_lifetime')
 
         if name and class_id:
             try:
@@ -3695,6 +3725,12 @@ def admin_add_equipment_subclass():
                                 existing.estimated_capital_cost = int(estimated_capital_cost)
                             except ValueError:
                                 pass
+                        # Update expected lifetime if provided
+                        if expected_lifetime and expected_lifetime.strip():
+                            try:
+                                existing.expected_lifetime = int(expected_lifetime)
+                            except ValueError:
+                                pass
                         db.session.commit()
                         flash('Subclass reactivated', 'success')
                 else:
@@ -3703,6 +3739,12 @@ def admin_add_equipment_subclass():
                     if estimated_capital_cost and estimated_capital_cost.strip():
                         try:
                             new_subclass.estimated_capital_cost = int(estimated_capital_cost)
+                        except ValueError:
+                            pass
+                    # Set expected lifetime if provided
+                    if expected_lifetime and expected_lifetime.strip():
+                        try:
+                            new_subclass.expected_lifetime = int(expected_lifetime)
                         except ValueError:
                             pass
                     db.session.add(new_subclass)
@@ -3725,6 +3767,7 @@ def admin_edit_equipment_subclass(subclass_id):
         name = request.form['name'].strip()
         class_id = request.form.get('equipment_class_id')
         estimated_capital_cost = request.form.get('estimated_capital_cost')
+        expected_lifetime = request.form.get('expected_lifetime')
 
         if name and class_id:
             try:
@@ -3744,6 +3787,14 @@ def admin_edit_equipment_subclass(subclass_id):
                             subclass.estimated_capital_cost = None
                     else:
                         subclass.estimated_capital_cost = None
+                    # Update expected lifetime
+                    if expected_lifetime and expected_lifetime.strip():
+                        try:
+                            subclass.expected_lifetime = int(expected_lifetime)
+                        except ValueError:
+                            subclass.expected_lifetime = None
+                    else:
+                        subclass.expected_lifetime = None
                     db.session.commit()
                     flash('Subclass updated', 'success')
                     return redirect(url_for('admin_equipment_subclasses'))

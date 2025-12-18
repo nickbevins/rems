@@ -38,6 +38,12 @@
                         <div class="form-text">Default estimated capital cost for equipment in this subclass (optional)</div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="expected_lifetime" class="form-label">Expected Lifetime (years)</label>
+                        <input type="number" class="form-control" id="expected_lifetime" name="expected_lifetime" min="0">
+                        <div class="form-text">Expected lifetime for equipment in this subclass (optional)</div>
+                    </div>
+
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('admin_equipment_subclasses') }}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancel
