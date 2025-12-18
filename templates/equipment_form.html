@@ -230,15 +230,6 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                {{ form.eq_eeoldate.label(class="form-label") }}
-                                {{ form.eq_eeoldate(class="form-control") }}
-                                {% for error in form.eq_eeoldate.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
                                 {{ form.eq_retdate.label(class="form-label") }}
                                 {{ form.eq_retdate(class="form-control") }}
                                 {% for error in form.eq_retdate.errors %}

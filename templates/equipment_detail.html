@@ -121,8 +121,8 @@
                                         <td>
                                             {% if equipment.eq_eoldate %}
                                                 {{ equipment.eq_eoldate.strftime('%Y-%m-%d') }}
-                                            {% elif equipment.eq_eeoldate %}
-                                                {{ equipment.eq_eeoldate.strftime('%Y-%m-%d') }} <span class="text-muted">(estimated)</span>
+                                            {% elif equipment.get_estimated_eol_date() %}
+                                                {{ equipment.get_estimated_eol_date().strftime('%Y-%m-%d') }} <span class="text-muted">(estimated)</span>
                                             {% else %}
                                                 N/A
                                             {% endif %}
@@ -869,10 +869,7 @@ function generateEquipmentDetailsForm(eq, choices) {
                     <div class="mb-3">
                         <label class="form-label">End of Life Date</label>
                         <input type="date" class="form-control" name="eq_eoldate" value="${eq.eq_eoldate || ''}">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Estimated End of Life Date</label>
-                        <input type="date" class="form-control" name="eq_eeoldate" value="${eq.eq_eeoldate || ''}">
+                        <small class="form-text text-muted">Leave blank to use estimated EOL from subclass</small>
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
