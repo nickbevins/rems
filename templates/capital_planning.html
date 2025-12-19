@@ -461,9 +461,10 @@
             row.addEventListener('dblclick', function(e) {
                 // Don't trigger if clicking on action buttons
                 if (e.target.closest('.btn-group')) return;
-                
+
                 const eqId = this.getAttribute('data-eq-id');
                 const currentParams = new URLSearchParams(window.location.search);
+                currentParams.set('redirect_to', 'capital');
                 window.location.href = `/equipment/${eqId}?${currentParams.toString()}`;
             });
         });

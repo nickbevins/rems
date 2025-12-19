@@ -21,6 +21,10 @@
                     <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Back to List
                     </a>
+                {% elif redirect_to == 'capital' %}
+                    <a href="{{ url_for('capital_planning', **search_params) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Capital Planning
+                    </a>
                 {% else %}
                     <a href="{{ url_for('equipment_list', **search_params) }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Back to List
