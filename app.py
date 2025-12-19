@@ -1811,11 +1811,13 @@ def get_equipment_form_data(eq_id):
 @login_required
 def capital_planning():
     from datetime import datetime
-    from sqlalchemy import and_, or_
+    from sqlalchemy import and_, or_, desc
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 25, type=int)
     today = datetime.now().date()
+    sort_param = request.args.get('sort', '')
+    order_param = request.args.get('order', '')
 
     # Filters
     search = request.args.get('search', '').strip()
@@ -1826,7 +1828,7 @@ def capital_planning():
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')
     include_noncovered = request.args.get('include_noncovered', 'false')
-    include_planned = request.args.get('include_planned', 'false')
+    include_planned = request.args.get('include_planned', 'true')  # Default to checked
     radiology_owned = request.args.get('radiology_owned', 'true')  # Default to checked
     replacement_funded = request.args.get('replacement_funded', 'false')
 
@@ -1889,6 +1891,27 @@ def capital_planning():
 
     if replacement_funded == 'true':
         query = query.filter(Equipment.eq_capfund == 1)
+
+    # Sorting
+    if sort_param and order_param:
+        sort_fields = sort_param.split(',')
+        sort_orders = order_param.split(',')
+
+        for field, order in zip(sort_fields, sort_orders):
+            if field == 'eq_class':
+                query = query.order_by(desc(EquipmentClass.name) if order == 'desc' else EquipmentClass.name)
+            elif field == 'eq_subclass':
+                query = query.order_by(desc(EquipmentSubclass.name) if order == 'desc' else EquipmentSubclass.name)
+            elif field == 'eq_manu':
+                query = query.order_by(desc(Manufacturer.name) if order == 'desc' else Manufacturer.name)
+            elif field == 'eq_dept':
+                query = query.order_by(desc(Department.name) if order == 'desc' else Department.name)
+            elif field == 'eq_fac':
+                query = query.order_by(desc(Facility.name) if order == 'desc' else Facility.name)
+            elif field == 'eq_rm':
+                query = query.order_by(desc(Equipment.eq_rm) if order == 'desc' else Equipment.eq_rm)
+            elif field == 'eq_capcst':
+                query = query.order_by(desc(Equipment.eq_capcst) if order == 'desc' else Equipment.eq_capcst)
 
     # Pagination
     equipment = query.paginate(page=page, per_page=per_page, error_out=False)
