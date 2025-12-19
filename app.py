@@ -1892,29 +1892,86 @@ def capital_planning():
     if replacement_funded == 'true':
         query = query.filter(Equipment.eq_capfund == 1)
 
-    # Sorting
+    # Handle sorting - need special handling for dynamic fields
+    has_dynamic_sort = False
     if sort_param and order_param:
         sort_fields = sort_param.split(',')
         sort_orders = order_param.split(',')
 
-        for field, order in zip(sort_fields, sort_orders):
-            if field == 'eq_class':
-                query = query.order_by(desc(EquipmentClass.name) if order == 'desc' else EquipmentClass.name)
-            elif field == 'eq_subclass':
-                query = query.order_by(desc(EquipmentSubclass.name) if order == 'desc' else EquipmentSubclass.name)
-            elif field == 'eq_manu':
-                query = query.order_by(desc(Manufacturer.name) if order == 'desc' else Manufacturer.name)
-            elif field == 'eq_dept':
-                query = query.order_by(desc(Department.name) if order == 'desc' else Department.name)
-            elif field == 'eq_fac':
-                query = query.order_by(desc(Facility.name) if order == 'desc' else Facility.name)
-            elif field == 'eq_rm':
-                query = query.order_by(desc(Equipment.eq_rm) if order == 'desc' else Equipment.eq_rm)
-            elif field == 'eq_capcst':
-                query = query.order_by(desc(Equipment.eq_capcst) if order == 'desc' else Equipment.eq_capcst)
+        # Check if sorting by dynamic fields
+        has_dynamic_sort = 'years_until_eol' in sort_fields or 'eq_capcst' in sort_fields
 
-    # Pagination
-    equipment = query.paginate(page=page, per_page=per_page, error_out=False)
+        if not has_dynamic_sort:
+            # Apply database sorting for non-dynamic fields
+            for field, order in zip(sort_fields, sort_orders):
+                if field == 'eq_class':
+                    query = query.order_by(desc(EquipmentClass.name) if order == 'desc' else EquipmentClass.name)
+                elif field == 'eq_subclass':
+                    query = query.order_by(desc(EquipmentSubclass.name) if order == 'desc' else EquipmentSubclass.name)
+                elif field == 'eq_manu':
+                    query = query.order_by(desc(Manufacturer.name) if order == 'desc' else Manufacturer.name)
+                elif field == 'eq_dept':
+                    query = query.order_by(desc(Department.name) if order == 'desc' else Department.name)
+                elif field == 'eq_fac':
+                    query = query.order_by(desc(Facility.name) if order == 'desc' else Facility.name)
+                elif field == 'eq_rm':
+                    query = query.order_by(desc(Equipment.eq_rm) if order == 'desc' else Equipment.eq_rm)
+
+    if has_dynamic_sort:
+        # Get all results for sorting
+        all_equipment = query.all()
+
+        # Calculate dynamic values and sort
+        equipment_with_values = []
+        for eq in all_equipment:
+            eol_date = eq.eq_eoldate or eq.get_estimated_eol_date()
+            years_until_eol = None
+            if eol_date:
+                years_until_eol = (eol_date - today).days / 365.25
+
+            display_cost = eq.get_display_cost()
+
+            equipment_with_values.append({
+                'equipment': eq,
+                'years_until_eol': years_until_eol if years_until_eol is not None else float('inf'),
+                'eq_capcst': display_cost if display_cost is not None else 0
+            })
+
+        # Sort by the specified fields
+        for field, order in reversed(list(zip(sort_fields, sort_orders))):
+            reverse = (order == 'desc')
+            if field == 'years_until_eol':
+                equipment_with_values.sort(key=lambda x: (x['years_until_eol'] == float('inf'), x['years_until_eol']), reverse=reverse)
+            elif field == 'eq_capcst':
+                equipment_with_values.sort(key=lambda x: (x['eq_capcst'] == 0, x['eq_capcst']), reverse=reverse)
+
+        # Extract sorted equipment
+        sorted_equipment = [item['equipment'] for item in equipment_with_values]
+
+        # Manual pagination
+        total = len(sorted_equipment)
+        start = (page - 1) * per_page
+        end = start + per_page
+        items = sorted_equipment[start:end]
+
+        # Create pagination object
+        from flask import url_for
+        class ManualPagination:
+            def __init__(self, items, page, per_page, total):
+                self.items = items
+                self.page = page
+                self.per_page = per_page
+                self.total = total
+                self.pages = (total + per_page - 1) // per_page
+                self.has_prev = page > 1
+                self.has_next = page < self.pages
+                self.prev_num = page - 1 if self.has_prev else None
+                self.next_num = page + 1 if self.has_next else None
+
+        equipment = ManualPagination(items, page, per_page, total)
+    else:
+        # Normal pagination
+        equipment = query.paginate(page=page, per_page=per_page, error_out=False)
 
     # Get filter options
     classes = [c.name for c in EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()]
