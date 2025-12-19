@@ -1884,7 +1884,12 @@ def capital_planning():
         query = query.filter(Equipment.eq_physcov == True)
 
     if include_planned != 'true':
-        query = query.filter(Equipment.eq_planned == False)
+        query = query.filter(
+            or_(
+                Equipment.eq_planned == False,
+                Equipment.eq_planned.is_(None)
+            )
+        )
 
     if radiology_owned == 'true':
         query = query.filter(Equipment.eq_radcap == 1)
