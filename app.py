@@ -1946,29 +1946,41 @@ def capital_planning():
                 equipment_with_values.sort(key=lambda x: (x['eq_capcst'] == 0, x['eq_capcst']), reverse=reverse)
 
         # Extract sorted equipment
-        sorted_equipment = [item['equipment'] for item in equipment_with_values]
+        all_equipment = [item['equipment'] for item in equipment_with_values]
 
         # Manual pagination
-        total = len(sorted_equipment)
-        start = (page - 1) * per_page
-        end = start + per_page
-        items = sorted_equipment[start:end]
+        total_items = len(all_equipment)
+        if request.args.get('show_all') == 'true':
+            equipment_items = all_equipment
+            equipment = type('MockPagination', (), {
+                'items': equipment_items,
+                'total': total_items,
+                'pages': 1,
+                'page': 1,
+                'has_prev': False,
+                'has_next': False,
+                'prev_num': None,
+                'next_num': None,
+                'iter_pages': lambda *args, **kwargs: [1]
+            })()
+        else:
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            equipment_items = all_equipment[start_idx:end_idx]
 
-        # Create pagination object
-        from flask import url_for
-        class ManualPagination:
-            def __init__(self, items, page, per_page, total):
-                self.items = items
-                self.page = page
-                self.per_page = per_page
-                self.total = total
-                self.pages = (total + per_page - 1) // per_page
-                self.has_prev = page > 1
-                self.has_next = page < self.pages
-                self.prev_num = page - 1 if self.has_prev else None
-                self.next_num = page + 1 if self.has_next else None
+            total_pages = (total_items + per_page - 1) // per_page
 
-        equipment = ManualPagination(items, page, per_page, total)
+            equipment = type('MockPagination', (), {
+                'items': equipment_items,
+                'total': total_items,
+                'pages': total_pages,
+                'page': page,
+                'has_prev': page > 1,
+                'has_next': page < total_pages,
+                'prev_num': page - 1 if page > 1 else None,
+                'next_num': page + 1 if page < total_pages else None,
+                'iter_pages': lambda *args, **kwargs: range(max(1, page - 2), min(total_pages + 1, page + 3))
+            })()
     else:
         # Normal pagination
         equipment = query.paginate(page=page, per_page=per_page, error_out=False)
