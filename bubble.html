@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMC Radiology Equipment Fleet by EOSL, Cost, and Category</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            overflow-x: auto;
+        }
+        .chart-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 1100px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .chart {
+            position: relative;
+        }
+        .grid line {
+            stroke: #e0e0e0;
+            stroke-width: 1;
+        }
+        .axis {
+            font-size: 11px;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #333;
+            shape-rendering: crispEdges;
+        }
+        .legend {
+            position: absolute;
+            right: 10px;
+            top: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 160px;
+        }
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .annotation {
+            position: absolute;
+            left: 250px;
+            top: 100px;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border: 1px solid #ff6b6b;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #ff6b6b;
+            max-width: 150px;
+            text-align: center;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .vertical-line {
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            stroke-dasharray: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <div class="title">MMC Radiology Equipment Fleet by EOSL, Cost, and Category</div>
+        <div class="chart" id="chart"></div>
+        <div class="annotation">
+            Units requiring replacement<br>
+            within the next six years<br>
+            <strong>($<span id="replacement-cost"></span> million)</strong>
+        </div>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <script>
+        // Data
+        const rawData = `Mammography,2029,744
+CT,2026,1800
+C-arm,2032,250
+R/F,2030,1200
+X-ray,2030,665
+C-arm,2038,2500
+C-arm,2039,2500
+C-arm,2039,3320
+CT,2035,1800
+CT,2036,1800
+CT,2028,2600
+X-ray,2044,665
+X-ray,2044,665
+X-ray,2041,665
+C-arm,2030,250
+CT,2029,2600
+C-arm,2032,250
+C-arm,2032,250
+R/F,2029,1200
+R/F,2029,1200
+R/F,2025,1200
+C-arm,2032,250
+C-arm,2032,250
+C-arm,2032,250
+C-arm,2029,250
+X-ray,2028,180
+C-arm,2032,250
+C-arm,2032,250
+X-ray,2036,180
+X-ray,2036,180
+X-ray,2037,180
+C-arm,2032,250
+C-arm,2032,250
+C-arm,2032,250
+X-ray,2038,180
+X-ray,2038,180
+X-ray,2038,180
+R/F,2035,1200
+X-ray,2041,665
+X-ray,2027,665
+X-ray,2044,665
+X-ray,2042,665
+Mammography,2038,744
+C-arm,2032,250
+Breast Biopsy,2032,150
+CT,2030,2600
+Mammography,2028,744
+Mammography,2038,744
+Mammography,2038,744
+Cabinet,2035,75
+R/F,2030,1200
+Breast Biopsy,2028,350
+C-arm,2032,250
+C-arm,2032,250
+C-arm,2032,250
+X-ray,2037,180
+Gamma Camera,2030,1100
+Gamma Camera,2029,1100
+Gamma Camera,2032,1100
+PET,2032,4879
+MRI,2028,2000
+MRI,2033,2000
+MRI,2028,2000
+MRI,2028,2000
+MRI,2034,2000
+X-ray,2042,180
+Dental,2038,80
+Ultrasound,2030,190
+Ultrasound,2025,190
+Ultrasound,2025,190
+Ultrasound,2029,190
+Ultrasound,2025,190
+Ultrasound,2025,190
+Ultrasound,2030,190
+Ultrasound,2025,190
+Ultrasound,2024,145
+Ultrasound,2025,190
+Ultrasound,2030,190
+Ultrasound,2025,190
+Ultrasound,2030,190
+Ultrasound,2024,145
+X-ray,2042,180
+X-ray,2042,180
+X-ray,2042,665
+Gamma Camera,2040,1100
+C-arm,2039,250
+C-arm,2039,250
+C-arm,2039,250
+X-ray,2043,180
+X-ray,2043,180
+X-ray,2043,180
+Ultrasound,2036,190
+Ultrasound,2036,190
+CT,2034,1800
+CT,2034,1800
+CT,2034,1800
+DXA,2037,100
+DXA,2034,100
+Mammography,2029,520
+Mammography,2028,520
+Mammography,2028,520
+Mammography,2030,520
+MRI,2032,3000
+MRI,2038,3000
+Gamma Camera,2039,1100
+Ultrasound,2027,190
+Ultrasound,2029,190
+Ultrasound,2030,190
+Ultrasound,2030,190
+Ultrasound,2033,190
+Ultrasound,2033,190
+Ultrasound,2035,190
+Ultrasound,2035,190
+X-ray,2042,550
+X-ray,2028,550
+X-ray,2032,550
+X-ray,2029,550
+X-ray,2025,550
+X-ray,2029,550
+X-ray,2028,550
+X-ray,2029,550
+X-ray,2017,550
+X-ray,2035,180
+X-ray,2035,180
+X-ray,2022,180
+X-ray,2040,180
+X-ray,2041,180
+X-ray,2032,180
+R/F,2037,1200
+C-arm,2038,200
+C-arm,2038,200
+C-arm,2038,80
+C-arm,2038,200
+C-arm,2038,200
+C-arm,2038,200
+C-arm,2038,80
+PET,2042,3500
+CT,2037,1800
+`;
+
+        // Parse data
+        const data = rawData.trim().split('\n').map(line => {
+            const [category, year, cost] = line.split(',');
+            let adjustedYear = parseInt(year);
+            // Move everything before current year to this year
+            const currentYear = new Date().getFullYear();
+            if (adjustedYear < currentYear) {
+                adjustedYear = currentYear;
+            }
+            return {
+                category: category.trim(),
+                year: adjustedYear,
+                cost: parseInt(cost) * 1000 // Convert to thousands for bubble sizing
+            };
+        });
+
+        // Color mapping based on the original chart
+        const colorMap = {
+            'Ultrasound': '#4CAF50',
+            'X-ray': '#2196F3',
+            'C-arm': '#FF9800',
+            'Mammography': '#E91E63',
+            'CT': '#9C27B0',
+            'R/F': '#673AB7',
+            'MRI': '#3F51B5',
+            'Gamma Camera': '#009688',
+            'PET': '#FF5722',
+            'Breast Biopsy': '#795548',
+            'Cabinet': '#607D8B',
+            'Dental': '#FFC107',
+            'DXA': '#8BC34A'
+        };
+
+        // Calculate total cost for equipment needing replacement in next 5 years
+        const currentYear = new Date().getFullYear();
+        const replacementYears = Array.from({length: 6}, (_, i) => currentYear + i);
+        const replacementEquipment = data.filter(d => replacementYears.includes(d.year));
+        const totalReplacementCost = replacementEquipment.reduce((sum, d) => sum + (d.cost / 1000), 0); // Convert back to original units
+        const costInMillions = (totalReplacementCost / 1000).toFixed(0); // Convert to millions
+
+        // Setup dimensions with responsive sizing
+        const containerWidth = Math.max(1000, window.innerWidth - 100);
+        const margin = {top: 20, right: 220, bottom: 60, left: 60};
+        const width = containerWidth - margin.left - margin.right;
+        const height = 600 - margin.top - margin.bottom;
+
+        // Create SVG with responsive width
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .style("width", "100%")
+            .style("height", "auto");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Create scales
+        const xScale = d3.scaleLinear()
+            .domain([currentYear-1, currentYear+19])
+            .range([0, width]);
+
+        const yScale = d3.scaleLinear()
+            .domain([0, 22])
+            .range([height, 0]);
+
+        const sizeScale = d3.scaleSqrt()
+            .domain([0, d3.max(data, d => d.cost)])
+            .range([2, 25]); // Scaled down from [3, 40]
+
+        // Create grid
+        const xGrid = d3.axisBottom(xScale)
+            .tickSize(-height)
+            .tickFormat("");
+
+        const yGrid = d3.axisLeft(yScale)
+            .tickSize(-width)
+            .tickFormat("");
+
+        g.append("g")
+            .attr("class", "grid")
+            .attr("transform", `translate(0,${height})`)
+            .call(xGrid);
+
+        g.append("g")
+            .attr("class", "grid")
+            .call(yGrid);
+
+        // Create axes with forced year labels
+        g.append("g")
+            .attr("class", "axis")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(xScale)
+                .tickValues(d3.range(currentYear, currentYear+20)) // Start from current year
+                .tickFormat(d3.format("d")));
+
+        g.append("g")
+            .attr("class", "axis")
+            .call(d3.axisLeft(yScale));
+
+        // Add axis labels
+        g.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0 - margin.left)
+            .attr("x", 0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .style("font-size", "12px")
+            .text("Number");
+
+        g.append("text")
+            .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 10})`)
+            .style("text-anchor", "middle")
+            .style("font-size", "12px")
+            .text("End of Serviceable Life Year");
+
+        // Add vertical line at 5.5 years now
+        const redLinePosition = currentYear + 5.5;
+        g.append("line")
+            .attr("class", "vertical-line")
+            .attr("x1", xScale(redLinePosition))
+            .attr("x2", xScale(redLinePosition))
+            .attr("y1", 0)
+            .attr("y2", height);
+
+        // Group data by year and category for stacking
+        const groupedData = d3.rollup(data, 
+            v => v.sort((a, b) => b.cost - a.cost), // Sort by cost descending (largest first)
+            d => d.year,
+            d => d.category
+        );
+
+        // Create stacked data points with largest circles at bottom
+        const stackedData = [];
+        for (let [year, categories] of groupedData) {
+            let yPosition = 1;
+            // Sort categories by their largest item cost to put biggest bubbles at bottom
+            const sortedCategories = Array.from(categories.entries()).sort((a, b) => {
+                const maxCostA = Math.max(...a[1].map(item => item.cost));
+                const maxCostB = Math.max(...b[1].map(item => item.cost));
+                return maxCostB - maxCostA;
+            });
+            
+            for (let [category, items] of sortedCategories) {
+                for (let i = 0; i < items.length; i++) {
+                    stackedData.push({
+                        year: year,
+                        category: category,
+                        yPosition: yPosition + i,
+                        cost: items[i].cost,
+                        originalCost: items[i].cost / 1000 // For display
+                    });
+                }
+                yPosition += items.length;
+            }
+        }
+
+        // Create tooltip
+        const tooltip = d3.select("#tooltip");
+
+        // Draw circles
+        const circles = g.selectAll(".dot")
+            .data(stackedData)
+            .enter().append("circle")
+            .attr("class", "dot")
+            .attr("cx", d => xScale(d.year))
+            .attr("cy", d => yScale(d.yPosition))
+            .attr("r", d => sizeScale(d.cost))
+            .attr("fill", d => colorMap[d.category] || '#999')
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1)
+            .style("opacity", 0.8);
+
+        // Add interactivity
+        circles
+            .on("mouseover", function(event, d) {
+                tooltip
+                    .style("opacity", 1)
+                    .html(`<strong>${d.category}</strong><br>Year: ${d.year}<br>Cost: $${d.originalCost}k`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+                
+                d3.select(this)
+                    .style("stroke", "#000")
+                    .style("stroke-width", 2);
+            })
+            .on("mouseout", function(d) {
+                tooltip.style("opacity", 0);
+                d3.select(this)
+                    .style("stroke", "#fff")
+                    .style("stroke-width", 1);
+            });
+
+        // Create legend
+        const legend = d3.select(".chart")
+            .append("div")
+            .attr("class", "legend");
+
+        legend.append("div")
+            .attr("class", "legend-title")
+            .text("Category");
+
+        const categories = Object.keys(colorMap);
+        const legendItems = legend.selectAll(".legend-item")
+            .data(categories)
+            .enter()
+            .append("div")
+            .attr("class", "legend-item");
+
+        legendItems.append("div")
+            .attr("class", "legend-color")
+            .style("background-color", d => colorMap[d]);
+
+        legendItems.append("span")
+            .text(d => {
+                const count = data.filter(item => item.category === d).length;
+                const maxCost = Math.max(...data.filter(item => item.category === d).map(item => item.cost / 1000));
+                return `${d} (~${count} units)`;
+            });
+
+        // Update the annotation with calculated cost
+        document.getElementById('replacement-cost').textContent = costInMillions;
+
+        // Add window resize handler for responsiveness
+        window.addEventListener('resize', function() {
+            // Simple responsive behavior - you could enhance this further
+            const newContainerWidth = Math.max(1000, window.innerWidth - 100);
+            const newWidth = newContainerWidth - margin.left - margin.right;
+            
+            // Update SVG width
+            svg.attr("width", newWidth + margin.left + margin.right);
+            
+            // Update scale
+            xScale.range([0, newWidth]);
+            
+            // Update elements
+            g.select(".axis").call(d3.axisBottom(xScale)
+                .tickValues(d3.range(2025, 2044)) // Exclude 2024
+                .tickFormat(d3.format("d")));
+            g.selectAll(".grid").call(xGrid);
+            g.selectAll(".dot").attr("cx", d => xScale(d.year));
+            g.select(".vertical-line").attr("x1", xScale(redLinePosition)).attr("x2", xScale(redLinePosition));
+            g.select("text[transform*='translate']").attr("transform", `translate(${newWidth / 2}, ${height + margin.bottom - 10})`);
+        });
+
+    </script>
+</body>
+</html>
