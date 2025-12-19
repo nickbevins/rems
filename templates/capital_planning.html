@@ -152,7 +152,7 @@
                             </div>
                             <div class="form-check form-check-inline mb-0">
                                 <input class="form-check-input auto-filter-checkbox" type="checkbox" name="include_planned" value="true" id="include_planned" form="filterForm"
-                                       {% if request.args.get('include_planned') == 'true' %}checked{% endif %}>
+                                       {% if request.args.get('include_planned', 'true') == 'true' %}checked{% endif %}>
                                 <label class="form-check-label text-muted small" for="include_planned">
                                     Include planned
                                 </label>
