@@ -151,7 +151,7 @@
                                 </label>
                             </div>
                             <div class="form-check form-check-inline mb-0">
-                                <input class="form-check-input auto-filter" type="checkbox" name="include_planned" value="true" id="include_planned" form="filterForm"
+                                <input class="form-check-input auto-filter-checkbox" type="checkbox" name="include_planned" value="true" id="include_planned" form="filterForm"
                                        {% if request.args.get('include_planned', 'true') == 'true' %}checked{% endif %}>
                                 <label class="form-check-label text-muted small" for="include_planned">
                                     Include planned
@@ -421,6 +421,7 @@
         const autoFilterElements = document.querySelectorAll('.auto-filter');
         const searchInput = document.getElementById('search');
         const radiologyOwnedCheckbox = document.getElementById('radiology_owned');
+        const includePlannedCheckbox = document.getElementById('include_planned');
 
         autoFilterElements.forEach(element => {
             element.addEventListener('change', function() {
@@ -428,18 +429,19 @@
             });
         });
 
-        // Special handling for radiology_owned checkbox to allow unchecking
+        // Special handling for checkboxes with defaults to allow unchecking
         if (radiologyOwnedCheckbox) {
             radiologyOwnedCheckbox.addEventListener('change', function() {
-                const form = document.getElementById('filterForm');
                 const url = new URL(window.location);
+                url.searchParams.set('radiology_owned', this.checked ? 'true' : 'false');
+                window.location.href = url.toString();
+            });
+        }
 
-                if (this.checked) {
-                    url.searchParams.set('radiology_owned', 'true');
-                } else {
-                    url.searchParams.set('radiology_owned', 'false');
-                }
-
+        if (includePlannedCheckbox) {
+            includePlannedCheckbox.addEventListener('change', function() {
+                const url = new URL(window.location);
+                url.searchParams.set('include_planned', this.checked ? 'true' : 'false');
                 window.location.href = url.toString();
             });
         }
