@@ -1807,6 +1807,201 @@ def get_equipment_form_data(eq_id):
         }
     })
 
+@app.route('/capital')
+@login_required
+def capital_planning():
+    from datetime import datetime
+    from sqlalchemy import and_, or_
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 25, type=int)
+    today = datetime.now().date()
+
+    # Filters
+    search = request.args.get('search', '').strip()
+    eq_class = request.args.get('eq_class')
+    eq_subclass = request.args.get('eq_subclass')
+    eq_manu = request.args.get('eq_manu')
+    eq_dept = request.args.get('eq_dept')
+    eq_fac = request.args.get('eq_fac')
+    include_retired = request.args.get('include_retired', 'false')
+    include_noncovered = request.args.get('include_noncovered', 'false')
+    include_planned = request.args.get('include_planned', 'false')
+    radiology_owned = request.args.get('radiology_owned', 'true')  # Default to checked
+    replacement_funded = request.args.get('replacement_funded', 'false')
+
+    # Build query
+    query = Equipment.query.join(
+        EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
+    ).join(
+        EquipmentSubclass, Equipment.subclass_id == EquipmentSubclass.id, isouter=True
+    ).join(
+        Manufacturer, Equipment.manufacturer_id == Manufacturer.id, isouter=True
+    ).join(
+        Department, Equipment.department_id == Department.id, isouter=True
+    ).join(
+        Facility, Equipment.facility_id == Facility.id, isouter=True
+    )
+
+    # Apply filters
+    if search:
+        search_filter = or_(
+            EquipmentClass.name.ilike(f'%{search}%'),
+            EquipmentSubclass.name.ilike(f'%{search}%'),
+            Manufacturer.name.ilike(f'%{search}%'),
+            Equipment.eq_mod.ilike(f'%{search}%'),
+            Department.name.ilike(f'%{search}%'),
+            Equipment.eq_rm.ilike(f'%{search}%'),
+            Facility.name.ilike(f'%{search}%')
+        )
+        query = query.filter(search_filter)
+
+    if eq_class:
+        query = query.filter(EquipmentClass.name == eq_class)
+    if eq_subclass:
+        query = query.filter(EquipmentSubclass.name == eq_subclass)
+    if eq_manu:
+        query = query.filter(Manufacturer.name == eq_manu)
+    if eq_dept:
+        query = query.filter(Department.name == eq_dept)
+    if eq_fac:
+        query = query.filter(Facility.name == eq_fac)
+
+    if include_retired != 'true':
+        query = query.filter(
+            and_(
+                Equipment.eq_retired == False,
+                or_(
+                    Equipment.eq_retdate.is_(None),
+                    Equipment.eq_retdate > today
+                )
+            )
+        )
+
+    if include_noncovered != 'true':
+        query = query.filter(Equipment.eq_physcov == True)
+
+    if include_planned != 'true':
+        query = query.filter(Equipment.eq_planned == False)
+
+    if radiology_owned == 'true':
+        query = query.filter(Equipment.eq_radcap == 1)
+
+    if replacement_funded == 'true':
+        query = query.filter(Equipment.eq_capfund == 1)
+
+    # Pagination
+    equipment = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Get filter options
+    classes = [c.name for c in EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()]
+    subclasses = [s.name for s in EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()]
+    manufacturers = [m.name for m in Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()]
+    departments = [d.name for d in Department.query.filter_by(is_active=True).order_by(Department.name).all()]
+    facilities = [f.name for f in Facility.query.filter_by(is_active=True).order_by(Facility.name).all()]
+
+    return render_template('capital_planning.html',
+                         equipment=equipment,
+                         classes=classes,
+                         subclasses=subclasses,
+                         manufacturers=manufacturers,
+                         departments=departments,
+                         facilities=facilities,
+                         today=today)
+
+@app.route('/capital/bubble')
+@login_required
+def capital_bubble():
+    return render_template('capital_bubble.html')
+
+@app.route('/capital/bubble-data')
+@login_required
+def capital_bubble_data():
+    from datetime import datetime
+    from sqlalchemy import and_, or_
+
+    today = datetime.now().date()
+    current_year = datetime.now().year
+
+    # Use same filters as capital planning page
+    eq_class = request.args.get('eq_class')
+    eq_subclass = request.args.get('eq_subclass')
+    eq_manu = request.args.get('eq_manu')
+    eq_dept = request.args.get('eq_dept')
+    eq_fac = request.args.get('eq_fac')
+    include_retired = request.args.get('include_retired', 'false')
+    include_noncovered = request.args.get('include_noncovered', 'false')
+    include_planned = request.args.get('include_planned', 'false')
+    radiology_owned = request.args.get('radiology_owned', 'true')
+    replacement_funded = request.args.get('replacement_funded', 'false')
+
+    # Build same query as capital planning
+    query = Equipment.query.join(
+        EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
+    ).join(
+        EquipmentSubclass, Equipment.subclass_id == EquipmentSubclass.id, isouter=True
+    ).join(
+        Manufacturer, Equipment.manufacturer_id == Manufacturer.id, isouter=True
+    ).join(
+        Department, Equipment.department_id == Department.id, isouter=True
+    ).join(
+        Facility, Equipment.facility_id == Facility.id, isouter=True
+    )
+
+    if eq_class:
+        query = query.filter(EquipmentClass.name == eq_class)
+    if eq_subclass:
+        query = query.filter(EquipmentSubclass.name == eq_subclass)
+    if eq_manu:
+        query = query.filter(Manufacturer.name == eq_manu)
+    if eq_dept:
+        query = query.filter(Department.name == eq_dept)
+    if eq_fac:
+        query = query.filter(Facility.name == eq_fac)
+
+    if include_retired != 'true':
+        query = query.filter(
+            and_(
+                Equipment.eq_retired == False,
+                or_(
+                    Equipment.eq_retdate.is_(None),
+                    Equipment.eq_retdate > today
+                )
+            )
+        )
+
+    if include_noncovered != 'true':
+        query = query.filter(Equipment.eq_physcov == True)
+
+    if include_planned != 'true':
+        query = query.filter(Equipment.eq_planned == False)
+
+    if radiology_owned == 'true':
+        query = query.filter(Equipment.eq_radcap == 1)
+
+    if replacement_funded == 'true':
+        query = query.filter(Equipment.eq_capfund == 1)
+
+    equipment_list = query.all()
+
+    # Generate CSV data: Class,Year,Cost
+    csv_lines = []
+    for eq in equipment_list:
+        eol_date = eq.eq_eoldate or eq.get_estimated_eol_date()
+        display_cost = eq.get_display_cost()
+
+        if eol_date and display_cost:
+            eol_year = eol_date.year
+            # Adjust past years to current year
+            if eol_year < current_year:
+                eol_year = current_year
+
+            class_name = eq.equipment_class.name if eq.equipment_class else 'Unknown'
+            csv_lines.append(f"{class_name},{eol_year},{display_cost}")
+
+    csv_data = '\n'.join(csv_lines)
+    return jsonify({'data': csv_data})
+
 @app.route('/compliance')
 @login_required
 def compliance_dashboard():
