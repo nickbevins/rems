@@ -1828,7 +1828,7 @@ def capital_planning():
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')
     include_noncovered = request.args.get('include_noncovered', 'false')
-    include_planned = request.args.get('include_planned', 'true')  # Default to checked
+    include_planned = request.args.get('include_planned', 'false')  # Default to unchecked (exclude planned)
     radiology_owned = request.args.get('radiology_owned', 'true')  # Default to checked
     replacement_funded = request.args.get('replacement_funded', 'false')
 
