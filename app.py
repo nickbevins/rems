@@ -1038,11 +1038,12 @@ create_default_admin()
 def index():
     today = datetime.now().date()
     
-    # Get active equipment (not retired, not past retirement date, and physics covered)
+    # Get active equipment (not retired, not past retirement date, physics covered, and not planned)
     from sqlalchemy import and_, or_
     active_equipment = Equipment.query.filter(
         and_(
             Equipment.eq_retired == False,
+            Equipment.eq_planned == False,
             Equipment.eq_physcov == True,
             or_(
                 Equipment.eq_retdate.is_(None),
