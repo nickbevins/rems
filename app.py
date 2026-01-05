@@ -2083,8 +2083,14 @@ def capital_bubble_data():
     if radiology_owned == 'true':
         query = query.filter(Equipment.eq_radcap == 1)
 
-    if replacement_funded == 'true':
-        query = query.filter(Equipment.eq_capfund == 1)
+    # Exclude replacement funded by default, include only when checked
+    if replacement_funded != 'true':
+        query = query.filter(
+            or_(
+                Equipment.eq_capfund == 0,
+                Equipment.eq_capfund.is_(None)
+            )
+        )
 
     equipment_list = query.all()
 
