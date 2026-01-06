@@ -123,7 +123,7 @@
 
                 // Parse data
                 const data = rawData.trim().split('\n').map(line => {
-                    const [category, year, cost] = line.split(',');
+                    const [category, year, cost, facility, room, eolDate, isEstimated] = line.split(',');
                     let adjustedYear = parseInt(year);
                     // Move everything before current year to this year
                     const currentYear = new Date().getFullYear();
@@ -133,7 +133,11 @@
                     return {
                         category: category.trim(),
                         year: adjustedYear,
-                        cost: parseInt(cost) * 1000 // Convert to thousands for bubble sizing
+                        cost: parseInt(cost) * 1000, // Convert to thousands for bubble sizing
+                        facility: facility.trim(),
+                        room: room.trim(),
+                        eolDate: eolDate.trim(),
+                        isEstimated: isEstimated.trim() === 'true'
                     };
                 });
 
@@ -297,12 +301,13 @@
         // Add interactivity
         circles
             .on("mouseover", function(event, d) {
+                const eolLabel = d.isEstimated ? 'Est. EOL' : 'EOL';
                 tooltip
                     .style("opacity", 1)
-                    .html(`<strong>${d.category}</strong><br>Year: ${d.year}<br>Cost: $${d.originalCost}k`)
+                    .html(`<strong>${d.category}</strong><br>${eolLabel}: ${d.eolDate}<br>Facility: ${d.facility}<br>Room: ${d.room}<br>Cost: $${d.originalCost}k`)
                     .style("left", (event.pageX + 10) + "px")
                     .style("top", (event.pageY - 10) + "px");
-                
+
                 d3.select(this)
                     .style("stroke", "#000")
                     .style("stroke-width", 2);
