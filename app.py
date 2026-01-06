@@ -2094,10 +2094,11 @@ def capital_bubble_data():
 
     equipment_list = query.all()
 
-    # Generate CSV data: Class,Year,Cost
+    # Generate CSV data: Class,Year,Cost,Facility,Room,EOLDate,IsEstimated
     csv_lines = []
     for eq in equipment_list:
         eol_date = eq.eq_eoldate or eq.get_estimated_eol_date()
+        is_estimated = 'true' if not eq.eq_eoldate else 'false'
         display_cost = eq.get_display_cost()
 
         if eol_date and display_cost:
@@ -2107,7 +2108,11 @@ def capital_bubble_data():
                 eol_year = current_year
 
             class_name = eq.equipment_class.name if eq.equipment_class else 'Unknown'
-            csv_lines.append(f"{class_name},{eol_year},{display_cost}")
+            facility_name = eq.facility.name if eq.facility else 'Unknown'
+            room = eq.eq_rm if eq.eq_rm else 'Unknown'
+            eol_date_str = eol_date.strftime('%Y-%m-%d')
+
+            csv_lines.append(f"{class_name},{eol_year},{display_cost},{facility_name},{room},{eol_date_str},{is_estimated}")
 
     csv_data = '\n'.join(csv_lines)
     return jsonify({'data': csv_data})
