@@ -275,7 +275,11 @@
                         category: category,
                         yPosition: yPosition + i,
                         cost: items[i].cost,
-                        originalCost: items[i].cost / 1000 // For display
+                        originalCost: items[i].cost / 1000, // For display
+                        facility: items[i].facility,
+                        room: items[i].room,
+                        eolDate: items[i].eolDate,
+                        isEstimated: items[i].isEstimated
                     });
                 }
                 yPosition += items.length;
