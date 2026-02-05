@@ -278,12 +278,12 @@
                             {% set category = equipment.get_capital_category() %}
                             {% if category %}
                             <tr>
-                                <th>Capital Cost Category:</th>
+                                <th>Cost Category:</th>
                                 <td>{{ category.name }}</td>
                             </tr>
                             {% endif %}
                             <tr>
-                                <th>Capital Cost:</th>
+                                <th>Cost:</th>
                                 <td>
                                     {% if equipment.eq_capcst %}
                                         ${{ "{:,}".format(equipment.eq_capcst * 1000) }}
@@ -296,19 +296,19 @@
                             </tr>
                             {% if equipment.eq_capyr %}
                             <tr>
-                                <th>Capital Year:</th>
+                                <th>Year:</th>
                                 <td>{{ equipment.eq_capyr }}</td>
                             </tr>
                             {% endif %}
                             {% if equipment.eq_captype %}
                             <tr>
-                                <th>Capital Type:</th>
+                                <th>Type:</th>
                                 <td>{{ equipment.eq_captype }}</td>
                             </tr>
                             {% endif %}
                             {% if equipment.eq_capnote %}
                             <tr>
-                                <th>Capital Notes:</th>
+                                <th>Notes:</th>
                                 <td>{{ equipment.eq_capnote }}</td>
                             </tr>
                             {% endif %}
