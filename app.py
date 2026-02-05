@@ -1613,6 +1613,8 @@ def update_capital_details(eq_id):
     equipment.eq_radcap = int(data.get('eq_radcap')) if data.get('eq_radcap') and data.get('eq_radcap') != '' else None
     equipment.eq_capfund = int(data.get('eq_capfund')) if data.get('eq_capfund') and data.get('eq_capfund') != '' else None
     equipment.eq_capcst = int(data.get('eq_capcst')) if data.get('eq_capcst') else None
+    equipment.eq_capyr = int(data.get('eq_capyr')) if data.get('eq_capyr') else None
+    equipment.eq_captype = data.get('eq_captype') if data.get('eq_captype') else 'Replacement'
     equipment.eq_capnote = data.get('eq_capnote') if data.get('eq_capnote') else None
 
     db.session.commit()
