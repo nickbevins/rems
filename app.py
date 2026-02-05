@@ -1690,6 +1690,8 @@ def get_equipment_form_data(eq_id):
             'eq_capfund': equipment.eq_capfund,
             'eq_capcst': equipment.eq_capcst,
             'eq_capecst': equipment.get_estimated_cost(),
+            'eq_capyr': equipment.eq_capyr,
+            'eq_captype': equipment.eq_captype,
             'eq_capnote': equipment.eq_capnote,
             'contact_id': equipment.contact_id,
             'supervisor_id': equipment.supervisor_id,
