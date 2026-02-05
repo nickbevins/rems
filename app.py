@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, SelectField, BooleanField, TextAreaField, SelectMultipleField, FileField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo
+from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo, NumberRange
 from datetime import datetime, timedelta
 import os
 import pandas as pd
