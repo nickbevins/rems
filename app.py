@@ -114,6 +114,35 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
 
     return contact
 
+def check_and_migrate_db():
+    """Check database schema and apply migrations if needed"""
+    try:
+        with app.app_context():
+            inspector = db.inspect(db.engine)
+
+            # Check if eq_capyr and eq_captype columns exist in equipment table
+            if inspector.has_table('equipment'):
+                equipment_columns = [col['name'] for col in inspector.get_columns('equipment')]
+
+                if 'eq_capyr' not in equipment_columns:
+                    print("Adding eq_capyr column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_capyr INTEGER"))
+                        conn.commit()
+                    print("Successfully added eq_capyr column")
+
+                if 'eq_captype' not in equipment_columns:
+                    print("Adding eq_captype column to equipment table...")
+                    with db.engine.connect() as conn:
+                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_captype VARCHAR(20) DEFAULT 'Replacement'"))
+                        # Set all existing equipment to 'Replacement' type
+                        conn.execute(db.text("UPDATE equipment SET eq_captype = 'Replacement' WHERE eq_captype IS NULL"))
+                        conn.commit()
+                    print("Successfully added eq_captype column")
+
+    except Exception as e:
+        print(f"Error during database migration: {e}")
+
 # Initialize database tables
 def init_db():
     """Initialize database tables if they don't exist"""
@@ -121,6 +150,8 @@ def init_db():
         with app.app_context():
             db.create_all()
             print("Database tables created successfully")
+            # Run migrations after creating tables
+            check_and_migrate_db()
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
@@ -198,6 +229,8 @@ class Equipment(db.Model):
     eq_capcat = db.Column(db.Integer)  # Capital Category ID
     eq_capcst = db.Column(db.Integer)  # Capital Cost (in thousands)
     eq_capecst = db.Column(db.Integer)  # Estimated Capital Cost from subclass (in thousands)
+    eq_capyr = db.Column(db.Integer)  # Capital Year (4-digit year)
+    eq_captype = db.Column(db.String(20), default='Replacement')  # Capital Type: Replacement or Upgrade
     eq_capnote = db.Column(db.String(140))  # Capital notes (max 140 chars)
 
     # Notes
@@ -707,6 +740,11 @@ class EquipmentForm(FlaskForm):
         ('3', 'Category 3')
     ], validators=[Optional()], coerce=lambda x: int(x) if x and x != '' else None)
     eq_capcst = IntegerField('Capital Cost (thousands $)', validators=[Optional()])
+    eq_capyr = IntegerField('Capital Year', validators=[Optional(), NumberRange(min=1900, max=2100, message='Must be a 4-digit year')])
+    eq_captype = SelectField('Capital Type', choices=[
+        ('Replacement', 'Replacement'),
+        ('Upgrade', 'Upgrade')
+    ], validators=[Optional()], default='Replacement')
     eq_capnote = StringField('Capital Notes', validators=[Optional(), Length(max=140)])
     eq_notes = TextAreaField('Notes', validators=[Optional()])
 
@@ -2446,7 +2484,7 @@ def export_equipment():
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired', 'eq_planned',
-        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst', 'eq_capcat', 'eq_capnote', 'eq_notes'
+        'eq_physcov', 'eq_auditfreq', 'eq_acrsite', 'eq_acrunit', 'eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capecst', 'eq_capyr', 'eq_captype', 'eq_capcat', 'eq_capnote', 'eq_notes'
     ]
     writer.writerow(headers)
     
@@ -2487,6 +2525,8 @@ def export_equipment():
             eq.eq_capfund if eq.eq_capfund is not None else '',
             eq.eq_capcst or '',
             eq.get_estimated_cost() or '',
+            eq.eq_capyr or '',
+            eq.eq_captype or '',
             eq.get_capital_category().name if eq.get_capital_category() else '',
             eq.eq_capnote or '',
             eq.eq_notes or ''
@@ -2968,7 +3008,7 @@ def import_data():
                                 equipment.eq_auditfreq = 'Annual - TJC'  # Default
                     
                     # Handle integers (eq_capcat and eq_capecst are calculated dynamically, not stored)
-                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst']
+                    int_fields = ['eq_radcap', 'eq_capfund', 'eq_capcst', 'eq_capyr']
                     for field in int_fields:
                         val = row.get(field)
                         if pd.isna(val) or val == '' or (isinstance(val, str) and val.strip() == ''):
@@ -2983,6 +3023,18 @@ def import_data():
 
                     equipment.eq_acrsite = row.get('eq_acrsite')
                     equipment.eq_acrunit = row.get('eq_acrunit')
+
+                    # Handle capital type
+                    captype_val = row.get('eq_captype')
+                    if pd.notna(captype_val) and captype_val != '':
+                        captype_str = str(captype_val).strip()
+                        if captype_str in ['Replacement', 'Upgrade']:
+                            equipment.eq_captype = captype_str
+                        else:
+                            equipment.eq_captype = 'Replacement'  # Default
+                    else:
+                        equipment.eq_captype = 'Replacement'  # Default
+
                     equipment.eq_capnote = row.get('eq_capnote')
                     equipment.eq_notes = row.get('eq_notes')
                     

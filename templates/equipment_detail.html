@@ -294,6 +294,18 @@
                                     {% endif %}
                                 </td>
                             </tr>
+                            {% if equipment.eq_capyr %}
+                            <tr>
+                                <th>Capital Year:</th>
+                                <td>{{ equipment.eq_capyr }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if equipment.eq_captype %}
+                            <tr>
+                                <th>Capital Type:</th>
+                                <td>{{ equipment.eq_captype }}</td>
+                            </tr>
+                            {% endif %}
                             {% if equipment.eq_capnote %}
                             <tr>
                                 <th>Capital Notes:</th>
@@ -964,6 +976,18 @@ function generateCapitalDetailsForm(eq) {
                 <input type="number" class="form-control" name="eq_capcst" value="${eq.eq_capcst || ''}">
                 ${eq.eq_capecst && !eq.eq_capcst ? `<small class="form-text text-muted">Estimated: $${(eq.eq_capecst * 1000).toLocaleString()} (from subclass)</small>` : ''}
                 <small class="form-text text-muted">Capital category will be automatically assigned based on cost</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Capital Year</label>
+                <input type="number" class="form-control" name="eq_capyr" min="1900" max="2100" value="${eq.eq_capyr || ''}">
+                <small class="form-text text-muted">4-digit year</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Capital Type</label>
+                <select class="form-control" name="eq_captype">
+                    <option value="Replacement" ${eq.eq_captype === 'Replacement' || !eq.eq_captype ? 'selected' : ''}>Replacement</option>
+                    <option value="Upgrade" ${eq.eq_captype === 'Upgrade' ? 'selected' : ''}>Upgrade</option>
+                </select>
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Notes</label>
