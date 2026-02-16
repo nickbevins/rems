@@ -39,9 +39,7 @@ Scripts in `scripts/` folder for emergency system administration:
 
 ### Application Structure
 - **Flask Application**: Single-file Flask app with SQLAlchemy ORM
-- **Two Main Files**:
-  - `app.py`: Full-featured application with all functionality
-  - `app_simple.py`: Simplified version with core features
+- **Main File**: `app.py` — full application with all functionality
 - **Database Models**: 
   - `Equipment`: Main model for radiology equipment tracking
   - `ComplianceTest`: Model for compliance testing records
@@ -72,7 +70,7 @@ The application uses SQLAlchemy with these key models:
 ### Configuration
 - Environment variables loaded via `python-dotenv`
 - Key settings: `SECRET_KEY`, `DATABASE_URL`, `FLASK_ENV`
-- Database URI defaults to SQLite: `sqlite:///physdb.db`
+- Database URI defaults to SQLite: `sqlite:///instance/physdb.db`
 
 ## Important Notes
 
