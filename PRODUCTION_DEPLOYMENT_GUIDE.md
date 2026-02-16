@@ -8,7 +8,7 @@ The examples here are written for an on-premise Linux VM, which is the primary p
 ## Pre-Installation Requirements
 
 **Recommended Server Specs:**
-- Ubuntu Server 22.04 LTS (or any Linux distro), Windows Server 2019/2022, or cloud VM
+- Ubuntu Server 22.04 LTS or 24.04 LTS (or any Linux distro), Windows Server 2019/2022, or cloud VM
 - 2-4 vCPUs, 4-8GB RAM (the application is lightweight; scale to your environment)
 - 50GB storage minimum (OS + app + backups; expand as needed)
 - Static IP or stable DNS hostname
@@ -27,6 +27,7 @@ sudo apt update && sudo apt upgrade -y
 # - nginx: Web server for reverse proxy and SSL termination
 # - certbot: SSL certificate management via Let's Encrypt
 sudo apt install -y python3.11 python3.11-venv python3-pip nginx
+# Note: on Ubuntu 24.04, python3.11 may need to be replaced with python3.12 (the default)
 sudo apt install -y supervisor certbot python3-certbot-nginx
 
 # Install backup and scheduling utilities
