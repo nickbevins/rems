@@ -32,9 +32,8 @@ pip install -r requirements.txt
 - Database schema reference: `database_schema.sql`
 
 ### Admin Utilities
-Scripts in `scripts/` folder for system administration:
-- `reset_password.py`: Reset user passwords
-- `list_users.py`: List all personnel/users
+Scripts in `scripts/` folder for emergency system administration:
+- `reset_password.py`: Reset a user's password from the command line (use when locked out of the web interface)
 
 ## Code Architecture
 

@@ -1,16 +1,18 @@
 # Production Installation Guide for REMS
 
 ## Overview
-This guide provides step-by-step instructions for deploying the Radiation Equipment Management System (REMS) on-premise with automatic startup, failure recovery, and automated backup capabilities.
+This guide provides step-by-step instructions for deploying the Radiation Equipment Management System (REMS) in a production environment with automatic startup, failure recovery, and automated backup capabilities.
+
+The examples here are written for an on-premise Linux VM, which is the primary planned deployment target, but the same principles apply to any Linux-based environment — including cloud VMs (AWS EC2, Azure VM, etc.) or bare-metal servers. Windows Server deployment notes are included where relevant.
 
 ## Pre-Installation Requirements
 
-**Server Setup:**
-- Ubuntu Server 20.04/22.04 LTS or Windows Server 2019/2022
-- Minimum 16GB RAM, 4+ CPU cores
-- 500GB SSD storage with RAID 1
-- Static IP address configured
-- Firewall configured (ports 80, 443, 22/3389)
+**Recommended Server Specs:**
+- Ubuntu Server 22.04 LTS (or any Linux distro), Windows Server 2019/2022, or cloud VM
+- 2-4 vCPUs, 4-8GB RAM (the application is lightweight; scale to your environment)
+- 50GB storage minimum (OS + app + backups; expand as needed)
+- Static IP or stable DNS hostname
+- Firewall: ports 80 and 443 open inbound; port 22 (SSH) for admin access
 
 ## Step 1: System Dependencies Installation
 
@@ -137,9 +139,9 @@ server {
     listen 443 ssl http2;
     server_name your-server-name.com;
 
-    # SSL Configuration (certificates obtained via certbot)
-    ssl_certificate /etc/letsencrypt/live/your-server-name.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-server-name.com/privkey.pem;
+    # SSL Configuration (certificate from your internal CA - see Step 8)
+    ssl_certificate /etc/ssl/rems/rems.crt;
+    ssl_certificate_key /etc/ssl/rems/rems.key;
 
     # Security headers to prevent common attacks
     add_header X-Frame-Options DENY;                    # Prevent clickjacking
@@ -172,8 +174,6 @@ sudo ln -s /etc/nginx/sites-available/rems /etc/nginx/sites-enabled/
 sudo nginx -t                               # Test configuration syntax
 sudo systemctl restart nginx
 
-# Obtain SSL certificate from Let's Encrypt (free)
-sudo certbot --nginx -d your-server-name.com
 ```
 
 **Explanation:** NGINX acts as a reverse proxy, handling SSL termination, static file serving, and security headers. This architecture improves performance and security compared to serving directly from Flask.
@@ -350,18 +350,60 @@ echo "*/5 * * * * /opt/rems/health-check.sh >> /var/log/rems-health.log 2>&1" | 
 
 **Explanation:** Health checks provide early detection of issues and automatic recovery for common problems like application crashes. The database check verifies the SQLite file is readable and not corrupt.
 
-## Step 8: SSL Certificate Auto-Renewal
+## Step 8: SSL Certificate
+
+Choose the appropriate option for your deployment:
+
+### Option A: Internal Network (AD Certificate Services)
+
+If REMS is on an internal network not reachable from the internet, use a certificate issued by your organization's Active Directory Certificate Services (AD CS). Let's Encrypt cannot be used in this case as it requires public internet access to validate your domain.
+
+### Option B: Internet-Accessible Server (Let's Encrypt)
+
+If your server is publicly reachable, you can use a free Let's Encrypt certificate:
 
 ```bash
-# Test certificate renewal process (dry run)
-sudo certbot renew --dry-run
+sudo certbot --nginx -d your-server-name.com
 
-# Schedule automatic certificate renewal (runs twice daily)
-# Let's Encrypt certificates expire every 90 days
+# Schedule automatic renewal (certificates expire every 90 days)
 echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
 ```
 
-**Explanation:** SSL certificates from Let's Encrypt expire every 90 days. Automatic renewal ensures continuous secure access without manual intervention.
+---
+
+### Option A Detail: Internal CA / AD CS
+
+### Requesting a Certificate from IT
+
+Ask your IT/security team for:
+> *"An SSL server certificate for an internal web application, hostname `rems.yourdomain.local` (or whatever internal hostname you choose)."*
+
+They will provide you with:
+- A certificate file (`.crt` or `.pem`)
+- A private key file (`.key`)
+
+### Installing the Certificate
+
+```bash
+# Create directory for certificate files
+sudo mkdir -p /etc/ssl/rems
+sudo chmod 700 /etc/ssl/rems
+
+# Copy the files provided by IT to the server
+# (replace with actual filenames IT provides)
+sudo cp your-cert.crt /etc/ssl/rems/rems.crt
+sudo cp your-cert.key /etc/ssl/rems/rems.key
+sudo chmod 600 /etc/ssl/rems/rems.key
+
+# Restart NGINX to apply
+sudo systemctl restart nginx
+```
+
+### Certificate Renewal
+
+AD CS certificates typically have 1-2 year validity. Set a calendar reminder to request a renewal before expiry. IT will provide updated certificate files — repeat the install steps above and restart NGINX.
+
+**Note:** Domain-joined Windows machines will automatically trust certificates issued by your organization's CA, so users will see no browser warnings.
 
 ## Step 9: Final Verification
 
