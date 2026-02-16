@@ -1,7 +1,7 @@
 # Production Installation Guide for REMS
 
 ## Overview
-This guide provides step-by-step instructions for deploying the Radiation Equipment Management System (REMS) in a production environment with automatic startup, failure recovery, and automated backup capabilities.
+This guide provides step-by-step instructions for deploying the Radiation Equipment Management System (REMS) on-premise with automatic startup, failure recovery, and automated backup capabilities.
 
 ## Pre-Installation Requirements
 
@@ -20,51 +20,23 @@ This guide provides step-by-step instructions for deploying the Radiation Equipm
 sudo apt update && sudo apt upgrade -y
 
 # Install core dependencies:
-# - python3.8: Runtime environment for the Flask application
-# - python3.8-venv: Virtual environment support for dependency isolation
+# - python3.11: Runtime environment for the Flask application
+# - python3.11-venv: Virtual environment support for dependency isolation
 # - nginx: Web server for reverse proxy and SSL termination
-# - mysql-server: Database server for persistent storage
-# - supervisor: Process control system (alternative to systemd)
 # - certbot: SSL certificate management via Let's Encrypt
-sudo apt install -y python3.8 python3.8-venv python3-pip nginx mysql-server
+sudo apt install -y python3.11 python3.11-venv python3-pip nginx
 sudo apt install -y supervisor certbot python3-certbot-nginx
 
 # Install backup and scheduling utilities
-sudo apt install -y rsync cron
+sudo apt install -y rsync cron sqlite3
 ```
 
 ### Windows Installation
-- Install Python 3.8+ from python.org
-- Install MySQL Server 8.0+
+- Install Python 3.11 from python.org
 - Install IIS or NGINX for Windows
 - Install NSSM (Non-Sucking Service Manager) for service management
 
-## Step 2: Database Setup
-
-```bash
-# Secure MySQL installation - sets root password and removes test databases
-sudo mysql_secure_installation
-
-# Create application database and dedicated user
-sudo mysql -u root -p
-```
-
-```sql
--- Create database with UTF-8 support for international characters
-CREATE DATABASE physdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Create dedicated database user with limited privileges
-CREATE USER 'physdb_user'@'localhost' IDENTIFIED BY 'secure_password_here';
-
--- Grant only necessary privileges to the application user
-GRANT ALL PRIVILEGES ON physdb.* TO 'physdb_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-**Explanation:** We create a dedicated database user instead of using root for security. The UTF-8 character set ensures proper handling of international characters in equipment names and locations.
-
-## Step 3: Application Deployment
+## Step 2: Application Deployment
 
 ```bash
 # Create application directory in standard location
@@ -76,28 +48,26 @@ cd /opt/rems
 # This can be done via git clone, scp, or file transfer
 
 # Create isolated Python environment to avoid conflicts
-python3 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 
-# Install Python dependencies
+# Install all Python dependencies (including gunicorn)
 pip install -r requirements.txt
-pip install gunicorn  # Production WSGI server (more robust than Flask dev server)
 
 # Create production environment configuration
 cat > .env << EOF
 SECRET_KEY=your_very_secure_secret_key_here
-DATABASE_URL=mysql://physdb_user:secure_password_here@localhost/physdb
 FLASK_ENV=production
-FLASK_DEBUG=False
 EOF
-
-# Initialize database schema (run once, then stop)
-python app.py
 ```
 
-**Explanation:** The virtual environment isolates Python dependencies, preventing conflicts with system packages. Gunicorn is a production-grade WSGI server that handles multiple concurrent requests efficiently.
+**Note:** No separate database installation or initialization is required. The application uses SQLite, which is file-based and requires no server process. The database file (`instance/physdb.db`) is created automatically the first time Gunicorn starts.
 
-## Step 4: Auto-Start Service Configuration
+**Important:** After first login, immediately change the default admin credentials (username: `admin`, password: `password123`).
+
+**Explanation:** The virtual environment isolates Python dependencies, preventing conflicts with system packages. Gunicorn is included in `requirements.txt` and is the production-grade WSGI server that handles concurrent requests efficiently.
+
+## Step 3: Auto-Start Service Configuration
 
 ### Linux (Systemd Service)
 
@@ -106,8 +76,7 @@ python app.py
 sudo tee /etc/systemd/system/rems.service << EOF
 [Unit]
 Description=REMS - Radiation Equipment Management System
-After=network.target mysql.service  # Start after network and database
-Requires=mysql.service               # Require database to be running
+After=network.target
 
 [Service]
 Type=notify
@@ -126,6 +95,9 @@ TimeoutStopSec=5
 WantedBy=multi-user.target          # Start at boot time
 EOF
 
+# Ensure www-data can write to the instance directory for the database file
+sudo chown -R www-data:www-data /opt/rems/instance
+
 # Register and start the service
 sudo systemctl daemon-reload
 sudo systemctl enable rems.service  # Enable auto-start at boot
@@ -137,17 +109,16 @@ sudo systemctl status rems.service  # Check service status
 
 ```cmd
 # Install application as Windows service using NSSM
-nssm install REMS "C:\opt\rems\venv\Scripts\python.exe"
-nssm set REMS Application "C:\opt\rems\venv\Scripts\gunicorn.exe"
-nssm set REMS AppParameters "--bind 127.0.0.1:5000 --workers 4 app:app"
+nssm install REMS "C:\opt\rems\venv\Scripts\gunicorn.exe"
+nssm set REMS AppParameters "--bind 127.0.0.1:5000 --workers 4 --timeout 120 app:app"
 nssm set REMS AppDirectory "C:\opt\rems"
 nssm set REMS Start SERVICE_AUTO_START  # Auto-start with Windows
 nssm start REMS
 ```
 
-**Explanation:** Systemd manages the application lifecycle, automatically restarting it if it crashes and starting it at boot time. The service runs as `www-data` user for security isolation.
+**Explanation:** Systemd manages the application lifecycle, automatically restarting it if it crashes and starting it at boot time. The service runs as `www-data` user for security isolation. No database service dependency is needed since SQLite is file-based.
 
-## Step 5: Web Server Configuration (NGINX)
+## Step 4: Web Server Configuration (NGINX)
 
 ```bash
 # Create NGINX reverse proxy configuration
@@ -156,7 +127,7 @@ sudo tee /etc/nginx/sites-available/rems << EOF
 server {
     listen 80;
     server_name your-server-name.com;
-    
+
     # Force HTTPS for security
     return 301 https://\$server_name\$request_uri;
 }
@@ -165,23 +136,23 @@ server {
 server {
     listen 443 ssl http2;
     server_name your-server-name.com;
-    
+
     # SSL Configuration (certificates obtained via certbot)
     ssl_certificate /etc/letsencrypt/live/your-server-name.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/your-server-name.com/privkey.pem;
-    
+
     # Security headers to prevent common attacks
     add_header X-Frame-Options DENY;                    # Prevent clickjacking
     add_header X-Content-Type-Options nosniff;          # Prevent MIME sniffing
     add_header X-XSS-Protection "1; mode=block";        # XSS protection
-    
+
     # Serve static files directly (CSS, JS, images) for better performance
     location /static {
         alias /opt/rems/static;
         expires 1y;                                      # Cache static files for 1 year
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Proxy all other requests to Flask application
     location / {
         proxy_pass http://127.0.0.1:5000;               # Forward to Gunicorn
@@ -207,9 +178,11 @@ sudo certbot --nginx -d your-server-name.com
 
 **Explanation:** NGINX acts as a reverse proxy, handling SSL termination, static file serving, and security headers. This architecture improves performance and security compared to serving directly from Flask.
 
-## Step 6: Automated Backup System
+## Step 5: Automated Backup System
 
 ### Database Backup Script
+
+The database is a single SQLite file at `/opt/rems/instance/physdb.db`. Backups are simple file copies using SQLite's built-in hot-backup command, which ensures a consistent snapshot even while the application is running.
 
 ```bash
 # Create backup directory structure
@@ -221,10 +194,8 @@ sudo tee /opt/backups/rems-backup.sh << 'EOF'
 #!/bin/bash
 
 # Configuration variables
-DB_NAME="physdb"
-DB_USER="physdb_user"
-DB_PASS="secure_password_here"
 APP_DIR="/opt/rems"
+DB_FILE="$APP_DIR/instance/physdb.db"
 BACKUP_DIR="/opt/backups/rems"
 DATE=$(date +%Y%m%d_%H%M%S)
 RETENTION_DAYS=30
@@ -232,14 +203,15 @@ RETENTION_DAYS=30
 # Create timestamped backup directory
 mkdir -p "$BACKUP_DIR/daily/$DATE"
 
-# Database backup with consistency guarantees
-# --single-transaction ensures consistent backup of InnoDB tables
-# --routines includes stored procedures and functions
-# --triggers includes database triggers
-mysqldump -u $DB_USER -p$DB_PASS --single-transaction --routines --triggers $DB_NAME | gzip > "$BACKUP_DIR/daily/$DATE/database.sql.gz"
+# Database backup using SQLite's .backup command for a consistent hot backup
+# This is safe to run while the application is live
+sqlite3 "$DB_FILE" ".backup '$BACKUP_DIR/daily/$DATE/physdb.db'"
+gzip "$BACKUP_DIR/daily/$DATE/physdb.db"
 
-# Application files backup (excluding virtual environment and SQLite files)
-tar -czf "$BACKUP_DIR/daily/$DATE/application.tar.gz" -C /opt rems --exclude='rems/venv' --exclude='rems/instance/*.db'
+# Application files backup (excluding virtual environment and database file)
+tar -czf "$BACKUP_DIR/daily/$DATE/application.tar.gz" -C /opt rems \
+    --exclude='rems/venv' \
+    --exclude='rems/instance/*.db'
 
 # Log backup completion for monitoring
 echo "$(date): Backup completed - $DATE" >> /var/log/rems-backup.log
@@ -296,7 +268,7 @@ if [ -z "$LATEST_BACKUP" ]; then
 fi
 
 # Verify database backup integrity
-if gzip -t "$LATEST_BACKUP/database.sql.gz"; then
+if gzip -t "$LATEST_BACKUP/physdb.db.gz"; then
     echo "$(date): Database backup verified - $LATEST_BACKUP" >> /var/log/rems-backup.log
 else
     echo "$(date): ERROR - Database backup corrupted - $LATEST_BACKUP" >> /var/log/rems-backup.log
@@ -313,9 +285,9 @@ EOF
 chmod +x /opt/backups/verify-backup.sh
 ```
 
-**Explanation:** The backup system creates daily, weekly, and monthly backups with different retention periods. Verification ensures backup integrity without false confidence in corrupted backups.
+**Explanation:** The backup system creates daily, weekly, and monthly backups with different retention periods. SQLite's `.backup` command produces a consistent snapshot without needing to stop the application. Verification ensures backup integrity.
 
-## Step 7: Production Security Hardening
+## Step 6: Production Security Hardening
 
 ```bash
 # Set proper file permissions for security
@@ -327,7 +299,6 @@ sudo chmod 600 /opt/rems/.env               # Only owner can read environment fi
 sudo ufw enable
 sudo ufw allow ssh                          # Allow SSH access
 sudo ufw allow 'Nginx Full'                # Allow HTTP/HTTPS
-sudo ufw deny 3306                          # Block external MySQL access
 
 # Set up log rotation to prevent disk space issues
 sudo tee /etc/logrotate.d/rems << EOF
@@ -345,7 +316,7 @@ EOF
 
 **Explanation:** Security hardening follows the principle of least privilege, limiting file permissions and network access to only what's necessary for operation.
 
-## Step 8: Monitoring and Health Checks
+## Step 7: Monitoring and Health Checks
 
 ```bash
 # Create application health monitoring script
@@ -362,11 +333,12 @@ else
     echo "$(date): Restarted REMS service" >> /var/log/rems-health.log
 fi
 
-# Check database connectivity
-if mysql -u physdb_user -psecure_password_here physdb -e "SELECT 1;" > /dev/null 2>&1; then
-    echo "$(date): Database connection healthy"
+# Check database file is accessible and not corrupt
+DB_FILE="/opt/rems/instance/physdb.db"
+if sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM equipment;" > /dev/null 2>&1; then
+    echo "$(date): Database is healthy"
 else
-    echo "$(date): ERROR - Database connection failed" >> /var/log/rems-health.log
+    echo "$(date): ERROR - Database check failed" >> /var/log/rems-health.log
 fi
 EOF
 
@@ -376,9 +348,9 @@ chmod +x /opt/rems/health-check.sh
 echo "*/5 * * * * /opt/rems/health-check.sh >> /var/log/rems-health.log 2>&1" | sudo crontab -
 ```
 
-**Explanation:** Health checks provide early detection of issues and automatic recovery for common problems like application crashes or database connection issues.
+**Explanation:** Health checks provide early detection of issues and automatic recovery for common problems like application crashes. The database check verifies the SQLite file is readable and not corrupt.
 
-## Step 9: SSL Certificate Auto-Renewal
+## Step 8: SSL Certificate Auto-Renewal
 
 ```bash
 # Test certificate renewal process (dry run)
@@ -391,13 +363,12 @@ echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
 
 **Explanation:** SSL certificates from Let's Encrypt expire every 90 days. Automatic renewal ensures continuous secure access without manual intervention.
 
-## Step 10: Final Verification
+## Step 9: Final Verification
 
 ```bash
 # Verify all critical services are running
 sudo systemctl status rems.service          # Application service
 sudo systemctl status nginx                 # Web server
-sudo systemctl status mysql                 # Database server
 
 # Test external application access
 curl -I https://your-server-name.com        # Should return 200 OK
@@ -413,21 +384,21 @@ tail -f /var/log/rems-health.log           # Health check logs
 ### Complete System Restoration
 
 ```bash
-# Stop application to prevent data corruption during restore
+# Stop application to prevent interference during restore
 sudo systemctl stop rems.service
 
 # Restore database from backup
-gunzip < /opt/backups/rems/daily/YYYYMMDD_HHMMSS/database.sql.gz | mysql -u physdb_user -p physdb
+gunzip -c /opt/backups/rems/daily/YYYYMMDD_HHMMSS/physdb.db.gz > /opt/rems/instance/physdb.db
+sudo chown www-data:www-data /opt/rems/instance/physdb.db
 
-# Restore application files
+# Restore application files (if needed)
 cd /opt && tar -xzf /opt/backups/rems/daily/YYYYMMDD_HHMMSS/application.tar.gz
 
 # Recreate virtual environment and reinstall dependencies
 cd /opt/rems
-python3 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-pip install gunicorn
 
 # Restart all services
 sudo systemctl start rems.service
@@ -438,27 +409,27 @@ sudo systemctl restart nginx
 
 ```bash
 # Monthly backup restoration test (recommended)
-# 1. Create test database
-mysql -u root -p -e "CREATE DATABASE physdb_test;"
+# 1. Decompress the latest backup to a temp location
+gunzip -c /opt/backups/rems/daily/$(ls -1 /opt/backups/rems/daily | tail -1)/physdb.db.gz > /tmp/physdb_test.db
 
-# 2. Restore latest backup to test database
-gunzip < /opt/backups/rems/daily/$(ls -1 /opt/backups/rems/daily | tail -1)/database.sql.gz | mysql -u root -p physdb_test
+# 2. Verify data integrity
+sqlite3 /tmp/physdb_test.db "SELECT COUNT(*) FROM equipment; SELECT COUNT(*) FROM compliance_tests;"
 
-# 3. Verify data integrity
-mysql -u root -p physdb_test -e "SELECT COUNT(*) FROM equipment; SELECT COUNT(*) FROM compliance_tests;"
-
-# 4. Clean up test database
-mysql -u root -p -e "DROP DATABASE physdb_test;"
+# 3. Clean up
+rm /tmp/physdb_test.db
 ```
+
+### Schema Upgrades
+
+The application automatically applies any required schema changes on startup via `check_and_migrate_db()`. No manual SQL migrations are needed when upgrading to a newer version — simply deploy the updated code and restart the service.
 
 ## System Architecture Summary
 
 **Service Dependencies:**
-1. **MySQL Database** - Persistent data storage
-2. **REMS Application** - Flask/Gunicorn service (depends on MySQL)
-3. **NGINX Web Server** - Reverse proxy and SSL termination
-4. **Cron Jobs** - Automated backups and health checks
-5. **Certbot** - SSL certificate management
+1. **REMS Application** - Flask/Gunicorn service (SQLite database is embedded, no separate service needed)
+2. **NGINX Web Server** - Reverse proxy and SSL termination
+3. **Cron Jobs** - Automated backups and health checks
+4. **Certbot** - SSL certificate management
 
 **Automatic Recovery Features:**
 - Service restart on application failure (systemd)
@@ -472,6 +443,5 @@ mysql -u root -p -e "DROP DATABASE physdb_test;"
 - SSL/TLS encryption for all web traffic
 - Secure file permissions and user isolation
 - Security headers preventing common web attacks
-- Database user with minimal required privileges
 
-This production deployment provides enterprise-level reliability, security, and maintainability for the REMS application.
+This production deployment provides reliable, low-maintenance hosting for the REMS application suitable for small-team use.

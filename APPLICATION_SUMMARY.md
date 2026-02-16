@@ -76,7 +76,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 
 ### Production Features
 - **Systemd Integration**: Automatic startup and failure recovery
-- **Database Flexibility**: SQLite for development, MySQL/PostgreSQL for production
+- **Database**: SQLite for all environments; no separate database server required
 - **Static File Handling**: Optimized for CDN deployment
 - **Environment Configuration**: Environment variable-based configuration
 

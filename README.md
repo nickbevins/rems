@@ -38,9 +38,8 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 ## Installation
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.11 or higher
 - pip package manager
-- SQLite (default) or MySQL/PostgreSQL database
 
 ### Setup Instructions
 
@@ -62,47 +61,19 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 
 4. **Configure Environment**
    ```bash
-   cp .env.example .env
-   # Edit .env file with your configuration
+   # Create a .env file with the following:
+   SECRET_KEY=your_secure_secret_key_here
+   FLASK_ENV=development
    ```
 
-5. **Initialize Database**
-   ```bash
-   python app.py
-   # This will create the database tables automatically
-   ```
-
-6. **Access the Application**
+5. **Access the Application**
    - Navigate to `http://localhost:5000`
    - Default admin login: `admin` / `password123`
    - Change the admin password immediately after first login
 
-## Production Deployment (Render.com)
+## Production Deployment
 
-### Requirements
-- Render.com account with paid tier ($7+ for persistent storage)
-- GitHub repository with your code
-
-### Setup Steps
-1. **Create Render Web Service**
-   - Connect your GitHub repository
-   - Set build command: `pip install -r requirements.txt`
-   - Set start command: `gunicorn app:app`
-
-2. **Add Persistent Disk**
-   - In Render dashboard, go to your service
-   - Add disk with mount path: `/var/data`
-   - Size: 1GB minimum (can expand later)
-
-3. **Environment Variables**
-   - Set `RENDER=true`
-   - Set `SECRET_KEY` to a secure random string
-   - Optionally set `DATABASE_URL` for PostgreSQL
-
-4. **Deploy and Import Data**
-   - Deploy the service
-   - Use CSV import features to load your data
-   - Data will persist across future deployments
+For on-premise installation with automatic startup, backups, and SSL, see [PRODUCTION_DEPLOYMENT_GUIDE.md](PRODUCTION_DEPLOYMENT_GUIDE.md).
 
 ## Usage
 
@@ -157,9 +128,8 @@ Access the application at `http://localhost:5000`
 - `ITEMS_PER_PAGE`: Number of items displayed per page
 
 ### Database Options
-- **SQLite** (default): Simple file-based database
-- **MySQL**: For multi-user production environments
-- **PostgreSQL**: Enterprise-grade database option
+- **SQLite** (default): File-based database, no separate server required. Suitable for most deployments.
+- **MySQL/PostgreSQL**: Supported for larger deployments by setting the `DATABASE_URL` environment variable (e.g. `mysql+pymysql://user:pass@localhost/physdb` or a PostgreSQL connection string). If using MySQL, also add `PyMySQL` to `requirements.txt`.
 
 ## Security Features
 - CSRF protection on all forms
@@ -172,11 +142,8 @@ Access the application at `http://localhost:5000`
 
 ### Database Backup
 ```bash
-# SQLite
-cp physdb.db physdb_backup_$(date +%Y%m%d).db
-
-# MySQL
-mysqldump -u username -p physdb > physdb_backup_$(date +%Y%m%d).sql
+# Copy the SQLite database file
+cp instance/physdb.db physdb_backup_$(date +%Y%m%d).db
 ```
 
 ### Log Files

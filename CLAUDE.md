@@ -26,9 +26,9 @@ pip install -r requirements.txt
 ```
 
 ### Database Management
-- Database is automatically created when running `python app.py`
-- **Local development**: SQLite database file: `instance/physdb.db`
-- **Production (Render)**: Uses persistent disk at `/var/data/physdb.db` or PostgreSQL via DATABASE_URL
+- Database is automatically created on first startup (no manual initialization needed)
+- **SQLite database file**: `instance/physdb.db` (all environments)
+- **Larger deployments**: MySQL or PostgreSQL supported via `DATABASE_URL` environment variable
 - Database schema reference: `database_schema.sql`
 
 ### Admin Utilities
@@ -92,11 +92,10 @@ The application uses SQLAlchemy with these key models:
   - Boolean values: TRUE/FALSE
   - CSV files with proper headers (download sample formats from export functions)
 
-### Deployment (Render.com)
-- **Database Persistence**: Requires paid tier ($7+) with persistent disk mounted at `/var/data`
-- **Environment Variables**: Set `RENDER=true` for production configuration
-- **Database Options**: SQLite with persistent disk or PostgreSQL via `DATABASE_URL`
-- **Manual Deploys**: Data persists across deployments with proper disk configuration
+### Deployment
+- **On-premise**: See `PRODUCTION_DEPLOYMENT_GUIDE.md` for full instructions
+- **Database**: SQLite by default; MySQL/PostgreSQL available via `DATABASE_URL`
+- **Auto-migration**: Schema changes applied automatically on startup via `check_and_migrate_db()`
 
 ### Security
 - CSRF protection enabled on all forms
@@ -106,7 +105,6 @@ The application uses SQLAlchemy with these key models:
 - **Admin Account**: Protected at ID 0 to prevent import conflicts
 
 ### Development Notes
-- Production deployment uses Gunicorn WSGI server via `Procfile`
-- Database initialization handled automatically on startup
+- Production deployment uses Gunicorn WSGI server
+- Database initialization and migration handled automatically on startup
 - Static file serving optimized for production
-- No database migrations - schema managed through model definitions
