@@ -75,6 +75,8 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 
 For on-premise installation with automatic startup, backups, and SSL, see [PRODUCTION_DEPLOYMENT_GUIDE.md](PRODUCTION_DEPLOYMENT_GUIDE.md).
 
+**Note**: The application is fully compatible with air-gapped (offline) deployments. All necessary assets (Bootstrap, Font Awesome, D3.js) are included locally in `static/vendor/` and require no internet connectivity during runtime.
+
 ## Usage
 
 ### Starting the Application (Local)

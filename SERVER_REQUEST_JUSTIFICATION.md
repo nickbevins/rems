@@ -36,11 +36,14 @@ No separate Apps or Data drive is required. The application uses a file-based SQ
 - Static internal IP address or stable internal DNS hostname (e.g. `rems.domain.local`)
 - Inbound ports: **80** (HTTP, redirects to HTTPS), **443** (HTTPS)
 - Admin access: **port 22** (SSH)
-- No outbound internet access required after initial setup
+- **Outbound internet access**:
+  - **Initial setup only**: Required for OS package installation (`apt update`, `apt upgrade`, `apt install`) and Python package installation (`pip install`)
+  - **Runtime**: **No outbound internet access required** — application functions entirely offline once deployed
+  - **Air-gapped deployment**: Fully supported with pre-downloaded packages and offline installation procedures (see deployment guide)
 
 ## SSL Certificate
 
-An SSL server certificate issued by the organizational CA will be required for the internal hostname. This should be requested separately from IT/security.
+An SSL server certificate issued by the organizational CA will be required for the internal hostname.
 
 ## Backup Strategy
 

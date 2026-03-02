@@ -11,12 +11,15 @@ The examples here are written for an on-premise Linux VM, which is the primary p
 - Ubuntu Server 22.04 LTS or 24.04 LTS (or any Linux distro), Windows Server 2019/2022, or cloud VM
 - 2-4 vCPUs, 4-8GB RAM (the application is lightweight; scale to your environment)
 - 50GB storage minimum (OS + app + backups; expand as needed)
-- Static IP or stable DNS hostname
+- Static internal IP address or stable internal DNS hostname (e.g., `rems.yourdomain.local`)
 - Firewall: ports 80 and 443 open inbound; port 22 (SSH) for admin access
+- **Network Connectivity**: Internet access required during initial setup for package installation (`apt`, `pip`). **No internet connectivity required during runtime** — all frontend assets (Bootstrap, Font Awesome, D3.js) are included locally in `static/vendor/`
 
 ## Step 1: System Dependencies Installation
 
 ### Ubuntu/Linux Installation
+
+**For Internet-Connected Systems:**
 ```bash
 # Update system packages to latest versions
 sudo apt update && sudo apt upgrade -y
@@ -34,6 +37,29 @@ sudo apt install -y supervisor certbot python3-certbot-nginx
 sudo apt install -y rsync cron sqlite3
 ```
 
+**For Air-Gapped Systems (No Internet Access):**
+
+On an internet-connected machine with the same Ubuntu version:
+```bash
+# Download all required .deb packages and dependencies
+apt-get download python3.11 python3.11-venv python3-pip nginx supervisor sqlite3 rsync
+apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts \
+  --no-breaks --no-replaces --no-enhances python3.11 python3.11-venv \
+  python3-pip nginx supervisor sqlite3 rsync | grep "^\w" | \
+  xargs apt-get download
+
+# Download Python packages for offline installation
+pip download -r requirements.txt -d ./python-packages
+```
+
+Transfer all `.deb` files and the `python-packages` directory to the air-gapped system via approved transfer method (USB, internal file share, etc.), then install:
+```bash
+# Install system packages offline
+sudo dpkg -i *.deb
+
+# Install Python packages offline (see Step 2)
+```
+
 ### Windows Installation
 - Install Python 3.11 from python.org
 - Install IIS or NGINX for Windows
@@ -41,6 +67,7 @@ sudo apt install -y rsync cron sqlite3
 
 ## Step 2: Application Deployment
 
+**For Internet-Connected Systems:**
 ```bash
 # Create application directory in standard location
 sudo mkdir -p /opt/rems
@@ -56,6 +83,36 @@ source venv/bin/activate
 
 # Install all Python dependencies (including gunicorn)
 pip install -r requirements.txt
+
+# Create production environment configuration
+cat > .env << EOF
+SECRET_KEY=your_very_secure_secret_key_here
+FLASK_ENV=production
+EOF
+```
+
+**For Air-Gapped Systems:**
+```bash
+# Create application directory
+sudo mkdir -p /opt/rems
+sudo chown $USER:$USER /opt/rems
+cd /opt/rems
+
+# Copy application files via approved transfer method
+# Ensure static/vendor/ directory contains all CDN assets:
+# - bootstrap.min.css
+# - bootstrap.bundle.min.js
+# - font-awesome.min.css
+# - webfonts/ directory (fa-solid-900.woff2, fa-regular-400.woff2, fa-brands-400.woff2)
+# - Sortable.min.js
+# - d3.min.js
+
+# Create isolated Python environment
+python3.11 -m venv venv
+source venv/bin/activate
+
+# Install Python dependencies from offline packages
+pip install --no-index --find-links=/path/to/python-packages -r requirements.txt
 
 # Create production environment configuration
 cat > .env << EOF
