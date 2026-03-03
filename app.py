@@ -114,6 +114,10 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
 
     return contact
 
+def check_and_migrate_db():
+    """Placeholder for future database migrations"""
+    pass
+
 # Initialize database tables
 def init_db():
     """Initialize database tables if they don't exist"""
@@ -4386,14 +4390,12 @@ def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):
 try:
     with app.app_context():
         db.create_all()
-        check_and_migrate_db()
 except Exception as e:
     print(f"Database initialization error: {e}")
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        check_and_migrate_db()
     # Only run debug mode in development
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     port = int(os.environ.get('PORT', 5000))
