@@ -66,7 +66,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Database migration functions
+# Utility functions for personnel management
 def ensure_personnel_role(person, role_name):
     """Ensure a person has a specific role assigned"""
     if person.roles:
@@ -114,35 +114,6 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
 
     return contact
 
-def check_and_migrate_db():
-    """Check database schema and apply migrations if needed"""
-    try:
-        with app.app_context():
-            inspector = db.inspect(db.engine)
-
-            # Check if eq_capyr and eq_captype columns exist in equipment table
-            if inspector.has_table('equipment'):
-                equipment_columns = [col['name'] for col in inspector.get_columns('equipment')]
-
-                if 'eq_capyr' not in equipment_columns:
-                    print("Adding eq_capyr column to equipment table...")
-                    with db.engine.connect() as conn:
-                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_capyr INTEGER"))
-                        conn.commit()
-                    print("Successfully added eq_capyr column")
-
-                if 'eq_captype' not in equipment_columns:
-                    print("Adding eq_captype column to equipment table...")
-                    with db.engine.connect() as conn:
-                        conn.execute(db.text("ALTER TABLE equipment ADD COLUMN eq_captype VARCHAR(20) DEFAULT 'Replacement'"))
-                        # Set all existing equipment to 'Replacement' type
-                        conn.execute(db.text("UPDATE equipment SET eq_captype = 'Replacement' WHERE eq_captype IS NULL"))
-                        conn.commit()
-                    print("Successfully added eq_captype column")
-
-    except Exception as e:
-        print(f"Error during database migration: {e}")
-
 # Initialize database tables
 def init_db():
     """Initialize database tables if they don't exist"""
@@ -150,8 +121,6 @@ def init_db():
         with app.app_context():
             db.create_all()
             print("Database tables created successfully")
-            # Run migrations after creating tables
-            check_and_migrate_db()
     except Exception as e:
         print(f"Error creating database tables: {e}")
 
