@@ -32,16 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 5000);
 });
 
-// Clear autosave data when form is submitted
-document.addEventListener('DOMContentLoaded', function() {
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function() {
-            localStorage.removeItem(`autosave_${form.id}`);
-        });
-    });
-});
-
 // Global error handler
 window.addEventListener('error', function(event) {
     console.error('Global error:', event.error);
