@@ -169,31 +169,84 @@ cp instance/physdb.db physdb_backup_$(date +%Y%m%d).db
 
 ## Data Format
 
-### CSV Import Format
-The CSV file should contain the following columns:
-- `eq_class`: Equipment class (CT, MRI, X-ray, etc.)
-- `eq_subclass`: Equipment subclass
-- `eq_manu`: Manufacturer name
-- `eq_mod`: Model number
-- `eq_dept`: Department
-- `eq_rm`: Room number
-- `eq_fac`: Facility name
-- `eq_address`: Facility address
-- Contact fields for personnel
-- Asset tracking fields
-- Date fields (YYYY-MM-DD format)
-- Technical specifications
-- Compliance requirements
+### Equipment CSV Import
+Required: `equipment_class`
+
+| Field | Description |
+|---|---|
+| `eq_id` | Equipment ID (for updating existing records) |
+| `equipment_class` | Equipment class (CT, MRI, X-ray, etc.) — **required** |
+| `equipment_subclass` | Equipment subclass |
+| `manufacturer` | Manufacturer name |
+| `eq_mod` | Model number |
+| `department` | Department name |
+| `eq_rm` | Room number |
+| `facility` | Facility name |
+| `facility_address` | Facility address |
+| `contact_person` | Contact person name |
+| `contact_email` | Contact person email |
+| `supervisor` | Supervisor name |
+| `supervisor_email` | Supervisor email |
+| `physician` | Physician name |
+| `physician_email` | Physician email |
+| `eq_assetid` | Asset ID |
+| `eq_sn` | Serial number |
+| `eq_mefac` | ME facility |
+| `eq_mereg` | ME registration |
+| `eq_manid` | Manufacturer ID |
+| `eq_mandt` | Manufacture date |
+| `eq_instdt` | Installation date |
+| `eq_eoldate` | End of life date |
+| `eq_eeoldate` | Extended end of life date |
+| `eq_retdate` | Retirement date |
+| `eq_retired` | Retirement status (TRUE/FALSE) |
+| `eq_auditfreq` | Audit frequency |
+| `eq_acrsite` | ACR site number |
+| `eq_acrunit` | ACR unit number |
+| `eq_notes` | Notes |
+
+### Personnel CSV Import
+Required: `name`, `email`
+
+| Field | Description |
+|---|---|
+| `id` | Personnel ID (for updating existing records) |
+| `name` | Full name |
+| `email` | Email address |
+| `phone` | Phone number |
+| `login_required` | Login access (TRUE/FALSE) |
+| `roles` | Comma-separated roles: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist` |
+
+### Compliance Tests CSV Import
+Required: `eq_id`, `test_type`, `test_date`
+
+| Field | Description |
+|---|---|
+| `test_id` | Test ID (for updating existing records) |
+| `eq_id` | Equipment ID |
+| `test_type` | `acceptance`, `annual`, `audit`, `qc_review`, `shielding_design`, `submission`, `retire`, `other` |
+| `test_date` | Test date |
+| `report_date` | Report date |
+| `submission_date` | Submission date |
+| `performed_by_id` | Performer personnel ID |
+| `reviewed_by_id` | Reviewer personnel ID |
+| `notes` | Notes |
+
+### Facilities CSV Import
+Required: `name`
+
+| Field | Description |
+|---|---|
+| `id` | Facility ID (for updating existing records) |
+| `name` | Facility name |
+| `address` | Address |
+| `is_active` | Active status (TRUE/FALSE) |
 
 ### Date Format
-All dates should be in YYYY-MM-DD format:
-- `eq_instdt`: Installation date
-- `eq_eoldate`: End of life date
-- `eq_mandt`: Manufacture date
+All dates must be in `YYYY-MM-DD` format.
 
 ### Boolean Fields
-Use TRUE/FALSE for boolean values:
-- `eq_retired`: Equipment retirement status
+Use `TRUE`/`FALSE` (also accepts `1`/`0`, `YES`/`Y`, case-insensitive).
 
 ## License
 
@@ -209,6 +262,3 @@ Copyright (c) 2026 MaineHealth. All rights reserved.
 - Web-based interface
 - Search and filtering capabilities
 
----
-
-For technical support or questions about this system, please contact your system administrator.

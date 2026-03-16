@@ -5,7 +5,6 @@ Flask-WTF
 WTForms
 python-dotenv
 pandas
-openpyxl
 email-validator
 python-dateutil
 gunicorn
