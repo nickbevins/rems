@@ -197,7 +197,7 @@ Use TRUE/FALSE for boolean values:
 
 ## License
 
-This project is developed for internal use in healthcare organizations for managing radiology equipment compliance and maintenance.
+Copyright (c) 2026 MaineHealth. All rights reserved.
 
 ## Version History
 
