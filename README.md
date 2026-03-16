@@ -250,7 +250,7 @@ Use `TRUE`/`FALSE` (also accepts `1`/`0`, `YES`/`Y`, case-insensitive).
 
 ## License
 
-Copyright (c) 2026 MaineHealth. All rights reserved.
+Copyright (c) 2026 Nick Bevins. All rights reserved.
 
 ## Version History
 
