@@ -5,10 +5,10 @@ erDiagram
     equipment_classes ||--o{ equipment_subclasses : "has"
     equipment_classes ||--o{ equipment : "classifies"
     equipment_subclasses ||--o{ equipment : "subcategorizes"
-    manufacturers ||--o{ equipment : "makes"
-    departments ||--o{ equipment : "hosts"
-    facilities ||--o{ equipment : "contains"
-    capital_categories ||--o{ equipment : "categorizes"
+    manufacturers ||--o{ equipment : "manufacturer"
+    departments ||--o{ equipment : "owns/stores"
+    facilities ||--o{ equipment : "locations"
+    capital_categories ||--o{ equipment : "capital description"
 
     personnel ||--o{ equipment : "contact"
     personnel ||--o{ equipment : "supervisor"
@@ -18,8 +18,8 @@ erDiagram
     personnel ||--o{ scheduled_tests : "created_by"
     personnel ||--o{ scheduled_tests : "modified_by"
 
-    equipment ||--o{ compliance_tests : "has"
-    equipment ||--o{ scheduled_tests : "has"
+    equipment ||--o{ compliance_tests : "record"
+    equipment ||--o{ scheduled_tests : "schedule"
 
     equipment {
         int eq_id PK
