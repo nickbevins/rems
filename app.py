@@ -4046,7 +4046,7 @@ def admin_delete_equipment_subclass(subclass_id):
 @login_required
 @admin_required
 def admin_departments():
-    departments = Department.query.filter_by(is_active=True).order_by(Department.name).all()
+    departments = Department.query.order_by(Department.name).all()
     return render_template('admin_departments.html', departments=departments)
 
 @app.route('/admin/departments/add', methods=['GET', 'POST'])
@@ -4103,6 +4103,16 @@ def admin_delete_department(dept_id):
     dept.is_active = False
     db.session.commit()
     flash('Department deactivated', 'success')
+    return redirect(url_for('admin_departments'))
+
+@app.route('/admin/departments/<int:dept_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    dept.is_active = True
+    db.session.commit()
+    flash('Department activated', 'success')
     return redirect(url_for('admin_departments'))
 
 @app.route('/admin/facilities')
