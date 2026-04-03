@@ -3857,7 +3857,7 @@ def admin_dashboard():
 @login_required
 @admin_required
 def admin_equipment_classes():
-    classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
+    classes = EquipmentClass.query.order_by(EquipmentClass.name).all()
     return render_template('admin_equipment_classes.html', classes=classes)
 
 @app.route('/admin/equipment-classes/add', methods=['GET', 'POST'])
@@ -3919,11 +3919,21 @@ def admin_delete_equipment_class(class_id):
     flash('Equipment class deactivated', 'success')
     return redirect(url_for('admin_equipment_classes'))
 
+@app.route('/admin/equipment-classes/<int:class_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_equipment_class(class_id):
+    eq_class = EquipmentClass.query.get_or_404(class_id)
+    eq_class.is_active = True
+    db.session.commit()
+    flash('Equipment class activated', 'success')
+    return redirect(url_for('admin_equipment_classes'))
+
 @app.route('/admin/equipment-subclasses')
 @login_required
 @admin_required
 def admin_equipment_subclasses():
-    subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
+    subclasses = EquipmentSubclass.query.order_by(EquipmentSubclass.name).all()
     return render_template('admin_equipment_subclasses.html', subclasses=subclasses)
 
 @app.route('/admin/equipment-subclasses/add', methods=['GET', 'POST'])
@@ -4042,6 +4052,16 @@ def admin_delete_equipment_subclass(subclass_id):
     flash('Subclass deactivated', 'success')
     return redirect(url_for('admin_equipment_subclasses'))
 
+@app.route('/admin/equipment-subclasses/<int:subclass_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_equipment_subclass(subclass_id):
+    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    subclass.is_active = True
+    db.session.commit()
+    flash('Subclass activated', 'success')
+    return redirect(url_for('admin_equipment_subclasses'))
+
 @app.route('/admin/departments')
 @login_required
 @admin_required
@@ -4119,7 +4139,7 @@ def admin_activate_department(dept_id):
 @login_required
 @admin_required
 def admin_facilities():
-    facilities = Facility.query.filter_by(is_active=True).order_by(Facility.name).all()
+    facilities = Facility.query.order_by(Facility.name).all()
     return render_template('admin_facilities.html', facilities=facilities)
 
 @app.route('/admin/facilities/add', methods=['GET', 'POST'])
@@ -4190,11 +4210,21 @@ def admin_delete_facility(facility_id):
     flash('Facility deactivated', 'success')
     return redirect(url_for('admin_facilities'))
 
+@app.route('/admin/facilities/<int:facility_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_facility(facility_id):
+    facility = Facility.query.get_or_404(facility_id)
+    facility.is_active = True
+    db.session.commit()
+    flash('Facility activated', 'success')
+    return redirect(url_for('admin_facilities'))
+
 @app.route('/admin/manufacturers')
 @login_required
 @admin_required
 def admin_manufacturers():
-    manufacturers = Manufacturer.query.filter_by(is_active=True).order_by(Manufacturer.name).all()
+    manufacturers = Manufacturer.query.order_by(Manufacturer.name).all()
     return render_template('admin_manufacturers.html', manufacturers=manufacturers)
 
 @app.route('/admin/manufacturers/add', methods=['GET', 'POST'])
@@ -4253,11 +4283,21 @@ def admin_delete_manufacturer(mfr_id):
     flash('Manufacturer deactivated', 'success')
     return redirect(url_for('admin_manufacturers'))
 
+@app.route('/admin/manufacturers/<int:mfr_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_manufacturer(mfr_id):
+    mfr = Manufacturer.query.get_or_404(mfr_id)
+    mfr.is_active = True
+    db.session.commit()
+    flash('Manufacturer activated', 'success')
+    return redirect(url_for('admin_manufacturers'))
+
 @app.route('/admin/capital-categories')
 @login_required
 @admin_required
 def admin_capital_categories():
-    categories = CapitalCategory.query.filter_by(is_active=True).order_by(CapitalCategory.min_cost).all()
+    categories = CapitalCategory.query.order_by(CapitalCategory.min_cost).all()
     return render_template('admin_capital_categories.html', categories=categories)
 
 @app.route('/admin/capital-categories/add', methods=['GET', 'POST'])
@@ -4362,6 +4402,16 @@ def admin_delete_capital_category(category_id):
     category.is_active = False
     db.session.commit()
     flash('Capital category deactivated', 'success')
+    return redirect(url_for('admin_capital_categories'))
+
+@app.route('/admin/capital-categories/<int:category_id>/activate', methods=['POST'])
+@login_required
+@admin_required
+def admin_activate_capital_category(category_id):
+    category = CapitalCategory.query.get_or_404(category_id)
+    category.is_active = True
+    db.session.commit()
+    flash('Capital category activated', 'success')
     return redirect(url_for('admin_capital_categories'))
 
 def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):

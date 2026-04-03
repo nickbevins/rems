@@ -25,26 +25,43 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
+                                    <th>Status</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for class in classes %}
-                                <tr>
+                                <tr class="{{ '' if class.is_active else 'table-secondary text-muted' }}">
                                     <td>{{ class.name }}</td>
+                                    <td>
+                                        {% if class.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ class.created_at.strftime('%Y-%m-%d') if class.created_at else 'N/A' }}</td>
                                     <td>
                                         <a href="{{ url_for('admin_edit_equipment_class', class_id=class.id) }}" class="btn btn-sm btn-outline-primary me-2">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
-                                        <form method="POST" action="{{ url_for('admin_delete_equipment_class', class_id=class.id) }}" 
-                                              style="display: inline;" 
-                                              onsubmit="return confirm('Are you sure you want to deactivate this equipment class?')">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="fas fa-trash"></i> Deactivate
-                                            </button>
-                                        </form>
+                                        {% if class.is_active %}
+                                            <form method="POST" action="{{ url_for('admin_delete_equipment_class', class_id=class.id) }}"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Are you sure you want to deactivate this equipment class?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-ban"></i> Deactivate
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            <form method="POST" action="{{ url_for('admin_activate_equipment_class', class_id=class.id) }}"
+                                                  style="display: inline;">
+                                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-check"></i> Activate
+                                                </button>
+                                            </form>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}

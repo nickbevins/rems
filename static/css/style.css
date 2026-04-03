@@ -91,7 +91,8 @@ body {
 }
 
 .table-striped > tbody > tr:nth-of-type(odd):hover > td,
-.table-striped > tbody > tr:nth-of-type(even):hover > td {
+.table-striped > tbody > tr:nth-of-type(even):hover > td,
+.table-striped > tbody > tr.table-secondary:hover > td {
     background-color: rgba(0, 123, 255, 0.15) !important;
     color: #e9ecef !important;
 }
@@ -127,7 +128,9 @@ body {
 .btn-outline-primary:hover,
 .btn-outline-secondary:hover,
 .btn-outline-warning:hover,
-.btn-outline-info:hover {
+.btn-outline-info:hover,
+.btn-outline-danger:hover,
+.btn-outline-success:hover {
     color: #fff;
 }
 
@@ -448,12 +451,12 @@ footer {
 
 /* Retired equipment styling */
 .table-secondary {
-    background-color: #495057 !important;
-    color: #212529 !important;
+    background-color: #3a3a3a !important;
+    color: #adb5bd !important;
 }
 
 .table-secondary td {
-    color: #212529 !important;
+    color: #adb5bd !important;
 }
 
 .table-secondary:hover {
@@ -462,7 +465,7 @@ footer {
 
 .table-secondary:hover td {
     background-color: rgba(0, 123, 255, 0.15) !important;
-    color: #212529 !important;
+    color: #e9ecef !important;
 }
 
 /* Smaller action button icons */
