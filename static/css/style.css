@@ -449,23 +449,17 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Retired equipment styling */
+/* Inactive/retired row styling — override Bootstrap 5 CSS variables */
 .table-secondary {
-    background-color: #3a3a3a !important;
-    color: #adb5bd !important;
-}
-
-.table-secondary td {
-    color: #adb5bd !important;
-}
-
-.table-secondary:hover {
-    background-color: rgba(0, 123, 255, 0.15) !important;
-}
-
-.table-secondary:hover td {
-    background-color: rgba(0, 123, 255, 0.15) !important;
-    color: #e9ecef !important;
+    --bs-table-bg: #3a3a3a;
+    --bs-table-color: #adb5bd;
+    --bs-table-border-color: #4a4a4a;
+    --bs-table-striped-bg: #353535;
+    --bs-table-striped-color: #adb5bd;
+    --bs-table-hover-bg: rgba(0, 123, 255, 0.15);
+    --bs-table-hover-color: #e9ecef;
+    --bs-table-active-bg: rgba(0, 123, 255, 0.15);
+    --bs-table-active-color: #e9ecef;
 }
 
 /* Smaller action button icons */
