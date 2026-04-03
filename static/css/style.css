@@ -449,17 +449,23 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Inactive/retired row styling — override Bootstrap 5 CSS variables */
-.table-secondary {
+/* Inactive/retired row styling — Bootstrap 5.1.3 uses direct color property, not CSS vars */
+.table-secondary,
+.table-secondary > td,
+.table-secondary > th {
     --bs-table-bg: #3a3a3a;
-    --bs-table-color: #adb5bd;
-    --bs-table-border-color: #4a4a4a;
     --bs-table-striped-bg: #353535;
-    --bs-table-striped-color: #adb5bd;
     --bs-table-hover-bg: rgba(0, 123, 255, 0.15);
     --bs-table-hover-color: #e9ecef;
     --bs-table-active-bg: rgba(0, 123, 255, 0.15);
-    --bs-table-active-color: #e9ecef;
+    color: #adb5bd !important;
+    border-color: #4a4a4a;
+}
+
+.table-hover tbody tr.table-secondary:hover,
+.table-hover tbody tr.table-secondary:hover > td,
+.table-hover tbody tr.table-secondary:hover > th {
+    color: #e9ecef !important;
 }
 
 /* Smaller action button icons */
