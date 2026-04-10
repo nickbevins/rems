@@ -16,6 +16,9 @@
                     <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Back to List
                     </a>
+                    <button type="button" class="btn btn-info" id="copyFromEquipmentBtn">
+                        <i class="fas fa-copy"></i> Copy from Equipment
+                    </button>
                 {% endif %}
                 <button type="submit" form="equipmentForm" class="btn btn-primary">
                     <i class="fas fa-save"></i> Save Equipment
@@ -395,6 +398,81 @@ document.addEventListener('DOMContentLoaded', function() {
 
         classSelect.addEventListener('change', updateSubclasses);
         if (classSelect.value) updateSubclasses();
+    }
+
+    // Copy from Equipment functionality (only for new equipment)
+    const copyFromEquipmentBtn = document.getElementById('copyFromEquipmentBtn');
+    if (copyFromEquipmentBtn) {
+        copyFromEquipmentBtn.addEventListener('click', function() {
+            const equipmentId = prompt('Enter the Equipment ID to copy from:');
+
+            if (!equipmentId) return;
+
+            if (isNaN(equipmentId) || parseInt(equipmentId) <= 0) {
+                alert('Please enter a valid Equipment ID number.');
+                return;
+            }
+
+            // Fetch equipment data
+            fetch(`/api/equipment/${equipmentId}/form-data`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Equipment not found');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const eq = data.equipment;
+
+                    // Populate fields that should be copied (template data)
+                    // Equipment Classification
+                    if (eq.class_id) document.getElementById('class_id').value = eq.class_id;
+                    if (eq.subclass_id) document.getElementById('subclass_id').value = eq.subclass_id;
+                    if (eq.manufacturer_id) document.getElementById('manufacturer_id').value = eq.manufacturer_id;
+                    if (eq.eq_mod) document.getElementById('eq_mod').value = eq.eq_mod;
+
+                    // Location & Department
+                    if (eq.department_id) document.getElementById('department_id').value = eq.department_id;
+                    if (eq.facility_id) {
+                        document.getElementById('facility_id').value = eq.facility_id;
+                        // Trigger change event to update address
+                        document.getElementById('facility_id').dispatchEvent(new Event('change'));
+                    }
+
+                    // Personnel Contacts
+                    if (eq.contact_id) document.getElementById('contact_id').value = eq.contact_id;
+                    if (eq.supervisor_id) document.getElementById('supervisor_id').value = eq.supervisor_id;
+                    if (eq.physician_id) document.getElementById('physician_id').value = eq.physician_id;
+
+                    // Compliance Settings
+                    if (eq.eq_physcov !== null && eq.eq_physcov !== undefined) {
+                        document.getElementById('eq_physcov').checked = eq.eq_physcov;
+                    }
+                    if (eq.eq_auditfreq) {
+                        // Handle audit frequency checkboxes
+                        const auditFreqs = eq.eq_auditfreq.split(',').map(f => f.trim());
+                        document.querySelectorAll('input[name="eq_auditfreq"]').forEach(checkbox => {
+                            checkbox.checked = auditFreqs.includes(checkbox.value);
+                        });
+                    }
+                    if (eq.eq_acrsite) document.getElementById('eq_acrsite').value = eq.eq_acrsite;
+                    if (eq.eq_mefac) document.getElementById('eq_mefac').value = eq.eq_mefac;
+
+                    // Capital Planning Defaults
+                    if (eq.eq_radcap !== null && eq.eq_radcap !== undefined) {
+                        document.getElementById('eq_radcap').value = eq.eq_radcap;
+                    }
+                    if (eq.eq_captype) document.getElementById('eq_captype').value = eq.eq_captype;
+                    if (eq.eq_capcat) document.getElementById('eq_capcat').value = eq.eq_capcat;
+                    if (eq.eq_capecst) document.getElementById('eq_capecst').value = eq.eq_capecst;
+
+                    alert('Template data loaded successfully! Please review and update as needed.');
+                })
+                .catch(error => {
+                    console.error('Error loading equipment:', error);
+                    alert('Error: Could not find equipment with ID ' + equipmentId + '. Please check the ID and try again.');
+                });
+        });
     }
 });
 </script>

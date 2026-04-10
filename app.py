@@ -1336,6 +1336,8 @@ def equipment_detail(eq_id):
         'eq_dept': request.args.get('eq_dept', ''),
         'eq_fac': request.args.get('eq_fac', ''),
         'include_retired': request.args.get('include_retired', ''),
+        'include_noncovered': request.args.get('include_noncovered', ''),
+        'include_planned': request.args.get('include_planned', ''),
         'sort': request.args.get('sort', ''),
         'order': request.args.get('order', ''),
         'page': request.args.get('page', '')
@@ -2359,6 +2361,42 @@ def api_equipment():
     equipment = Equipment.query.all()
     return jsonify([eq.to_dict() for eq in equipment])
 
+@app.route('/api/equipment/search')
+@login_required
+def api_equipment_search():
+    """API endpoint to search equipment for template selection"""
+    search_term = request.args.get('q', '').strip()
+
+    if not search_term or len(search_term) < 2:
+        return jsonify([])
+
+    # Search across class, manufacturer, model, and equipment ID
+    equipment_list = Equipment.query.join(
+        EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
+    ).join(
+        Manufacturer, Equipment.manufacturer_id == Manufacturer.id, isouter=True
+    ).filter(
+        or_(
+            EquipmentClass.name.ilike(f'%{search_term}%'),
+            Manufacturer.name.ilike(f'%{search_term}%'),
+            Equipment.eq_mod.ilike(f'%{search_term}%'),
+            Equipment.eq_id == int(search_term) if search_term.isdigit() else False
+        )
+    ).filter(
+        Equipment.eq_retired == False  # Only show active equipment as templates
+    ).order_by(
+        EquipmentClass.name, Manufacturer.name, Equipment.eq_mod
+    ).limit(20).all()
+
+    results = []
+    for eq in equipment_list:
+        results.append({
+            'eq_id': eq.eq_id,
+            'label': f"{eq.equipment_class.name if eq.equipment_class else 'Unknown'} - {eq.manufacturer.name if eq.manufacturer else 'Unknown'} {eq.eq_mod or ''} (ID: {eq.eq_id})".strip()
+        })
+
+    return jsonify(results)
+
 @app.route('/api/subclasses')
 def api_subclasses():
     eq_class = request.args.get('eq_class')
@@ -2404,12 +2442,13 @@ def api_facility_address(facility_id):
 def export_equipment():
     from sqlalchemy import and_, or_
     # Get all equipment or apply filters like in equipment_list
+    search = request.args.get('search', '').strip()
     eq_class = request.args.get('eq_class')
     eq_manu = request.args.get('eq_manu')
     eq_dept = request.args.get('eq_dept')
     eq_fac = request.args.get('eq_fac')
     include_retired = request.args.get('include_retired', 'false')
-    
+
     # Build query with proper joins for relational data (same as equipment_list)
     query = Equipment.query.join(
         EquipmentClass, Equipment.class_id == EquipmentClass.id, isouter=True
@@ -2424,7 +2463,31 @@ def export_equipment():
     ).join(
         Personnel, Equipment.contact_id == Personnel.id, isouter=True
     )
-    
+
+    # Apply text search filter across multiple fields if search text is provided
+    if search:
+        search_filter = or_(
+            EquipmentClass.name.ilike(f'%{search}%'),
+            EquipmentSubclass.name.ilike(f'%{search}%'),
+            Manufacturer.name.ilike(f'%{search}%'),
+            Equipment.eq_mod.ilike(f'%{search}%'),
+            Department.name.ilike(f'%{search}%'),
+            Equipment.eq_rm.ilike(f'%{search}%'),
+            Facility.name.ilike(f'%{search}%'),
+            Equipment.eq_address.ilike(f'%{search}%'),
+            Equipment.eq_assetid.ilike(f'%{search}%'),
+            Equipment.eq_sn.ilike(f'%{search}%'),
+            Equipment.eq_mefac.ilike(f'%{search}%'),
+            Equipment.eq_mereg.ilike(f'%{search}%'),
+            Equipment.eq_mefacreg.ilike(f'%{search}%'),
+            Equipment.eq_manid.ilike(f'%{search}%'),
+            Equipment.eq_acrsite.ilike(f'%{search}%'),
+            Equipment.eq_acrunit.ilike(f'%{search}%'),
+            Equipment.eq_servlogin.ilike(f'%{search}%'),
+            Equipment.eq_notes.ilike(f'%{search}%')
+        )
+        query = query.filter(search_filter)
+
     # Apply filters using relational data
     if eq_class:
         query = query.filter(EquipmentClass.name == eq_class)
@@ -2458,7 +2521,7 @@ def export_equipment():
     
     # Write header - using relational field names
     headers = [
-        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
+        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'eq_servlogin', 'eq_servpwd', 'facility', 'facility_address',
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired', 'eq_planned',
@@ -2469,7 +2532,7 @@ def export_equipment():
     # Write data - using relational data
     for eq in equipment_list:
         row = [
-            eq.eq_id, 
+            eq.eq_id,
             eq.equipment_class.name if eq.equipment_class else '',
             eq.equipment_subclass.name if eq.equipment_subclass else '',
             eq.manufacturer.name if eq.manufacturer else '',
@@ -2477,6 +2540,8 @@ def export_equipment():
             eq.department.name if eq.department else '',
             eq.eq_rm or '',
             eq.eq_phone or '',
+            eq.eq_servlogin or '',
+            eq.eq_servpwd or '',
             eq.facility.name if eq.facility else '',
             eq.facility.address if eq.facility else '',
             eq.contact_id if eq.contact_id else '',
@@ -2891,6 +2956,8 @@ def import_data():
                     equipment.eq_mod = row.get('eq_mod')
                     equipment.eq_rm = row.get('eq_rm')
                     equipment.eq_phone = row.get('eq_phone')
+                    equipment.eq_servlogin = row.get('eq_servlogin')
+                    equipment.eq_servpwd = row.get('eq_servpwd')
                     equipment.eq_assetid = row.get('eq_assetid')
                     equipment.eq_sn = row.get('eq_sn')
                     equipment.eq_mefac = row.get('eq_mefac')
