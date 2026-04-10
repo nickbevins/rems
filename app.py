@@ -1530,6 +1530,8 @@ def update_equipment_details(eq_id):
     equipment.department_id = int(data.get('department_id')) if data.get('department_id') else None
     equipment.eq_rm = data.get('eq_rm', '')
     equipment.eq_phone = data.get('eq_phone', '')
+    equipment.eq_servlogin = data.get('eq_servlogin', '')
+    equipment.eq_servpwd = data.get('eq_servpwd', '')
     equipment.facility_id = int(data.get('facility_id')) if data.get('facility_id') else None
     equipment.eq_assetid = data.get('eq_assetid', '')
     equipment.eq_sn = data.get('eq_sn', '')
