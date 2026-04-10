@@ -96,6 +96,20 @@
                                             <div class="invalid-feedback d-block">{{ error }}</div>
                                         {% endfor %}
                                     </div>
+                                    <div class="mb-3">
+                                        {{ form.eq_servlogin.label(class="form-label") }}
+                                        {{ form.eq_servlogin(class="form-control") }}
+                                        {% for error in form.eq_servlogin.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mb-3">
+                                        {{ form.eq_servpwd.label(class="form-label") }}
+                                        {{ form.eq_servpwd(class="form-control") }}
+                                        {% for error in form.eq_servpwd.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
 
                                 <!-- Right sub-column -->

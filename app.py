@@ -666,6 +666,8 @@ class EquipmentForm(FlaskForm):
     department_id = SelectField('Department', choices=[], validators=[Optional()])
     eq_rm = StringField('Room', validators=[Optional(), Length(max=100)])
     eq_phone = StringField('Phone', validators=[Optional(), Length(max=20)])
+    eq_servlogin = StringField('Service Login', validators=[Optional(), Length(max=100)])
+    eq_servpwd = StringField('Service Password', validators=[Optional(), Length(max=100)])
     facility_id = SelectField('Facility', choices=[], validators=[Optional()])
     eq_address = TextAreaField('Address', validators=[Optional()])
     contact_id = SelectField('Contact Person', choices=[], validators=[Optional()])
