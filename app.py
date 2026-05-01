@@ -15,6 +15,8 @@ import io
 import csv
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import logging
+import re
 
 load_dotenv()
 
@@ -44,6 +46,61 @@ def extract_personnel_initials(name):
     # Extract first character of each part
     initials = ''.join([part[0].upper() for part in parts if part and len(part) > 0])
     return initials[:3]  # Limit to 3 characters max
+
+
+def _generate_mefacreg(mefac, mereg):
+    """Derive eq_mefacreg by combining trailing digits of eq_mefac and eq_mereg.
+
+    Returns a '<mefac_digits>-<mereg_digits>' string, or None if either value
+    is missing or contains no trailing digits.
+    """
+    if not mefac or not mereg:
+        return None
+    mefac_m = re.search(r'\d+$', mefac)
+    mereg_m = re.search(r'\d+$', mereg)
+    if mefac_m and mereg_m:
+        return f"{mefac_m.group()}-{mereg_m.group()}"
+    return None
+
+
+class MockPagination:
+    """Minimal pagination shim used when SQLAlchemy's paginate() is bypassed.
+
+    Compatible with Flask-SQLAlchemy's Pagination object so templates need
+    no changes when switching between real and mock pagination.
+    """
+
+    def __init__(self, items, page, pages):
+        self.items = items
+        self.total = len(items) if pages == 1 else None  # overridden below when needed
+        self.page = page
+        self.pages = pages
+        self.has_prev = page > 1
+        self.has_next = page < pages
+        self.prev_num = page - 1 if page > 1 else None
+        self.next_num = page + 1 if page < pages else None
+
+    def iter_pages(self, *args, **kwargs):
+        return range(max(1, self.page - 2), min(self.pages + 1, self.page + 3))
+
+    @classmethod
+    def show_all(cls, items):
+        """Return a single-page MockPagination containing all items."""
+        obj = cls(items, page=1, pages=1)
+        obj.total = len(items)
+        obj.has_next = False
+        obj.iter_pages = lambda *a, **k: [1]
+        return obj
+
+    @classmethod
+    def paginate(cls, items, page, per_page, total):
+        """Return a MockPagination for a pre-sliced page of items."""
+        pages = max(1, (total + per_page - 1) // per_page)
+        obj = cls(items, page=page, pages=pages)
+        obj.total = total
+        obj.iter_pages = lambda *a, **k: range(max(1, page - 2), min(pages + 1, page + 3))
+        return obj
+
 
 app = Flask(__name__)
 _secret_key = os.environ.get('SECRET_KEY')
@@ -314,8 +371,6 @@ class Equipment(db.Model):
     def get_last_tested_date(self):
         """Get the date of the most recent acceptance or annual test."""
         from datetime import datetime
-
-        today = datetime.now().date()
 
         # Find the most recent acceptance or annual test
         latest_test = ComplianceTest.query.filter(
@@ -1169,18 +1224,7 @@ def equipment_list():
         # Create pagination manually
         total_items = len(all_equipment)
         if request.args.get('show_all') == 'true':
-            equipment_items = all_equipment
-            equipment = type('MockPagination', (), {
-                'items': equipment_items,
-                'total': total_items,
-                'pages': 1,
-                'page': 1,
-                'has_prev': False,
-                'has_next': False,
-                'prev_num': None,
-                'next_num': None,
-                'iter_pages': lambda *args, **kwargs: [1]
-            })()
+            equipment = MockPagination.show_all(all_equipment)
         else:
             # Manual pagination
             per_page = int(request.args.get('per_page', 25))
@@ -1188,42 +1232,20 @@ def equipment_list():
                 per_page = 25
             elif per_page > 1000:
                 per_page = 1000
-            
+
             page = int(request.args.get('page', 1))
             start_idx = (page - 1) * per_page
             end_idx = start_idx + per_page
             equipment_items = all_equipment[start_idx:end_idx]
-            
-            total_pages = (total_items + per_page - 1) // per_page
-            
-            equipment = type('MockPagination', (), {
-                'items': equipment_items,
-                'total': total_items,
-                'pages': total_pages,
-                'page': page,
-                'has_prev': page > 1,
-                'has_next': page < total_pages,
-                'prev_num': page - 1 if page > 1 else None,
-                'next_num': page + 1 if page < total_pages else None,
-                'iter_pages': lambda *args, **kwargs: range(max(1, page - 2), min(total_pages + 1, page + 3))
-            })()
+
+            equipment = MockPagination.paginate(equipment_items, page=page, per_page=per_page, total=total_items)
     else:
         # Handle pagination or show all normally
         if request.args.get('show_all') == 'true':
             # Get all items without pagination
             all_equipment = query.all()
             # Create a mock pagination object for template compatibility
-            equipment = type('MockPagination', (), {
-                'items': all_equipment,
-                'total': len(all_equipment),
-                'pages': 1,
-                'page': 1,
-                'has_prev': False,
-                'has_next': False,
-                'prev_num': None,
-                'next_num': None,
-                'iter_pages': lambda *args, **kwargs: [1]
-            })()
+            equipment = MockPagination.show_all(all_equipment)
         else:
             # Validate per_page range
             if per_page < 1:
@@ -1322,21 +1344,7 @@ def equipment_new():
             equipment.eq_retdate = datetime.now().date()
 
         # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
-        if equipment.eq_mefac and equipment.eq_mereg:
-            # Extract trailing numbers from eq_mefac (e.g., "ME-12345" -> "12345", "ABC123" -> "123")
-            import re
-            mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
-            mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
-            # Extract trailing numbers from eq_mereg (e.g., "REG-67890" -> "67890", "XYZ890" -> "890")
-            mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
-            mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
-            # Combine them with hyphen (e.g., "123-456" format)
-            if mefac_suffix and mereg_suffix:
-                equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
-            else:
-                equipment.eq_mefacreg = None
-        else:
-            equipment.eq_mefacreg = None
+        equipment.eq_mefacreg = _generate_mefacreg(equipment.eq_mefac, equipment.eq_mereg)
 
         db.session.add(equipment)
         db.session.commit()
@@ -1515,21 +1523,7 @@ def equipment_edit(eq_id):
             equipment.eq_retdate = datetime.now().date()
 
         # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
-        if equipment.eq_mefac and equipment.eq_mereg:
-            # Extract trailing numbers from eq_mefac (e.g., "ME-12345" -> "12345", "ABC123" -> "123")
-            import re
-            mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
-            mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
-            # Extract trailing numbers from eq_mereg (e.g., "REG-67890" -> "67890", "XYZ890" -> "890")
-            mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
-            mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
-            # Combine them with hyphen (e.g., "123-456" format)
-            if mefac_suffix and mereg_suffix:
-                equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
-            else:
-                equipment.eq_mefacreg = None
-        else:
-            equipment.eq_mefacreg = None
+        equipment.eq_mefacreg = _generate_mefacreg(equipment.eq_mefac, equipment.eq_mereg)
 
         db.session.commit()
         flash('Equipment updated successfully!', 'success')
@@ -1598,18 +1592,7 @@ def update_equipment_details(eq_id):
     equipment.eq_physcov = data.get('eq_physcov') == 'true' or data.get('eq_physcov') == True
 
     # Auto-generate eq_mefacreg from eq_mefac and eq_mereg
-    if equipment.eq_mefac and equipment.eq_mereg:
-        import re
-        mefac_numbers = re.search(r'\d+$', equipment.eq_mefac)
-        mefac_suffix = mefac_numbers.group() if mefac_numbers else ''
-        mereg_numbers = re.search(r'\d+$', equipment.eq_mereg)
-        mereg_suffix = mereg_numbers.group() if mereg_numbers else ''
-        if mefac_suffix and mereg_suffix:
-            equipment.eq_mefacreg = f"{mefac_suffix}-{mereg_suffix}"
-        else:
-            equipment.eq_mefacreg = None
-    else:
-        equipment.eq_mefacreg = None
+    equipment.eq_mefacreg = _generate_mefacreg(equipment.eq_mefac, equipment.eq_mereg)
 
     db.session.commit()
 
@@ -1881,36 +1864,13 @@ def capital_planning():
         # Manual pagination
         total_items = len(all_equipment)
         if request.args.get('show_all') == 'true':
-            equipment_items = all_equipment
-            equipment = type('MockPagination', (), {
-                'items': equipment_items,
-                'total': total_items,
-                'pages': 1,
-                'page': 1,
-                'has_prev': False,
-                'has_next': False,
-                'prev_num': None,
-                'next_num': None,
-                'iter_pages': lambda *args, **kwargs: [1]
-            })()
+            equipment = MockPagination.show_all(all_equipment)
         else:
             start_idx = (page - 1) * per_page
             end_idx = start_idx + per_page
             equipment_items = all_equipment[start_idx:end_idx]
 
-            total_pages = (total_items + per_page - 1) // per_page
-
-            equipment = type('MockPagination', (), {
-                'items': equipment_items,
-                'total': total_items,
-                'pages': total_pages,
-                'page': page,
-                'has_prev': page > 1,
-                'has_next': page < total_pages,
-                'prev_num': page - 1 if page > 1 else None,
-                'next_num': page + 1 if page < total_pages else None,
-                'iter_pages': lambda *args, **kwargs: range(max(1, page - 2), min(total_pages + 1, page + 3))
-            })()
+            equipment = MockPagination.paginate(equipment_items, page=page, per_page=per_page, total=total_items)
     else:
         # Normal pagination
         equipment = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -3006,8 +2966,6 @@ def import_data():
                     equipment.eq_mod = row.get('eq_mod')
                     equipment.eq_rm = row.get('eq_rm')
                     equipment.eq_phone = row.get('eq_phone')
-                    equipment.eq_servlogin = row.get('eq_servlogin')
-                    equipment.eq_servpwd = row.get('eq_servpwd')
                     equipment.eq_assetid = row.get('eq_assetid')
                     equipment.eq_sn = row.get('eq_sn')
                     equipment.eq_mefac = row.get('eq_mefac')
@@ -3223,10 +3181,14 @@ def new_personnel():
         )
         personnel.set_roles_list(form.roles.data)
 
-        # Set password - use provided password or default to "radiology"
-        password = form.password.data if form.password.data else "radiology"
+        # Set password - use provided password or generate a random temp password
         if form.username.data:  # Only set password if username is provided
-            personnel.set_password(password)
+            if form.password.data:
+                personnel.set_password(form.password.data)
+            else:
+                # No password supplied: set a random temp and force change on first login
+                personnel.set_password(secrets.token_urlsafe(16))
+                personnel.must_change_password = True
 
         try:
             db.session.add(personnel)
@@ -3365,50 +3327,49 @@ def import_personnel():
 
             # Expected columns
             required_columns = ['name', 'email']
-            optional_columns = ['id', 'phone', 'login_required', 'roles']
-            
+            optional_columns = ['id', 'phone', 'roles']
+
             # Check required columns
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 flash(f'Missing required columns: {", ".join(missing_columns)}', 'error')
                 return render_template('import_personnel.html', form=form)
-            
+
             # Process each row
             imported_count = 0
             error_count = 0
-            temp_credentials = []  # [(username, temp_password)] for new login-enabled users
-            
+
             for index, row in df.iterrows():
                 try:
                     # Skip completely empty rows
                     if row.isna().all():
                         logger.debug("Skipping empty row %d", index + 1)
                         continue
-                    
+
                     # Skip rows with empty name or email (required fields)
                     if pd.isna(row.get('name')) or pd.isna(row.get('email')) or str(row.get('name')).strip() == '' or str(row.get('email')).strip() == '':
                         logger.debug("Skipping row %d: Missing name or email", index + 1)
                         continue
-                    
+
                     # Check if personnel already exists by ID or email
                     personnel_id = row.get('id')
                     email = row['email']
-                    
+
                     # Don't overwrite existing users - check by ID first, then email
                     personnel = None
                     is_new_user = True
-                    
+
                     if personnel_id and not pd.isna(personnel_id):
                         personnel = db.session.get(Personnel, int(personnel_id))
                         if personnel:
                             is_new_user = False
-                    
+
                     if not personnel:
                         # Check by email to avoid duplicates
                         personnel = Personnel.query.filter_by(email=email).first()
                         if personnel:
                             is_new_user = False
-                    
+
                     if not personnel:
                         # Create new personnel only if doesn't exist
                         personnel = Personnel()
@@ -3416,18 +3377,13 @@ def import_personnel():
                         if personnel_id and not pd.isna(personnel_id) and int(personnel_id) != 0:
                             personnel.id = int(personnel_id)
                         is_new_user = True
-                    
-                    # Set basic fields
+
+                    # Set basic contact fields only — login credentials are managed
+                    # through the UI, not via bulk import.
                     personnel.name = row['name']
                     personnel.email = row['email']
                     personnel.phone = row.get('phone', '')
-                    
-                    # Handle login_required field
-                    if 'login_required' in row and not pd.isna(row['login_required']):
-                        personnel.login_required = str(row['login_required']).upper() == 'TRUE'
-                    else:
-                        personnel.login_required = False
-                    
+
                     # Handle roles - check for both formats (comma-separated OR individual columns)
                     if 'roles' in row and not pd.isna(row['roles']):
                         # Simple comma-separated format
@@ -3440,32 +3396,17 @@ def import_personnel():
                             if role in row and str(row[role]).upper() == 'TRUE':
                                 role_list.append(role)
                         personnel.roles = ', '.join(role_list)
-                    
-                    # Set default login credentials for NEW users only
-                    
-                    if not personnel.username:
-                        # Create username from email (part before @)
-                        username = row['email'].split('@')[0].lower()
-                        personnel.username = username
-                    
-                    # Assign a random temporary password to new login-enabled users.
-                    # They will be forced to change it on first login.
-                    if (is_new_user or not personnel.password_hash) and personnel.login_required:
-                        temp_password = secrets.token_urlsafe(12)
-                        personnel.set_password(temp_password)
-                        personnel.must_change_password = True
-                        temp_credentials.append((personnel.username, temp_password))
 
                     personnel.is_active = True
-                    
+
                     # Set admin status based on roles
                     if personnel.roles and 'admin' in personnel.roles.lower():
                         personnel.is_admin = True
-                    
+
                     if is_new_user:
                         db.session.add(personnel)
                         imported_count += 1
-                    
+
                 except Exception as e:
                     error_count += 1
                     logger.error("Personnel import error on row %d: %s", index + 1, e)
@@ -3475,9 +3416,7 @@ def import_personnel():
             db.session.commit()
 
             flash(f'Successfully imported {imported_count} personnel records. {error_count} errors.', 'success')
-            if temp_credentials:
-                cred_list = ', '.join(f'{u} / {p}' for u, p in temp_credentials)
-                flash(f'Temporary credentials for new login-enabled users (they will be forced to change password on first login): {cred_list}', 'warning')
+            flash('Login access must be configured individually through the personnel UI.', 'info')
             return redirect(url_for('personnel_list'))
             
         except Exception as e:
@@ -3773,6 +3712,10 @@ def import_scheduled_tests():
             # Read CSV
             df = pd.read_csv(file)
 
+            if len(df) > MAX_CSV_ROWS:
+                flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). Split the file and import in batches.', 'error')
+                return redirect(url_for('compliance_dashboard'))
+
             # Expected columns
             required_columns = ['eq_id', 'scheduled_date', 'scheduling_date']
             optional_columns = ['schedule_id', 'notes']
@@ -3904,7 +3847,11 @@ def import_facilities():
             try:
                 # Read CSV
                 df = pd.read_csv(file)
-                
+
+                if len(df) > MAX_CSV_ROWS:
+                    flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). Split the file and import in batches.', 'error')
+                    return redirect(request.url)
+
                 # Expected columns
                 required_columns = ['name']
                 optional_columns = ['id', 'address', 'is_active']
@@ -4592,13 +4539,17 @@ def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):
 try:
     with app.app_context():
         db.create_all()
+        check_and_migrate_db()
 except sa_exc.SQLAlchemyError as e:
     logger.error("Database initialization error: %s", e)
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # Only run debug mode in development
-    debug_mode = os.environ.get('FLASK_ENV') == 'development'
+        check_and_migrate_db()
+    # FLASK_ENV is deprecated in Flask 2.x; use FLASK_DEBUG instead.
+    # host='127.0.0.1' binds only loopback for local dev; production traffic
+    # is served through gunicorn (see PRODUCTION_DEPLOYMENT_GUIDE.md).
+    debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    app.run(host='127.0.0.1', port=port, debug=debug_mode)

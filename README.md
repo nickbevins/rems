@@ -61,15 +61,20 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 
 4. **Configure Environment**
    ```bash
-   # Create a .env file with the following:
+   # Create a .env file with the following (SECRET_KEY is mandatory — app will not start without it):
    SECRET_KEY=your_secure_secret_key_here
-   FLASK_ENV=development
+   # Set FLASK_DEBUG=1 for local development only. Never set in production.
+   FLASK_DEBUG=1
    ```
 
-5. **Access the Application**
+5. **Create the Admin Account**
+   ```bash
+   flask create-admin
+   ```
+   Interactive prompt creates the first admin user. Aborts safely if an admin already exists.
+
+6. **Access the Application**
    - Navigate to `http://localhost:5000`
-   - Default admin login: `admin` / `password123`
-   - Change the admin password immediately after first login
 
 ## Production Deployment
 
@@ -124,9 +129,9 @@ Access the application at `http://localhost:5000`
 ## Configuration
 
 ### Environment Variables
-- `SECRET_KEY`: Flask secret key for session security
-- `DATABASE_URL`: Database connection string
-- `FLASK_ENV`: Development/production environment
+- `SECRET_KEY`: Flask secret key for session security (**required** — app refuses to start without it)
+- `DATABASE_URL`: Database connection string (defaults to `instance/physdb.db` SQLite)
+- `FLASK_DEBUG`: Set to `1` for local development only; omit or set to `0` in production (`FLASK_ENV` is deprecated in Flask 2.x)
 - `ITEMS_PER_PAGE`: Number of items displayed per page
 
 ### Database Options
@@ -136,9 +141,18 @@ Access the application at `http://localhost:5000`
 ## Security Features
 - CSRF protection on all forms
 - Input validation and sanitization
-- Secure session management
-- SQL injection prevention
+- Secure session management with forced password change on first login
+- SQL injection prevention via SQLAlchemy ORM
 - XSS protection
+- Open redirect prevention on login `next` parameter
+- Role-based access control with route-level enforcement decorators
+- Security audit logging for login success, failure, and logout events
+- `SECRET_KEY` required at startup — no insecure fallback
+- Service credentials (`eq_servlogin`/`eq_servpwd`) removed from database; automatic migration drops columns on startup
+- CSV import row limit (500 rows) to prevent resource exhaustion
+- Safe date parsing with `strptime('%Y-%m-%d')` — rejects arbitrary date strings
+- Bulk personnel import creates contact records only — no login credentials are set during import; access must be granted individually through the UI
+- Local dev server binds to `127.0.0.1` only; production traffic served via Gunicorn + NGINX
 
 ## Maintenance
 
@@ -208,13 +222,14 @@ Required: `equipment_class`
 ### Personnel CSV Import
 Required: `name`, `email`
 
+Bulk import creates or updates **contact records only**. Login access (username, password, `login_required`) is configured per user through the personnel UI, not via CSV.
+
 | Field | Description |
 |---|---|
 | `id` | Personnel ID (for updating existing records) |
 | `name` | Full name |
 | `email` | Email address |
 | `phone` | Phone number |
-| `login_required` | Login access (TRUE/FALSE) |
 | `roles` | Comma-separated roles: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist` |
 
 ### Compliance Tests CSV Import
@@ -252,7 +267,29 @@ Use `TRUE`/`FALSE` (also accepts `1`/`0`, `YES`/`Y`, case-insensitive).
 
 Copyright (c) 2026 Nick Bevins. All rights reserved.
 
+## Running Tests
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
+Tests cover: authentication, open redirect rejection, role enforcement, `must_change_password` enforcement, CSV row limits, and date arithmetic. See `tests/test_app.py`.
+
 ## Version History
+
+### v1.2.0
+- Bulk personnel import no longer creates login credentials; contact records only — login access granted individually via UI
+- `FLASK_ENV` deprecated; replaced with `FLASK_DEBUG`; local dev server binds `127.0.0.1` only
+- Duplicate `eq_mefacreg` generation extracted to `_generate_mefacreg()` utility function
+- `MockPagination` dynamic `type()` pattern replaced with a proper module-level class
+- Redundant in-function `import re` statements removed (now top-level); missing `import logging` added
+- Unused `today` variable removed from `get_last_tested_date()`
+
+### v1.1.0
+- Security hardening: removed default credentials, hardened SECRET_KEY handling, open redirect fix, audit logging, role enforcement, CSV row limits, safe date parsing
+- Removed `eq_servlogin`/`eq_servpwd` from database and UI; automatic migration on startup via `check_and_migrate_db()`
+- Integration test scaffold (`tests/`)
 
 ### v1.0.0
 - Initial release

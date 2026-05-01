@@ -85,9 +85,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Create production environment configuration
+# FLASK_ENV is deprecated in Flask 2.x and is not used. Do not set FLASK_DEBUG in production.
 cat > .env << EOF
 SECRET_KEY=your_very_secure_secret_key_here
-FLASK_ENV=production
 EOF
 ```
 
@@ -115,15 +115,21 @@ source venv/bin/activate
 pip install --no-index --find-links=/path/to/python-packages -r requirements.txt
 
 # Create production environment configuration
+# FLASK_ENV is deprecated in Flask 2.x and is not used. Do not set FLASK_DEBUG in production.
 cat > .env << EOF
 SECRET_KEY=your_very_secure_secret_key_here
-FLASK_ENV=production
 EOF
 ```
 
 **Note:** No separate database installation or initialization is required. The application uses SQLite, which is file-based and requires no server process. The database file (`instance/physdb.db`) is created automatically the first time Gunicorn starts.
 
-**Important:** After first login, immediately change the default admin credentials (username: `admin`, password: `password123`).
+**Create the admin account** after first startup — there are no default credentials:
+```bash
+cd /opt/rems
+source venv/bin/activate
+flask create-admin
+```
+This interactive command prompts for name, email, username, and password. It aborts safely if an admin already exists. To recover a locked-out admin, use `python scripts/reset_password.py <username>`.
 
 **Explanation:** The virtual environment isolates Python dependencies, preventing conflicts with system packages. Gunicorn is included in `requirements.txt` and is the production-grade WSGI server that handles concurrent requests efficiently.
 

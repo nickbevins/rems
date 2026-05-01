@@ -42,9 +42,18 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 - **Facility/Department/Manufacturer**: Lookup tables for data consistency
 
 ### Security Features
-- **User Authentication**: Flask-Login with role-based permissions
+- **User Authentication**: Flask-Login with username/password; no default credentials — admin created via `flask create-admin`
 - **CSRF Protection**: Form security with Flask-WTF
-- **Input Validation**: Comprehensive form validation and sanitization
+- **Input Validation**: Comprehensive form validation; safe date parsing with `strptime('%Y-%m-%d')`
+- **Role-Based Access Control**: Route-level decorators (`manage_equipment_required`, `manage_compliance_required`, `manage_personnel_required`)
+- **Forced Password Change**: `enforce_password_change` before_request hook; all routes blocked until password updated
+- **Open Redirect Prevention**: Login `next` parameter validated against host
+- **Security Audit Logging**: Login success, failure, and logout events logged with username and IP
+- **No Credential Storage in App DB**: `eq_servlogin`/`eq_servpwd` dropped via `check_and_migrate_db()` on startup
+- **Mandatory SECRET_KEY**: `RuntimeError` at startup if not set — no insecure fallback
+- **CSV Import Limits**: 500-row maximum per upload
+- **No Credential Creation via Bulk Import**: Personnel CSV import creates contact records only; login access is granted individually through the UI
+- **Loopback-Only Dev Server**: `app.run` binds `127.0.0.1`; `FLASK_ENV` replaced with `FLASK_DEBUG`
 
 ## User Interface
 
@@ -86,9 +95,11 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 - **Log Management**: Comprehensive logging for troubleshooting
 
 ## Current Status
-- **Database**: Fully migrated to relational structure
-- **Import/Export**: Updated for new CSV format with backward compatibility
-- **UI/UX**: Modern Bootstrap-based responsive interface
-- **Testing**: All legacy field references removed and verified
+- **Database**: Fully migrated to relational structure; `check_and_migrate_db()` runs on every startup to apply incremental changes
+- **Import/Export**: Personnel CSV import creates contact records only (no login credentials); equipment/compliance/facility import unchanged
+- **UI/UX**: Modern Bootstrap-based responsive interface; service credential fields removed from equipment form and detail views
+- **Security**: Hardened per internal security triage (2025-05); all addressable PDF findings resolved through v1.2.0 — see README for full feature list
+- **Code Quality**: Duplicate `eq_mefacreg` logic extracted to `_generate_mefacreg()`; `MockPagination` promoted to module-level class; redundant in-function imports removed
+- **Testing**: Integration test scaffold in `tests/` covering auth, roles, CSV limits, and date arithmetic
 
 The application provides a complete solution for radiology equipment management with robust data handling, compliance tracking, and user-friendly interfaces suitable for healthcare environments.
