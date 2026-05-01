@@ -186,13 +186,26 @@ def check_and_migrate_db():
     """Apply incremental schema migrations to existing databases."""
     from sqlalchemy import text, inspect
     inspector = inspect(db.engine)
-    # Drop eq_servlogin and eq_servpwd — service credentials must not be stored in the app DB
+
     equipment_cols = {c['name'] for c in inspector.get_columns('equipment')}
+    personnel_cols = {c['name'] for c in inspector.get_columns('personnel')}
+
     with db.engine.begin() as conn:
+        # Drop eq_servlogin and eq_servpwd — service credentials must not be stored in the app DB
         for col in ('eq_servlogin', 'eq_servpwd'):
             if col in equipment_cols:
                 conn.execute(text(f'ALTER TABLE equipment DROP COLUMN {col}'))
                 logger.info("Migration: dropped column equipment.%s", col)
+
+        # Add must_change_password to personnel (added in v1.1.0)
+        if 'must_change_password' not in personnel_cols:
+            conn.execute(text('ALTER TABLE personnel ADD COLUMN must_change_password BOOLEAN DEFAULT 0'))
+            logger.info("Migration: added column personnel.must_change_password")
+
+        # Add last_login to personnel (added in v1.1.0)
+        if 'last_login' not in personnel_cols:
+            conn.execute(text('ALTER TABLE personnel ADD COLUMN last_login DATETIME'))
+            logger.info("Migration: added column personnel.last_login")
 
 # Initialize database tables
 def init_db():
