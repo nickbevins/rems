@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, make_response, session
+from urllib.parse import urlparse, urljoin
+import secrets
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import exc as sa_exc
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, SelectField, BooleanField, TextAreaField, SelectMultipleField, FileField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo, NumberRange
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import pandas as pd
 from dotenv import load_dotenv
@@ -14,6 +17,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Utility functions for auditing
 def extract_personnel_initials(name):
@@ -40,7 +46,10 @@ def extract_personnel_initials(name):
     return initials[:3]  # Limit to 3 characters max
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is not set. Set it in your .env file before starting the application.")
+app.config['SECRET_KEY'] = _secret_key
 # Use persistent database path for production
 if 'RENDER' in os.environ:
     # On Render, check for persistent disk or PostgreSQL
@@ -54,8 +63,8 @@ if 'RENDER' in os.environ:
     else:
         # Fallback to temp location (data will be lost on deploy)
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/physdb.db'
-        print("WARNING: Using temporary SQLite database. Data will be lost on deployment!")
-        print("Consider upgrading to a paid plan and adding a persistent disk, or use PostgreSQL.")
+        logger.warning("Using temporary SQLite database. Data will be lost on deployment!")
+        logger.warning("Consider upgrading to a paid plan and adding a persistent disk, or use PostgreSQL.")
 else:
     # Local development - use instance folder
     instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
@@ -63,6 +72,8 @@ else:
     db_path = os.path.join(instance_dir, 'physdb.db')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+MAX_CSV_ROWS = 500  # Maximum rows allowed per CSV import
 
 db = SQLAlchemy(app)
 
@@ -83,7 +94,7 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     # First try to match by ID if provided
     if contact_id and str(contact_id).strip() and not pd.isna(contact_id):
         try:
-            contact = Personnel.query.get(int(contact_id))
+            contact = db.session.get(Personnel, int(contact_id))
         except (ValueError, TypeError):
             pass
 
@@ -115,8 +126,16 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     return contact
 
 def check_and_migrate_db():
-    """Placeholder for future database migrations"""
-    pass
+    """Apply incremental schema migrations to existing databases."""
+    from sqlalchemy import text, inspect
+    inspector = inspect(db.engine)
+    # Drop eq_servlogin and eq_servpwd — service credentials must not be stored in the app DB
+    equipment_cols = {c['name'] for c in inspector.get_columns('equipment')}
+    with db.engine.begin() as conn:
+        for col in ('eq_servlogin', 'eq_servpwd'):
+            if col in equipment_cols:
+                conn.execute(text(f'ALTER TABLE equipment DROP COLUMN {col}'))
+                logger.info("Migration: dropped column equipment.%s", col)
 
 # Initialize database tables
 def init_db():
@@ -124,9 +143,9 @@ def init_db():
     try:
         with app.app_context():
             db.create_all()
-            print("Database tables created successfully")
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
+            logger.info("Database tables created successfully")
+    except sa_exc.SQLAlchemyError as e:
+        logger.error("Error creating database tables: %s", e)
 
 # Don't initialize here - wait until all models are defined
 
@@ -140,7 +159,7 @@ login_manager.login_message_category = 'info'
 # User loader function for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    return Personnel.query.get(int(user_id))
+    return db.session.get(Personnel, int(user_id))
 
 # Database Models
 
@@ -193,8 +212,6 @@ class Equipment(db.Model):
     eq_auditfreq = db.Column(db.String(200), default='Annual - TJC')  # Comma-separated list of frequencies
     eq_acrsite = db.Column(db.String(100))
     eq_acrunit = db.Column(db.String(100))
-    eq_servlogin = db.Column(db.String(100))
-    eq_servpwd = db.Column(db.String(100))
 
     # Technical Specifications / Capital Information
     eq_radcap = db.Column(db.Integer)  # Radiology Owned: 1=Yes, 0=No, NULL=N/A
@@ -210,8 +227,8 @@ class Equipment(db.Model):
     eq_notes = db.Column(db.Text)
 
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     compliance_tests = db.relationship('ComplianceTest', backref='equipment', lazy=True, cascade='all, delete-orphan')
@@ -360,21 +377,18 @@ class Equipment(db.Model):
     def to_dict(self):
         return {
             'eq_id': self.eq_id,
-            'eq_class': self.eq_class,
-            'eq_subclass': self.eq_subclass,
-            'eq_manu': self.eq_manu,
+            'eq_class': self.equipment_class.name if self.equipment_class else None,
+            'eq_subclass': self.equipment_subclass.name if self.equipment_subclass else None,
+            'eq_manu': self.manufacturer.name if self.manufacturer else None,
             'eq_mod': self.eq_mod,
-            'eq_dept': self.eq_dept,
+            'eq_dept': self.department.name if self.department else None,
             'eq_rm': self.eq_rm,
             'eq_phone': self.eq_phone,
-            'eq_fac': self.eq_fac,
+            'eq_fac': self.facility.name if self.facility else None,
             'eq_address': self.eq_address,
-            'eq_contact': self.eq_contact,
-            'eq_contactinfo': self.eq_contactinfo,
-            'eq_sup': self.eq_sup,
-            'eq_supinfo': self.eq_supinfo,
-            'eq_physician': self.eq_physician,
-            'eq_physicianinfo': self.eq_physicianinfo,
+            'eq_contact': self.contact.name if self.contact else None,
+            'eq_sup': self.supervisor.name if self.supervisor else None,
+            'eq_physician': self.physician.name if self.physician else None,
             'eq_assetid': self.eq_assetid,
             'eq_sn': self.eq_sn,
             'eq_mefac': self.eq_mefac,
@@ -411,10 +425,11 @@ class Personnel(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     login_required = db.Column(db.Boolean, default=False)  # True if this person needs login access
+    must_change_password = db.Column(db.Boolean, default=False)  # True forces password change on next login
     last_login = db.Column(db.DateTime)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<Personnel {self.id}: {self.name}>'
@@ -501,9 +516,9 @@ class ComplianceTest(db.Model):
     
     # Audit fields
     created_by = db.Column(db.String(10))  # Personnel initials
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     modified_by = db.Column(db.String(10))  # Personnel initials  
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationships
     performed_by = db.relationship('Personnel', foreign_keys=[performed_by_id], backref='tests_performed')
@@ -555,9 +570,9 @@ class ScheduledTest(db.Model):
 
     # Audit fields
     created_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     modified_by_id = db.Column(db.Integer, db.ForeignKey('personnel.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     equipment = db.relationship('Equipment', backref='scheduled_tests')
@@ -574,7 +589,7 @@ class EquipmentClass(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<EquipmentClass {self.id}: {self.name}>'
@@ -588,7 +603,7 @@ class EquipmentSubclass(db.Model):
     estimated_capital_cost = db.Column(db.Integer)  # Estimated capital cost in thousands
     expected_lifetime = db.Column(db.Integer)  # Expected lifetime in years
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     equipment_class = db.relationship('EquipmentClass', backref='subclasses')
@@ -602,7 +617,7 @@ class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<Department {self.id}: {self.name}>'
@@ -614,7 +629,7 @@ class Facility(db.Model):
     name = db.Column(db.String(200), nullable=False, unique=True)
     address = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def __repr__(self):
         return f'<Facility {self.id}: {self.name}>'
@@ -625,7 +640,7 @@ class Manufacturer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f'<Manufacturer {self.id}: {self.name}>'
@@ -638,7 +653,7 @@ class CapitalCategory(db.Model):
     min_cost = db.Column(db.Integer, nullable=False)  # In thousands
     max_cost = db.Column(db.Integer)  # In thousands, NULL means unlimited
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f'<CapitalCategory {self.id}: {self.name}>'
@@ -666,8 +681,6 @@ class EquipmentForm(FlaskForm):
     department_id = SelectField('Department', choices=[], validators=[Optional()])
     eq_rm = StringField('Room', validators=[Optional(), Length(max=100)])
     eq_phone = StringField('Phone', validators=[Optional(), Length(max=20)])
-    eq_servlogin = StringField('Service Login', validators=[Optional(), Length(max=100)])
-    eq_servpwd = StringField('Service Password', validators=[Optional(), Length(max=100)])
     facility_id = SelectField('Facility', choices=[], validators=[Optional()])
     eq_address = TextAreaField('Address', validators=[Optional()])
     contact_id = SelectField('Contact Person', choices=[], validators=[Optional()])
@@ -818,6 +831,15 @@ def manage_personnel_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Enforce password change before any other action
+@app.before_request
+def enforce_password_change():
+    if current_user.is_authenticated and getattr(current_user, 'must_change_password', False):
+        allowed = {'change_password', 'logout', 'static'}
+        if request.endpoint not in allowed:
+            flash('You must set a new password before continuing.', 'warning')
+            return redirect(url_for('change_password'))
+
 # Authentication Routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -829,14 +851,21 @@ def login():
         user = Personnel.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data) and user.is_active and user.login_required:
             login_user(user)
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
-            
+            logger.info("AUTH login_success user=%s ip=%s", user.username, request.remote_addr)
+
             next_page = request.args.get('next')
-            if not next_page or not next_page.startswith('/'):
+            if next_page:
+                ref = urlparse(request.host_url)
+                test = urlparse(urljoin(request.host_url, next_page))
+                if test.scheme not in ('http', 'https') or ref.netloc != test.netloc:
+                    next_page = url_for('index')
+            else:
                 next_page = url_for('index')
             return redirect(next_page)
         else:
+            logger.warning("AUTH login_failed username=%s ip=%s", form.username.data, request.remote_addr)
             flash('Invalid username or password.', 'error')
     
     return render_template('login.html', form=form)
@@ -844,6 +873,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    logger.info("AUTH logout user=%s ip=%s", current_user.username, request.remote_addr)
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
@@ -859,15 +889,17 @@ def change_password():
             flash('Current password is incorrect.', 'error')
             return render_template('change_password.html', form=form)
         
-        # Update password
+        # Update password and clear any forced-change flag
         current_user.set_password(form.new_password.data)
-        
+        current_user.must_change_password = False
+
         try:
             db.session.commit()
             flash('Password changed successfully!', 'success')
             return redirect(url_for('index'))
-        except Exception as e:
+        except sa_exc.SQLAlchemyError as e:
             db.session.rollback()
+            logger.error("Error changing password for user %s: %s", current_user.username, e)
             flash('Error changing password. Please try again.', 'error')
     
     return render_template('change_password.html', form=form)
@@ -875,34 +907,36 @@ def change_password():
 # Initialize database and create default admin after all models are defined
 init_db()
 
-# Create default admin user if none exists
-def create_default_admin():
-    """Create default admin user if no users exist at all"""
-    try:
-        with app.app_context():
-            # Only create admin if database is completely empty
-            if Personnel.query.count() == 0:
-                admin_user = Personnel(
-                    id=0,
-                    name='Admin User',
-                    email='admin@rems.com',
-                    username='admin',
-                    is_admin=True,
-                    is_active=True,
-                    login_required=True,
-                    roles='admin'
-                )
-                admin_user.set_password('password123')
-                db.session.add(admin_user)
-                db.session.commit()
-                print("Default admin user created with ID 0: admin/password123")
-            else:
-                print("Personnel exist - skipping default admin creation")
-    except Exception as e:
-        print(f"Error creating default admin: {e}")
+@app.cli.command('create-admin')
+def create_admin_command():
+    """One-time setup: create the initial admin account.
 
-# Create default admin after database initialization
-create_default_admin()
+    Run once after first deployment:
+        flask create-admin
+    """
+    import click
+    with app.app_context():
+        if Personnel.query.filter_by(is_admin=True).first():
+            click.echo('An admin account already exists. Aborting.')
+            return
+        name = click.prompt('Full name')
+        email = click.prompt('Email')
+        username = click.prompt('Username')
+        password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
+        admin = Personnel(
+            name=name,
+            email=email,
+            username=username,
+            is_active=True,
+            is_admin=True,
+            login_required=True,
+            must_change_password=False,
+            roles='admin'
+        )
+        admin.set_password(password)
+        db.session.add(admin)
+        db.session.commit()
+        click.echo(f'Admin account "{username}" created successfully.')
 
 # Routes
 @app.route('/')
@@ -951,7 +985,7 @@ def index():
 
     scheduled_tests_count = 0
     for test in all_scheduled_tests:
-        equipment = Equipment.query.get(test.eq_id)
+        equipment = db.session.get(Equipment, test.eq_id)
         if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
             scheduled_tests_count += 1
 
@@ -1020,7 +1054,6 @@ def equipment_list():
             Equipment.eq_manid.ilike(f'%{search}%'),
             Equipment.eq_acrsite.ilike(f'%{search}%'),
             Equipment.eq_acrunit.ilike(f'%{search}%'),
-            Equipment.eq_servlogin.ilike(f'%{search}%'),
             Equipment.eq_notes.ilike(f'%{search}%')
         )
         query = query.filter(search_filter)
@@ -1112,22 +1145,23 @@ def equipment_list():
                         return (due_date - today).days
                     else:
                         return 9998  # Put equipment with no due date near the end
-                except Exception as e:
+                except (AttributeError, TypeError, ValueError):
                     # If there's any error calculating for this equipment, put it at the end
                     return 9997
-            
+
             # Find the days_until_due sort order
             days_sort_order = 'asc'
             for i, field in enumerate(sort_fields):
                 if field == 'days_until_due':
                     days_sort_order = sort_orders[i] if i < len(sort_orders) else 'asc'
                     break
-            
+
             # Sort by days until due
             reverse_sort = (days_sort_order == 'desc')
             all_equipment.sort(key=get_days_until_due, reverse=reverse_sort)
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError) as e:
             # If sorting fails, fall back to regular query without days_until_due sorting
+            logger.warning("days_until_due sort failed, falling back: %s", e)
             has_days_until_due_sort = False
     
     # Handle pagination based on whether days_until_due sorting was successful
@@ -1314,7 +1348,7 @@ def equipment_new():
 @app.route('/equipment/<int:eq_id>')
 @login_required
 def equipment_detail(eq_id):
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
     
     # Add pagination for compliance tests
     test_page = request.args.get('test_page', 1, type=int)
@@ -1386,7 +1420,7 @@ def equipment_detail(eq_id):
 @login_required
 @manage_equipment_required
 def equipment_edit(eq_id):
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
 
     # For GET requests, pre-process the equipment data to ensure proper form population
     if request.method == 'GET':
@@ -1517,7 +1551,7 @@ def equipment_edit(eq_id):
 @manage_equipment_required
 def update_equipment_details(eq_id):
     """AJAX endpoint to update equipment details card"""
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
 
     # Get form data from JSON
     data = request.get_json()
@@ -1530,8 +1564,6 @@ def update_equipment_details(eq_id):
     equipment.department_id = int(data.get('department_id')) if data.get('department_id') else None
     equipment.eq_rm = data.get('eq_rm', '')
     equipment.eq_phone = data.get('eq_phone', '')
-    equipment.eq_servlogin = data.get('eq_servlogin', '')
-    equipment.eq_servpwd = data.get('eq_servpwd', '')
     equipment.facility_id = int(data.get('facility_id')) if data.get('facility_id') else None
     equipment.eq_assetid = data.get('eq_assetid', '')
     equipment.eq_sn = data.get('eq_sn', '')
@@ -1543,17 +1575,22 @@ def update_equipment_details(eq_id):
     equipment.eq_acrunit = data.get('eq_acrunit', '')
     equipment.eq_notes = data.get('eq_notes', '')
 
-    # Handle dates
-    from dateutil import parser
-    try:
-        equipment.eq_mandt = parser.parse(data.get('eq_mandt')).date() if data.get('eq_mandt') else None
-        equipment.eq_rfrbdt = parser.parse(data.get('eq_rfrbdt')).date() if data.get('eq_rfrbdt') else None
-        equipment.eq_instdt = parser.parse(data.get('eq_instdt')).date() if data.get('eq_instdt') else None
-        equipment.eq_eoldate = parser.parse(data.get('eq_eoldate')).date() if data.get('eq_eoldate') else None
-        equipment.eq_eeoldate = parser.parse(data.get('eq_eeoldate')).date() if data.get('eq_eeoldate') else None
-        equipment.eq_retdate = parser.parse(data.get('eq_retdate')).date() if data.get('eq_retdate') else None
-    except:
-        pass
+    # Handle dates — input type="date" always sends YYYY-MM-DD
+    def _parse_iso_date(val):
+        if not val:
+            return None
+        try:
+            return datetime.strptime(str(val).strip(), '%Y-%m-%d').date()
+        except (ValueError, OverflowError) as exc:
+            logger.warning("Invalid date value ignored: %r — %s", val, exc)
+            return None
+
+    equipment.eq_mandt = _parse_iso_date(data.get('eq_mandt'))
+    equipment.eq_rfrbdt = _parse_iso_date(data.get('eq_rfrbdt'))
+    equipment.eq_instdt = _parse_iso_date(data.get('eq_instdt'))
+    equipment.eq_eoldate = _parse_iso_date(data.get('eq_eoldate'))
+    equipment.eq_eeoldate = _parse_iso_date(data.get('eq_eeoldate'))
+    equipment.eq_retdate = _parse_iso_date(data.get('eq_retdate'))
 
     # Handle boolean checkboxes
     equipment.eq_retired = data.get('eq_retired') == 'true' or data.get('eq_retired') == True
@@ -1583,7 +1620,7 @@ def update_equipment_details(eq_id):
 @manage_equipment_required
 def update_capital_details(eq_id):
     """AJAX endpoint to update capital details card"""
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
 
     # Get form data from JSON
     data = request.get_json()
@@ -1606,7 +1643,7 @@ def update_capital_details(eq_id):
 @manage_equipment_required
 def update_contact_info(eq_id):
     """AJAX endpoint to update contact information card"""
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
 
     # Get form data from JSON
     data = request.get_json()
@@ -1624,7 +1661,7 @@ def update_contact_info(eq_id):
 @login_required
 def get_equipment_form_data(eq_id):
     """AJAX endpoint to get dropdown choices and current values for edit forms"""
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
 
     # Get all dropdown choices
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
@@ -2099,7 +2136,7 @@ def compliance_dashboard():
     scheduled_by_equipment = {}
     for test in all_scheduled_tests:
         if test.eq_id not in scheduled_by_equipment:
-            equipment = Equipment.query.get(test.eq_id)
+            equipment = db.session.get(Equipment, test.eq_id)
             if equipment:
                 last_tested = equipment.get_last_tested_date()
                 # Include if no previous test, or scheduled date is more than 30 days after last test
@@ -2109,7 +2146,7 @@ def compliance_dashboard():
     # Add scheduled tests to the scheduled_tests list (future dates only)
     for test in all_scheduled_tests:
         if test.scheduled_date >= today:
-            equipment = Equipment.query.get(test.eq_id)
+            equipment = db.session.get(Equipment, test.eq_id)
             if equipment and not (equipment.eq_retired or (equipment.eq_retdate and equipment.eq_retdate <= today)):
                 scheduled_tests.append((test, equipment))
 
@@ -2161,7 +2198,7 @@ def compliance_dashboard():
 @login_required
 @manage_compliance_required
 def compliance_test_new(eq_id):
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
     form = ComplianceTestForm()
     
     # Get redirect parameter from URL
@@ -2211,8 +2248,8 @@ def compliance_test_new(eq_id):
 @login_required
 @manage_compliance_required
 def compliance_test_edit(test_id):
-    test = ComplianceTest.query.get_or_404(test_id)
-    equipment = Equipment.query.get_or_404(test.eq_id)
+    test = db.get_or_404(ComplianceTest, test_id)
+    equipment = db.get_or_404(Equipment, test.eq_id)
     form = ComplianceTestForm(obj=test)
     
     # Get redirect parameter from URL
@@ -2255,7 +2292,7 @@ def compliance_test_edit(test_id):
 @login_required
 @manage_compliance_required
 def compliance_test_delete(test_id):
-    test = ComplianceTest.query.get_or_404(test_id)
+    test = db.get_or_404(ComplianceTest, test_id)
     eq_id = test.eq_id
 
     # Get redirect parameter from form or URL
@@ -2277,7 +2314,7 @@ def compliance_test_delete(test_id):
 @login_required
 @manage_compliance_required
 def schedule_test_new(eq_id):
-    equipment = Equipment.query.get_or_404(eq_id)
+    equipment = db.get_or_404(Equipment, eq_id)
     form = ScheduleTestForm()
 
     # Get redirect parameter from URL
@@ -2311,8 +2348,8 @@ def schedule_test_new(eq_id):
 @login_required
 @manage_compliance_required
 def schedule_test_edit(schedule_id):
-    scheduled_test = ScheduledTest.query.get_or_404(schedule_id)
-    equipment = Equipment.query.get_or_404(scheduled_test.eq_id)
+    scheduled_test = db.get_or_404(ScheduledTest, schedule_id)
+    equipment = db.get_or_404(Equipment, scheduled_test.eq_id)
     form = ScheduleTestForm(obj=scheduled_test)
 
     # Get redirect parameter from URL
@@ -2342,7 +2379,7 @@ def schedule_test_edit(schedule_id):
 @login_required
 @manage_compliance_required
 def schedule_test_delete(schedule_id):
-    scheduled_test = ScheduledTest.query.get_or_404(schedule_id)
+    scheduled_test = db.get_or_404(ScheduledTest, schedule_id)
     eq_id = scheduled_test.eq_id
 
     # Get redirect parameter from form or URL
@@ -2361,6 +2398,7 @@ def schedule_test_delete(schedule_id):
         return redirect(url_for('equipment_detail', eq_id=eq_id, **filter_params))
 
 @app.route('/api/equipment')
+@login_required
 def api_equipment():
     equipment = Equipment.query.all()
     return jsonify([eq.to_dict() for eq in equipment])
@@ -2402,6 +2440,7 @@ def api_equipment_search():
     return jsonify(results)
 
 @app.route('/api/subclasses')
+@login_required
 def api_subclasses():
     eq_class = request.args.get('eq_class')
     class_id = request.args.get('class_id')
@@ -2435,14 +2474,16 @@ def api_subclasses():
     return jsonify(subclass_list)
 
 @app.route('/api/facility/<int:facility_id>/address')
+@login_required
 def api_facility_address(facility_id):
     """API endpoint to get facility address by ID"""
-    facility = Facility.query.get(facility_id)
+    facility = db.session.get(Facility, facility_id)
     if facility:
         return jsonify({'address': facility.address or ''})
     return jsonify({'address': ''}), 404
 
 @app.route('/export-equipment')
+@login_required
 def export_equipment():
     from sqlalchemy import and_, or_
     # Get all equipment or apply filters like in equipment_list
@@ -2487,7 +2528,6 @@ def export_equipment():
             Equipment.eq_manid.ilike(f'%{search}%'),
             Equipment.eq_acrsite.ilike(f'%{search}%'),
             Equipment.eq_acrunit.ilike(f'%{search}%'),
-            Equipment.eq_servlogin.ilike(f'%{search}%'),
             Equipment.eq_notes.ilike(f'%{search}%')
         )
         query = query.filter(search_filter)
@@ -2525,7 +2565,7 @@ def export_equipment():
     
     # Write header - using relational field names
     headers = [
-        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'eq_servlogin', 'eq_servpwd', 'facility', 'facility_address',
+        'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'eq_mod', 'department', 'eq_rm', 'eq_phone', 'facility', 'facility_address',
         'contact_id', 'contact_person', 'contact_email', 'supervisor_id', 'supervisor', 'supervisor_email', 'physician_id', 'physician', 'physician_email',
         'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg', 'eq_mefacreg', 'eq_manid',
         'eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_eeoldate', 'eq_retdate', 'eq_retired', 'eq_planned',
@@ -2544,8 +2584,6 @@ def export_equipment():
             eq.department.name if eq.department else '',
             eq.eq_rm or '',
             eq.eq_phone or '',
-            eq.eq_servlogin or '',
-            eq.eq_servpwd or '',
             eq.facility.name if eq.facility else '',
             eq.facility.address if eq.facility else '',
             eq.contact_id if eq.contact_id else '',
@@ -2596,6 +2634,8 @@ def export_equipment():
     )
 
 @app.route('/bulk-edit', methods=['GET', 'POST'])
+@login_required
+@manage_equipment_required
 def bulk_edit():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -2626,7 +2666,7 @@ def bulk_edit():
                             continue
                         
                         # Find existing equipment
-                        equipment = Equipment.query.get(int(eq_id))
+                        equipment = db.session.get(Equipment, int(eq_id))
                         if not equipment:
                             error_count += 1
                             errors.append(f"Equipment ID {eq_id} not found")
@@ -2723,15 +2763,15 @@ def bulk_edit():
                                             break
                                         except ValueError:
                                             continue
-                                except:
+                                except (AttributeError, TypeError):
                                     pass
                             else:
                                 setattr(equipment, field, None)
-                        
+
                         # Handle boolean
                         retired_val = str(row.get('eq_retired', '')).strip().upper()
                         equipment.eq_retired = retired_val in ('TRUE', 'YES', '1')
-                        
+
                         # Handle audit frequency (string field - can be comma-separated)
                         audit_freq = str(row.get('eq_auditfreq', '')).strip()
                         if audit_freq and audit_freq != '':
@@ -2761,11 +2801,11 @@ def bulk_edit():
                                         equipment.eq_auditfreq = 'Annual - ACR'
                                     else:
                                         equipment.eq_auditfreq = 'Annual - TJC'
-                                except:
+                                except (ValueError, TypeError):
                                     equipment.eq_auditfreq = 'Annual - TJC'  # Default
                         else:
                             equipment.eq_auditfreq = None
-                        
+
                         # Handle integers (skip eq_capcat as it's auto-assigned)
                         int_fields = ['eq_radcap', 'eq_capcst']
                         for field in int_fields:
@@ -2773,7 +2813,7 @@ def bulk_edit():
                             if val and val != '':
                                 try:
                                     setattr(equipment, field, int(float(val)))
-                                except:
+                                except (ValueError, TypeError):
                                     setattr(equipment, field, None)
                             else:
                                 setattr(equipment, field, None)
@@ -2815,6 +2855,8 @@ def bulk_edit():
     return render_template('bulk_edit.html')
 
 @app.route('/import-data', methods=['GET', 'POST'])
+@login_required
+@manage_equipment_required
 def import_data():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -2830,7 +2872,11 @@ def import_data():
             try:
                 # Read CSV file
                 df = pd.read_csv(file)
-                
+
+                if len(df) > MAX_CSV_ROWS:
+                    flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). Split the file and import in batches.', 'error')
+                    return redirect(request.url)
+
                 # Import data
                 imported_count = 0
                 updated_count = 0
@@ -2838,14 +2884,14 @@ def import_data():
                 for index, row in df.iterrows():
                     # Skip completely empty rows
                     if row.isna().all():
-                        print(f"Skipping empty row {index + 1}")
+                        logger.debug("Skipping empty row %d", index + 1)
                         skipped_count += 1
                         continue
                     
                     # Require Equipment Class - this is mandatory data (match export format)
                     eq_class = row.get('equipment_class') or row.get('Equipment Class') or row.get('eq_class')
                     if pd.isna(eq_class) or eq_class == '' or str(eq_class).strip() == '':
-                        print(f"Row {index + 1}: Missing equipment_class. Available columns: {list(row.index)}")
+                        logger.warning("Row %d: Missing equipment_class. Available columns: %s", index + 1, list(row.index))
                         skipped_count += 1
                         continue
                     
@@ -2853,7 +2899,7 @@ def import_data():
                     eq_id = row.get('eq_id')
                     if pd.notna(eq_id) and eq_id != '':
                         try:
-                            equipment = Equipment.query.get(int(eq_id))
+                            equipment = db.session.get(Equipment, int(eq_id))
                             if equipment:
                                 # Update existing equipment
                                 is_update = True
@@ -2976,7 +3022,7 @@ def import_data():
                         if pd.notna(date_val) and date_val != '':
                             try:
                                 setattr(equipment, field, pd.to_datetime(date_val).date())
-                            except:
+                            except (ValueError, TypeError):
                                 pass
 
                     # Handle boolean fields
@@ -3053,7 +3099,7 @@ def import_data():
                                     equipment.eq_auditfreq = 'Annual - ACR'
                                 else:
                                     equipment.eq_auditfreq = 'Annual - TJC'
-                            except:
+                            except (ValueError, TypeError):
                                 equipment.eq_auditfreq = 'Annual - TJC'  # Default
                     
                     # Handle integers (eq_capcat and eq_capecst are calculated dynamically, not stored)
@@ -3111,7 +3157,7 @@ def import_data():
             except Exception as e:
                 import traceback
                 error_details = traceback.format_exc()
-                print(f"Equipment import error: {error_details}")
+                logger.error("Equipment import error: %s", error_details)
                 flash(f'Error importing data: {str(e)}. Check logs for details.', 'error')
                 return redirect(request.url)
         
@@ -3187,8 +3233,9 @@ def new_personnel():
             db.session.commit()
             flash('Personnel added successfully!', 'success')
             return redirect(url_for('personnel_list'))
-        except Exception as e:
+        except sa_exc.SQLAlchemyError as e:
             db.session.rollback()
+            logger.error("Error adding personnel: %s", e)
             flash('Error adding personnel. Email or username may already exist.', 'error')
 
     return render_template('personnel_form.html', form=form, title='Add Personnel')
@@ -3196,14 +3243,14 @@ def new_personnel():
 @app.route('/personnel/<int:id>')
 @login_required
 def personnel_detail(id):
-    personnel = Personnel.query.get_or_404(id)
+    personnel = db.get_or_404(Personnel, id)
     return render_template('personnel_detail.html', personnel=personnel)
 
 @app.route('/personnel/<int:id>/edit', methods=['GET', 'POST'])
 @login_required
 @manage_personnel_required
 def edit_personnel(id):
-    personnel = Personnel.query.get_or_404(id)
+    personnel = db.get_or_404(Personnel, id)
     form = PersonnelForm(obj=personnel)
     
     if request.method == 'GET':
@@ -3230,8 +3277,9 @@ def edit_personnel(id):
             db.session.commit()
             flash('Personnel updated successfully!', 'success')
             return redirect(url_for('personnel_detail', id=id))
-        except Exception as e:
+        except sa_exc.SQLAlchemyError as e:
             db.session.rollback()
+            logger.error("Error updating personnel id=%s: %s", id, e)
             flash('Error updating personnel.', 'error')
 
     return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel)
@@ -3240,19 +3288,21 @@ def edit_personnel(id):
 @login_required
 @manage_personnel_required
 def delete_personnel(id):
-    personnel = Personnel.query.get_or_404(id)
+    personnel = db.get_or_404(Personnel, id)
     try:
         db.session.delete(personnel)
         db.session.commit()
         flash('Personnel deleted successfully!', 'success')
-    except Exception as e:
+    except sa_exc.SQLAlchemyError as e:
         db.session.rollback()
+        logger.error("Error deleting personnel id=%s: %s", id, e)
         flash('Error deleting personnel.', 'error')
     
     return redirect(url_for('personnel_list'))
 
 
 @app.route('/export-personnel')
+@login_required
 def export_personnel():
     personnel = Personnel.query.all()
     
@@ -3297,6 +3347,8 @@ def export_personnel():
     return response
 
 @app.route('/import-personnel', methods=['GET', 'POST'])
+@login_required
+@manage_personnel_required
 def import_personnel():
     form = BulkPersonnelForm()
     
@@ -3306,7 +3358,11 @@ def import_personnel():
         try:
             # Read CSV
             df = pd.read_csv(file)
-            
+
+            if len(df) > MAX_CSV_ROWS:
+                flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). Split the file and import in batches.', 'error')
+                return render_template('import_personnel.html', form=form)
+
             # Expected columns
             required_columns = ['name', 'email']
             optional_columns = ['id', 'phone', 'login_required', 'roles']
@@ -3320,17 +3376,18 @@ def import_personnel():
             # Process each row
             imported_count = 0
             error_count = 0
+            temp_credentials = []  # [(username, temp_password)] for new login-enabled users
             
             for index, row in df.iterrows():
                 try:
                     # Skip completely empty rows
                     if row.isna().all():
-                        print(f"Skipping empty row {index + 1}")
+                        logger.debug("Skipping empty row %d", index + 1)
                         continue
                     
                     # Skip rows with empty name or email (required fields)
                     if pd.isna(row.get('name')) or pd.isna(row.get('email')) or str(row.get('name')).strip() == '' or str(row.get('email')).strip() == '':
-                        print(f"Skipping row {index + 1}: Missing name or email")
+                        logger.debug("Skipping row %d: Missing name or email", index + 1)
                         continue
                     
                     # Check if personnel already exists by ID or email
@@ -3342,7 +3399,7 @@ def import_personnel():
                     is_new_user = True
                     
                     if personnel_id and not pd.isna(personnel_id):
-                        personnel = Personnel.query.get(int(personnel_id))
+                        personnel = db.session.get(Personnel, int(personnel_id))
                         if personnel:
                             is_new_user = False
                     
@@ -3391,10 +3448,14 @@ def import_personnel():
                         username = row['email'].split('@')[0].lower()
                         personnel.username = username
                     
-                    # Set default password only for NEW users (don't overwrite existing passwords)
-                    if is_new_user or not personnel.password_hash:
-                        personnel.set_password('password123')
-                    
+                    # Assign a random temporary password to new login-enabled users.
+                    # They will be forced to change it on first login.
+                    if (is_new_user or not personnel.password_hash) and personnel.login_required:
+                        temp_password = secrets.token_urlsafe(12)
+                        personnel.set_password(temp_password)
+                        personnel.must_change_password = True
+                        temp_credentials.append((personnel.username, temp_password))
+
                     personnel.is_active = True
                     
                     # Set admin status based on roles
@@ -3407,12 +3468,16 @@ def import_personnel():
                     
                 except Exception as e:
                     error_count += 1
+                    logger.error("Personnel import error on row %d: %s", index + 1, e)
                     continue
-            
+
             # Commit all changes
             db.session.commit()
-            
-            flash(f'Successfully imported {imported_count} personnel records. All users can log in with password "password123". {error_count} errors.', 'success')
+
+            flash(f'Successfully imported {imported_count} personnel records. {error_count} errors.', 'success')
+            if temp_credentials:
+                cred_list = ', '.join(f'{u} / {p}' for u, p in temp_credentials)
+                flash(f'Temporary credentials for new login-enabled users (they will be forced to change password on first login): {cred_list}', 'warning')
             return redirect(url_for('personnel_list'))
             
         except Exception as e:
@@ -3422,6 +3487,7 @@ def import_personnel():
     return render_template('import_personnel.html', form=form)
 
 @app.route('/export-compliance')
+@login_required
 def export_compliance():
     # Check if this is a request for sample template
     sample = request.args.get('sample', 'false').lower() == 'true'
@@ -3449,12 +3515,12 @@ def export_compliance():
             # Get personnel names from IDs
             performed_by_name = ''
             if test.performed_by_id:
-                performed_by = Personnel.query.get(test.performed_by_id)
+                performed_by = db.session.get(Personnel, test.performed_by_id)
                 performed_by_name = performed_by.name if performed_by else ''
                 
             reviewed_by_name = ''
             if test.reviewed_by_id:
-                reviewed_by = Personnel.query.get(test.reviewed_by_id)
+                reviewed_by = db.session.get(Personnel, test.reviewed_by_id)
                 reviewed_by_name = reviewed_by.name if reviewed_by else ''
             
             writer.writerow([
@@ -3488,6 +3554,7 @@ class BulkComplianceForm(FlaskForm):
 
 @app.route('/import-compliance', methods=['GET', 'POST'])
 @login_required
+@manage_compliance_required
 def import_compliance():
     form = BulkComplianceForm()
     
@@ -3498,7 +3565,11 @@ def import_compliance():
             try:
                 # Read CSV
                 df = pd.read_csv(file)
-                
+
+                if len(df) > MAX_CSV_ROWS:
+                    flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). Split the file and import in batches.', 'error')
+                    return redirect(request.url)
+
                 # Expected columns
                 required_columns = ['eq_id', 'test_type', 'test_date']
                 optional_columns = ['test_id', 'report_date', 'submission_date', 'performed_by_id', 'reviewed_by_id', 'notes']
@@ -3519,7 +3590,7 @@ def import_compliance():
                         test_id = row.get('test_id')
                         is_update = False
                         if test_id and not pd.isna(test_id):
-                            test = ComplianceTest.query.get(int(test_id))
+                            test = db.session.get(ComplianceTest, int(test_id))
                             if not test:
                                 # Create new test
                                 test = ComplianceTest()
@@ -3531,11 +3602,11 @@ def import_compliance():
                         
                         # Set fields
                         eq_id = int(row['eq_id'])
-                        equipment = Equipment.query.get(eq_id)
+                        equipment = db.session.get(Equipment, eq_id)
                         if not equipment:
                             error_count += 1
                             available_ids = [str(eq.eq_id) for eq in Equipment.query.all()]
-                            print(f"Row {index + 1}: Equipment ID {eq_id} not found. Available equipment IDs: {', '.join(available_ids[:10])}")
+                            logger.warning("Row %d: Equipment ID %s not found. Available equipment IDs: %s", index + 1, eq_id, ', '.join(available_ids[:10]))
                             continue
                         
                         test.eq_id = eq_id
@@ -3567,13 +3638,13 @@ def import_compliance():
                             else:
                                 try:
                                     performed_by_id = int(performed_by_str)
-                                    personnel_record = Personnel.query.get(performed_by_id)
+                                    personnel_record = db.session.get(Personnel, performed_by_id)
                                     if personnel_record:
                                         test.performed_by_id = performed_by_id
                                     else:
-                                        print(f"Warning: Personnel ID {performed_by_id} not found for performed_by in row {index + 1}")
+                                        logger.warning("Row %d: Personnel ID %s not found for performed_by", index + 1, performed_by_id)
                                 except ValueError:
-                                    print(f"Warning: Invalid personnel ID '{performed_by_val}' for performed_by in row {index + 1}")
+                                    logger.warning("Row %d: Invalid personnel ID '%s' for performed_by", index + 1, performed_by_val)
                         
                         # Handle reviewed_by_id
                         reviewed_by_val = row.get('reviewed_by_id')
@@ -3584,13 +3655,13 @@ def import_compliance():
                             else:
                                 try:
                                     reviewed_by_id = int(reviewed_by_str)
-                                    personnel_record = Personnel.query.get(reviewed_by_id)
+                                    personnel_record = db.session.get(Personnel, reviewed_by_id)
                                     if personnel_record:
                                         test.reviewed_by_id = reviewed_by_id
                                     else:
-                                        print(f"Warning: Personnel ID {reviewed_by_id} not found for reviewed_by in row {index + 1}")
+                                        logger.warning("Row %d: Personnel ID %s not found for reviewed_by", index + 1, reviewed_by_id)
                                 except ValueError:
-                                    print(f"Warning: Invalid personnel ID '{reviewed_by_val}' for reviewed_by in row {index + 1}")
+                                    logger.warning("Row %d: Invalid personnel ID '%s' for reviewed_by", index + 1, reviewed_by_val)
                         
                         if 'notes' in row and not pd.isna(row['notes']):
                             notes_str = str(row['notes']).strip().upper()
@@ -3619,7 +3690,7 @@ def import_compliance():
                         
                     except Exception as e:
                         error_count += 1
-                        print(f"Error processing row {index + 1}: {str(e)}")
+                        logger.error("Error processing row %d: %s", index + 1, e)
                         continue
                 
                 # Commit all changes
@@ -3723,7 +3794,7 @@ def import_scheduled_tests():
                     schedule_id = row.get('schedule_id')
                     is_update = False
                     if schedule_id and not pd.isna(schedule_id):
-                        test = ScheduledTest.query.get(int(schedule_id))
+                        test = db.session.get(ScheduledTest, int(schedule_id))
                         if not test:
                             # Create new test
                             test = ScheduledTest()
@@ -3735,10 +3806,10 @@ def import_scheduled_tests():
 
                     # Set fields
                     eq_id = int(row['eq_id'])
-                    equipment = Equipment.query.get(eq_id)
+                    equipment = db.session.get(Equipment, eq_id)
                     if not equipment:
                         error_count += 1
-                        print(f"Row {index + 1}: Equipment ID {eq_id} not found")
+                        logger.warning("Row %d: Equipment ID %s not found", index + 1, eq_id)
                         continue
 
                     test.eq_id = eq_id
@@ -3768,7 +3839,7 @@ def import_scheduled_tests():
 
                 except Exception as e:
                     error_count += 1
-                    print(f"Error processing row {index + 1}: {str(e)}")
+                    logger.error("Schedule import error on row %d: %s", index + 1, e)
                     continue
 
             # Commit all changes
@@ -3856,7 +3927,7 @@ def import_facilities():
                         
                         facility = None
                         if facility_id and not pd.isna(facility_id):
-                            facility = Facility.query.get(int(facility_id))
+                            facility = db.session.get(Facility, int(facility_id))
                         
                         if not facility:
                             # Check by name to avoid duplicates
@@ -3886,7 +3957,7 @@ def import_facilities():
                         
                     except Exception as e:
                         error_count += 1
-                        print(f"Error processing facility row {index + 1}: {str(e)}")
+                        logger.error("Error processing facility row %d: %s", index + 1, e)
                         continue
                 
                 # Commit all changes
@@ -3961,7 +4032,7 @@ def admin_add_equipment_class():
 @login_required
 @admin_required
 def admin_edit_equipment_class(class_id):
-    eq_class = EquipmentClass.query.get_or_404(class_id)
+    eq_class = db.get_or_404(EquipmentClass, class_id)
     if request.method == 'POST':
         name = request.form['name'].strip()
         if name and name != eq_class.name:
@@ -3984,7 +4055,7 @@ def admin_edit_equipment_class(class_id):
 @login_required
 @admin_required
 def admin_delete_equipment_class(class_id):
-    eq_class = EquipmentClass.query.get_or_404(class_id)
+    eq_class = db.get_or_404(EquipmentClass, class_id)
     eq_class.is_active = False
     db.session.commit()
     flash('Equipment class deactivated', 'success')
@@ -3994,7 +4065,7 @@ def admin_delete_equipment_class(class_id):
 @login_required
 @admin_required
 def admin_activate_equipment_class(class_id):
-    eq_class = EquipmentClass.query.get_or_404(class_id)
+    eq_class = db.get_or_404(EquipmentClass, class_id)
     eq_class.is_active = True
     db.session.commit()
     flash('Equipment class activated', 'success')
@@ -4070,7 +4141,7 @@ def admin_add_equipment_subclass():
 @login_required
 @admin_required
 def admin_edit_equipment_subclass(subclass_id):
-    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    subclass = db.get_or_404(EquipmentSubclass, subclass_id)
     classes = EquipmentClass.query.filter_by(is_active=True).order_by(EquipmentClass.name).all()
     
     if request.method == 'POST':
@@ -4117,7 +4188,7 @@ def admin_edit_equipment_subclass(subclass_id):
 @login_required
 @admin_required
 def admin_delete_equipment_subclass(subclass_id):
-    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    subclass = db.get_or_404(EquipmentSubclass, subclass_id)
     subclass.is_active = False
     db.session.commit()
     flash('Subclass deactivated', 'success')
@@ -4127,7 +4198,7 @@ def admin_delete_equipment_subclass(subclass_id):
 @login_required
 @admin_required
 def admin_activate_equipment_subclass(subclass_id):
-    subclass = EquipmentSubclass.query.get_or_404(subclass_id)
+    subclass = db.get_or_404(EquipmentSubclass, subclass_id)
     subclass.is_active = True
     db.session.commit()
     flash('Subclass activated', 'success')
@@ -4168,7 +4239,7 @@ def admin_add_department():
 @login_required
 @admin_required
 def admin_edit_department(dept_id):
-    dept = Department.query.get_or_404(dept_id)
+    dept = db.get_or_404(Department, dept_id)
     if request.method == 'POST':
         name = request.form['name'].strip()
         if name and name != dept.name:
@@ -4190,7 +4261,7 @@ def admin_edit_department(dept_id):
 @login_required
 @admin_required
 def admin_delete_department(dept_id):
-    dept = Department.query.get_or_404(dept_id)
+    dept = db.get_or_404(Department, dept_id)
     dept.is_active = False
     db.session.commit()
     flash('Department deactivated', 'success')
@@ -4200,7 +4271,7 @@ def admin_delete_department(dept_id):
 @login_required
 @admin_required
 def admin_activate_department(dept_id):
-    dept = Department.query.get_or_404(dept_id)
+    dept = db.get_or_404(Department, dept_id)
     dept.is_active = True
     db.session.commit()
     flash('Department activated', 'success')
@@ -4243,7 +4314,7 @@ def admin_add_facility():
 @login_required
 @admin_required
 def admin_edit_facility(facility_id):
-    facility = Facility.query.get_or_404(facility_id)
+    facility = db.get_or_404(Facility, facility_id)
     if request.method == 'POST':
         name = request.form['name'].strip()
         address = request.form.get('address', '').strip()
@@ -4275,7 +4346,7 @@ def admin_edit_facility(facility_id):
 @login_required
 @admin_required
 def admin_delete_facility(facility_id):
-    facility = Facility.query.get_or_404(facility_id)
+    facility = db.get_or_404(Facility, facility_id)
     facility.is_active = False
     db.session.commit()
     flash('Facility deactivated', 'success')
@@ -4285,7 +4356,7 @@ def admin_delete_facility(facility_id):
 @login_required
 @admin_required
 def admin_activate_facility(facility_id):
-    facility = Facility.query.get_or_404(facility_id)
+    facility = db.get_or_404(Facility, facility_id)
     facility.is_active = True
     db.session.commit()
     flash('Facility activated', 'success')
@@ -4326,7 +4397,7 @@ def admin_add_manufacturer():
 @login_required
 @admin_required
 def admin_edit_manufacturer(mfr_id):
-    mfr = Manufacturer.query.get_or_404(mfr_id)
+    mfr = db.get_or_404(Manufacturer, mfr_id)
     if request.method == 'POST':
         name = request.form['name'].strip()
         if name and name != mfr.name:
@@ -4348,7 +4419,7 @@ def admin_edit_manufacturer(mfr_id):
 @login_required
 @admin_required
 def admin_delete_manufacturer(mfr_id):
-    mfr = Manufacturer.query.get_or_404(mfr_id)
+    mfr = db.get_or_404(Manufacturer, mfr_id)
     mfr.is_active = False
     db.session.commit()
     flash('Manufacturer deactivated', 'success')
@@ -4358,7 +4429,7 @@ def admin_delete_manufacturer(mfr_id):
 @login_required
 @admin_required
 def admin_activate_manufacturer(mfr_id):
-    mfr = Manufacturer.query.get_or_404(mfr_id)
+    mfr = db.get_or_404(Manufacturer, mfr_id)
     mfr.is_active = True
     db.session.commit()
     flash('Manufacturer activated', 'success')
@@ -4424,7 +4495,7 @@ def admin_add_capital_category():
 @login_required
 @admin_required
 def admin_edit_capital_category(category_id):
-    category = CapitalCategory.query.get_or_404(category_id)
+    category = db.get_or_404(CapitalCategory, category_id)
 
     if request.method == 'POST':
         name = request.form['name'].strip()
@@ -4469,7 +4540,7 @@ def admin_edit_capital_category(category_id):
 @login_required
 @admin_required
 def admin_delete_capital_category(category_id):
-    category = CapitalCategory.query.get_or_404(category_id)
+    category = db.get_or_404(CapitalCategory, category_id)
     category.is_active = False
     db.session.commit()
     flash('Capital category deactivated', 'success')
@@ -4479,7 +4550,7 @@ def admin_delete_capital_category(category_id):
 @login_required
 @admin_required
 def admin_activate_capital_category(category_id):
-    category = CapitalCategory.query.get_or_404(category_id)
+    category = db.get_or_404(CapitalCategory, category_id)
     category.is_active = True
     db.session.commit()
     flash('Capital category activated', 'success')
@@ -4521,8 +4592,8 @@ def check_capital_category_overlap(min_cost, max_cost, exclude_id=None):
 try:
     with app.app_context():
         db.create_all()
-except Exception as e:
-    print(f"Database initialization error: {e}")
+except sa_exc.SQLAlchemyError as e:
+    logger.error("Database initialization error: %s", e)
 
 if __name__ == '__main__':
     with app.app_context():
