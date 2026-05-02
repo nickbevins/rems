@@ -2530,10 +2530,7 @@ def export_equipment():
     equipment_list = query.all()
     
     # Create CSV content
-    from io import StringIO
-    import csv
-    
-    output = StringIO()
+    output = io.StringIO()
     writer = csv.writer(output)
     
     # Write header - using relational field names
@@ -3183,35 +3180,32 @@ def personnel_list():
 def new_personnel():
     form = PersonnelForm()
     if form.validate_on_submit():
-        personnel = Personnel(
-            name=form.name.data,
-            email=form.email.data,
-            phone=form.phone.data,
-            username=form.username.data if form.username.data else None,
-            is_admin=form.is_admin.data,
-            is_active=form.is_active.data,
-            login_required=form.login_required.data
-        )
-        personnel.set_roles_list(form.roles.data)
+        if form.username.data and not form.password.data:
+            form.password.errors.append('A password is required when creating a login account.')
+        else:
+            personnel = Personnel(
+                name=form.name.data,
+                email=form.email.data,
+                phone=form.phone.data,
+                username=form.username.data if form.username.data else None,
+                is_admin=form.is_admin.data,
+                is_active=form.is_active.data,
+                login_required=form.login_required.data
+            )
+            personnel.set_roles_list(form.roles.data)
 
-        # Set password - use provided password or generate a random temp password
-        if form.username.data:  # Only set password if username is provided
-            if form.password.data:
+            if form.username.data:
                 personnel.set_password(form.password.data)
-            else:
-                # No password supplied: set a random temp and force change on first login
-                personnel.set_password(secrets.token_urlsafe(16))
-                personnel.must_change_password = True
 
-        try:
-            db.session.add(personnel)
-            db.session.commit()
-            flash('Personnel added successfully!', 'success')
-            return redirect(url_for('personnel_list'))
-        except sa_exc.SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Error adding personnel: %s", e)
-            flash('Error adding personnel. Email or username may already exist.', 'error')
+            try:
+                db.session.add(personnel)
+                db.session.commit()
+                flash('Personnel added successfully!', 'success')
+                return redirect(url_for('personnel_list'))
+            except sa_exc.SQLAlchemyError as e:
+                db.session.rollback()
+                logger.error("Error adding personnel: %s", e)
+                flash('Error adding personnel. Email or username may already exist.', 'error')
 
     return render_template('personnel_form.html', form=form, title='Add Personnel')
 
@@ -3236,26 +3230,30 @@ def edit_personnel(id):
         form.login_required.data = personnel.login_required
 
     if form.validate_on_submit():
-        personnel.name = form.name.data
-        personnel.email = form.email.data
-        personnel.phone = form.phone.data
-        personnel.username = form.username.data if form.username.data else None
-        personnel.is_admin = form.is_admin.data
-        personnel.is_active = form.is_active.data
-        personnel.login_required = form.login_required.data
-        personnel.set_roles_list(form.roles.data)
+        enabling_login = form.username.data and not personnel.password_hash
+        if enabling_login and not form.password.data:
+            form.password.errors.append('A password is required when enabling login for this account.')
+        else:
+            personnel.name = form.name.data
+            personnel.email = form.email.data
+            personnel.phone = form.phone.data
+            personnel.username = form.username.data if form.username.data else None
+            personnel.is_admin = form.is_admin.data
+            personnel.is_active = form.is_active.data
+            personnel.login_required = form.login_required.data
+            personnel.set_roles_list(form.roles.data)
 
-        if form.password.data:
-            personnel.set_password(form.password.data)
+            if form.password.data:
+                personnel.set_password(form.password.data)
 
-        try:
-            db.session.commit()
-            flash('Personnel updated successfully!', 'success')
-            return redirect(url_for('personnel_detail', id=id))
-        except sa_exc.SQLAlchemyError as e:
-            db.session.rollback()
-            logger.error("Error updating personnel id=%s: %s", id, e)
-            flash('Error updating personnel.', 'error')
+            try:
+                db.session.commit()
+                flash('Personnel updated successfully!', 'success')
+                return redirect(url_for('personnel_detail', id=id))
+            except sa_exc.SQLAlchemyError as e:
+                db.session.rollback()
+                logger.error("Error updating personnel id=%s: %s", id, e)
+                flash('Error updating personnel.', 'error')
 
     return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel)
 
