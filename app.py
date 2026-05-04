@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from urllib.parse import urlparse, urljoin
 import secrets
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc as sa_exc
+from sqlalchemy import exc as sa_exc, or_
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, SelectField, BooleanField, TextAreaField, SelectMultipleField, FileField, PasswordField, SubmitField
@@ -2621,7 +2621,7 @@ def bulk_edit():
             try:
                 # Read CSV file
                 content = file.read().decode('utf-8')
-                csv_reader = csv.DictReader(StringIO(content))
+                csv_reader = csv.DictReader(io.StringIO(content))
                 
                 # Update data
                 updated_count = 0
