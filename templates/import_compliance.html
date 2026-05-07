@@ -50,28 +50,33 @@
                         </ul>
                     </div>
                     
-                    <div class="alert alert-success">
-                        <h6><i class="fas fa-users"></i> Personnel IDs:</h6>
-                        <p><strong>Use personnel IDs for accuracy:</strong></p>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h7><strong>For performed_by_id column:</strong></h7>
-                                <ul class="mb-0">
-                                    {% for person in performed_by_personnel %}
-                                    <li>{{ person.id }} - {{ person.name }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h7><strong>For reviewed_by_id column (Reviewing Physicist):</strong></h7>
-                                <ul class="mb-0">
-                                    {% for person in reviewed_by_personnel %}
-                                    <li>{{ person.id }} - {{ person.name }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
+                    <div class="card border-success mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-users"></i> Personnel IDs Reference</h6>
                         </div>
-                        <small class="text-muted">Note: Use the numeric ID values. Invalid IDs will be skipped with a warning. Use "CLEAR" to remove personnel assignments.</small>
+                        <div class="card-body">
+                            <p><strong>Use these personnel IDs for accuracy in your CSV file:</strong></p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><strong>For performed_by_id column:</strong></h6>
+                                    <ul class="mb-0">
+                                        {% for person in performed_by_personnel %}
+                                        <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><strong>For reviewed_by_id column (Reviewing Physicist):</strong></h6>
+                                    <ul class="mb-0">
+                                        {% for person in reviewed_by_personnel %}
+                                        <li><strong>{{ person.id }}</strong> - {{ person.name }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <hr>
+                            <small class="text-muted"><strong>Note:</strong> Use the numeric ID values shown in bold. Invalid IDs will be skipped with a warning. Use "CLEAR" to remove personnel assignments.</small>
+                        </div>
                     </div>
                     
                     <button type="submit" class="btn btn-primary">

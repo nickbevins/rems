@@ -3441,38 +3441,89 @@ def import_personnel():
 def export_compliance():
     # Check if this is a request for sample template
     sample = request.args.get('sample', 'false').lower() == 'true'
-    
+
     # Create CSV data
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     if sample:
         # For sample template, use simplified headers matching import requirements
         headers = ['eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by_id', 'reviewed_by_id', 'notes']
         writer.writerow(headers)
-        
+
         # Create response for template
         response = make_response(output.getvalue())
         filename = 'compliance_tests_template.csv'
     else:
+        # Get filter parameters from query string
+        eq_class = request.args.get('eq_class', '').strip()
+        eq_subclass = request.args.get('eq_subclass', '').strip()
+        eq_fac = request.args.get('eq_fac', '').strip()
+        search = request.args.get('search', '').strip()
+
         # For full export, use complete headers with audit fields
         headers = ['test_id', 'eq_id', 'test_type', 'test_date', 'report_date', 'submission_date', 'performed_by', 'reviewed_by', 'notes', 'created_by', 'created_at', 'modified_by', 'updated_at']
         writer.writerow(headers)
-        
-        # Write data for all compliance tests
-        compliance_tests = ComplianceTest.query.all()
+
+        # Build query for compliance tests with optional equipment filters
+        from sqlalchemy import or_
+        query = ComplianceTest.query.join(Equipment)
+
+        # Apply equipment filters if any are specified
+        if eq_class or eq_subclass or eq_fac or search:
+            # Apply class filter
+            if eq_class:
+                query = query.join(EquipmentClass, Equipment.class_id == EquipmentClass.id).filter(
+                    EquipmentClass.name.ilike(f'%{eq_class}%')
+                )
+
+            # Apply subclass filter
+            if eq_subclass:
+                query = query.join(EquipmentSubclass, Equipment.subclass_id == EquipmentSubclass.id).filter(
+                    EquipmentSubclass.name.ilike(f'%{eq_subclass}%')
+                )
+
+            # Apply facility filter
+            if eq_fac:
+                query = query.join(Facility, Equipment.facility_id == Facility.id).filter(
+                    Facility.name.ilike(f'%{eq_fac}%')
+                )
+
+            # Apply search filter
+            if search:
+                search_term = f'%{search}%'
+                query = query.outerjoin(EquipmentClass, Equipment.class_id == EquipmentClass.id)
+                query = query.outerjoin(Manufacturer, Equipment.manufacturer_id == Manufacturer.id)
+                query = query.outerjoin(Department, Equipment.department_id == Department.id)
+                query = query.outerjoin(Facility, Equipment.facility_id == Facility.id)
+                query = query.filter(
+                    or_(
+                        Equipment.eq_mod.ilike(search_term),
+                        Equipment.eq_rm.ilike(search_term),
+                        Equipment.eq_assetid.ilike(search_term),
+                        Equipment.eq_sn.ilike(search_term),
+                        EquipmentClass.name.ilike(search_term),
+                        Manufacturer.name.ilike(search_term),
+                        Department.name.ilike(search_term),
+                        Facility.name.ilike(search_term)
+                    )
+                )
+
+        # Order by test date descending
+        compliance_tests = query.order_by(ComplianceTest.test_date.desc()).all()
+
         for test in compliance_tests:
             # Get personnel names from IDs
             performed_by_name = ''
             if test.performed_by_id:
                 performed_by = db.session.get(Personnel, test.performed_by_id)
                 performed_by_name = performed_by.name if performed_by else ''
-                
+
             reviewed_by_name = ''
             if test.reviewed_by_id:
                 reviewed_by = db.session.get(Personnel, test.reviewed_by_id)
                 reviewed_by_name = reviewed_by.name if reviewed_by else ''
-            
+
             writer.writerow([
                 test.test_id,
                 test.eq_id,
@@ -3488,15 +3539,21 @@ def export_compliance():
                 test.modified_by if test.modified_by else '',
                 test.updated_at.strftime('%Y-%m-%d %H:%M:%S') if test.updated_at else ''
             ])
-        
+
         # Create response for full export
         response = make_response(output.getvalue())
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'compliance_tests_with_audit_{timestamp}.csv'
-    
+
+        # Include filter info in filename if filters are applied
+        filter_suffix = ''
+        if eq_class or eq_subclass or eq_fac or search:
+            filter_suffix = '_filtered'
+
+        filename = f'compliance_tests{filter_suffix}_{timestamp}.csv'
+
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     response.headers['Content-Type'] = 'text/csv'
-    
+
     return response
 
 class BulkComplianceForm(FlaskForm):
