@@ -52,6 +52,10 @@ apt-cache depends --recurse --no-recommends --no-suggests --no-conflicts \
 pip download -r requirements.txt -d ./python-packages
 ```
 
+> Run `pip download` on a machine matching the target's OS and Python version so the correct
+> platform wheels are fetched. `XlsxWriter` (used by the admin Excel export) is pure Python with no
+> transitive dependencies, so its wheel is platform-independent.
+
 Transfer all `.deb` files and the `python-packages` directory to the air-gapped system via approved transfer method (USB, internal file share, etc.), then install:
 ```bash
 # Install system packages offline
@@ -350,6 +354,48 @@ chmod +x /opt/backups/verify-backup.sh
 ```
 
 **Explanation:** The backup system creates daily, weekly, and monthly backups with different retention periods. SQLite's `.backup` command produces a consistent snapshot without needing to stop the application. Verification ensures backup integrity.
+
+### On-Demand Backup from the Web UI
+
+Admins can also download a backup directly from **Admin Dashboard → Database Export → Download
+Backup (.sqlite3)**. This runs SQLite's `VACUUM INTO`, producing the same kind of transactionally
+consistent single-file snapshot as the cron script above, with the WAL folded in and the file
+defragmented. It complements the scheduled backups — it does not replace them, since it depends on
+someone remembering to click it.
+
+The same panel offers an `.xlsx` workbook export for analysis in Excel. That file is **not** a
+backup: it excludes password hashes and cannot be restored from.
+
+> The `.sqlite3` download contains every user account and password hash in the system. Treat it with
+> the same care as the backup archives in `/opt/backups`.
+
+### Restoring from a Backup
+
+```bash
+# 1. Stop the application so nothing is writing to the database
+sudo systemctl stop rems
+
+# 2. Preserve the current database in case the restore needs to be undone
+sudo mv /opt/rems/instance/physdb.db /opt/rems/instance/physdb.db.pre-restore
+
+# 3. Remove any stale write-ahead log sidecars
+sudo rm -f /opt/rems/instance/physdb.db-wal /opt/rems/instance/physdb.db-shm
+
+# 4. Put the backup in place and verify it before starting up
+sudo cp /opt/backups/rems/daily/<TIMESTAMP>/physdb.db /opt/rems/instance/physdb.db
+sudo sqlite3 /opt/rems/instance/physdb.db "PRAGMA integrity_check;"   # expect: ok
+
+# 5. Restore ownership, then start
+sudo chown www-data:www-data /opt/rems/instance/physdb.db
+sudo chmod 640 /opt/rems/instance/physdb.db
+sudo systemctl start rems
+sudo systemctl status rems
+```
+
+> **Step 3 is not optional.** A `-wal` file left over from the old database, paired with a restored
+> `physdb.db`, is a corruption path: SQLite will try to replay a write-ahead log that does not belong
+> to the database file it now sits next to. Always delete the `-wal` and `-shm` sidecars before
+> copying a backup into place.
 
 ## Step 6: Production Security Hardening
 

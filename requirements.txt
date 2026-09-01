@@ -7,7 +7,9 @@ Werkzeug==3.1.3
 SQLAlchemy==2.0.41
 python-dotenv==1.1.1
 pandas==2.3.1
+XlsxWriter>=3.2.0  # admin Excel workbook export (pure Python, no transitive deps)
 email-validator==2.2.0
 python-dateutil==2.9.0.post0
 gunicorn>=23.0.0  # Linux/production only; not installable on Windows
 pytest>=8.0.0  # dev: run tests with: pytest tests/
+openpyxl>=3.1.0  # dev: reads back the .xlsx export in tests (not used at runtime)

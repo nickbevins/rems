@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, make_response, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, make_response, send_file, session
 from urllib.parse import urlparse, urljoin
 import secrets
 from flask_sqlalchemy import SQLAlchemy
@@ -7,12 +7,16 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, SelectField, BooleanField, TextAreaField, SelectMultipleField, FileField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo, NumberRange
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import os
 import pandas as pd
 from dotenv import load_dotenv
 import io
 import csv
+import shutil
+import sqlite3
+import tempfile
+import xlsxwriter
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import logging
@@ -131,6 +135,14 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 MAX_CSV_ROWS = 500  # Maximum rows allowed per CSV import
+
+# Columns omitted from the Excel workbook export. The .sqlite3 backup keeps
+# everything -- a backup you cannot restore logins from is not a backup.
+EXPORT_EXCLUDED_COLUMNS = {
+    'personnel': {'password_hash'},
+}
+EXCEL_MAX_DATA_ROWS = 1_048_575  # Excel's 1,048,576 sheet rows, minus the header
+INVALID_SHEET_NAME_CHARS = '[]:*?/\\'  # characters Excel forbids in a worksheet name
 
 db = SQLAlchemy(app)
 
@@ -4008,7 +4020,216 @@ def admin_dashboard():
                          departments_count=departments_count,
                          facilities_count=facilities_count,
                          manufacturers_count=manufacturers_count,
-                         capital_categories_count=capital_categories_count)
+                         capital_categories_count=capital_categories_count,
+                         backup_available=_is_sqlite_backend())
+
+
+def _is_sqlite_backend():
+    """True when the configured database is a SQLite file we can snapshot."""
+    return db.engine.url.get_backend_name() == 'sqlite'
+
+
+def _safe_sheet_name(name):
+    """Coerce a table name into something Excel will accept as a worksheet name."""
+    cleaned = ''.join(ch for ch in name if ch not in INVALID_SHEET_NAME_CHARS)
+    return (cleaned or 'sheet')[:31]
+
+
+def _export_columns(table):
+    """Columns of `table` to include in the workbook, with secrets removed."""
+    excluded = EXPORT_EXCLUDED_COLUMNS.get(table.name, set())
+    return [c for c in table.columns if c.name not in excluded]
+
+
+@app.route('/admin/database/backup')
+@login_required
+@admin_required
+def admin_backup_database():
+    """Download a consistent, self-contained snapshot of the SQLite database.
+
+    Uses VACUUM INTO rather than copying the file: a plain copy of a database
+    in WAL mode can produce a torn read, and drops any committed transaction
+    that has not yet been checkpointed into the main file. VACUUM INTO folds
+    the WAL in and emits a defragmented single file with no -wal/-shm sidecars.
+    """
+    if not _is_sqlite_backend():
+        flash('Database backup is only available for SQLite databases. '
+              'Use your database server\'s own backup tooling instead.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'rems_backup_{timestamp}.sqlite3'
+    temp_dir = tempfile.mkdtemp(prefix='rems_backup_')
+    # VACUUM INTO refuses to overwrite, so the target must not exist yet.
+    target_path = os.path.join(temp_dir, filename)
+
+    try:
+        if sqlite3.sqlite_version_info >= (3, 27, 0):
+            # VACUUM cannot run inside a transaction, so bypass the session.
+            with db.engine.connect().execution_options(isolation_level='AUTOCOMMIT') as conn:
+                conn.exec_driver_sql('VACUUM INTO ?', (target_path,))
+        else:
+            # Pre-3.27 fallback: the online backup API, which is also WAL-safe.
+            raw = db.engine.raw_connection()
+            try:
+                dest = sqlite3.connect(target_path)
+                try:
+                    raw.driver_connection.backup(dest)
+                finally:
+                    dest.close()
+            finally:
+                raw.close()
+
+        with open(target_path, 'rb') as fh:
+            payload = fh.read()
+    except (sa_exc.SQLAlchemyError, sqlite3.Error, OSError) as e:
+        logger.error("Database backup failed for user %s: %s", current_user.username, e)
+        flash(f'Error creating database backup: {str(e)}', 'error')
+        return redirect(url_for('admin_dashboard'))
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    # This file contains every password hash in the system - worth an audit line.
+    logger.info("Database backup downloaded by %s (%d bytes)", current_user.username, len(payload))
+
+    return send_file(
+        io.BytesIO(payload),
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.sqlite3',
+    )
+
+
+@app.route('/admin/database/workbook')
+@login_required
+@admin_required
+def admin_export_workbook():
+    """Download the whole database as an .xlsx workbook, one sheet per table.
+
+    Driven off SQLAlchemy metadata so new columns appear automatically. Written
+    with xlsxwriter rather than pandas because pandas coerces integer columns
+    containing NULLs to float (foreign keys would render as '3.0') and cannot
+    emit named Excel Tables, which are what make the sheets usable from
+    Power Query.
+    """
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'rems_export_{timestamp}.xlsx'
+
+    buffer = io.BytesIO()
+    workbook = xlsxwriter.Workbook(buffer, {'in_memory': True})
+    try:
+        header_fmt = workbook.add_format({'bold': True})
+        datetime_fmt = workbook.add_format({'num_format': 'yyyy-mm-dd hh:mm'})
+        date_fmt = workbook.add_format({'num_format': 'yyyy-mm-dd'})
+
+        readme = workbook.add_worksheet('_README')
+        summary = []
+
+        for table in db.metadata.sorted_tables:  # FK-dependency order: lookups first
+            columns = _export_columns(table)
+            if not columns:
+                continue
+
+            result = db.session.execute(table.select().with_only_columns(*columns))
+            rows = result.all()
+            truncated = len(rows) > EXCEL_MAX_DATA_ROWS
+            if truncated:
+                logger.warning("Table %s truncated to %d rows in workbook export",
+                               table.name, EXCEL_MAX_DATA_ROWS)
+                rows = rows[:EXCEL_MAX_DATA_ROWS]
+
+            sheet_name = _safe_sheet_name(table.name)
+            worksheet = workbook.add_worksheet(sheet_name)
+            widths = [len(c.name) for c in columns]
+
+            for row_idx, row in enumerate(rows, start=1):
+                for col_idx, value in enumerate(row):
+                    if value is None:
+                        worksheet.write_blank(row_idx, col_idx, None)
+                        continue
+                    if isinstance(value, datetime):
+                        worksheet.write_datetime(row_idx, col_idx, value, datetime_fmt)
+                        widths[col_idx] = max(widths[col_idx], 16)
+                        continue
+                    if isinstance(value, date):
+                        worksheet.write_datetime(row_idx, col_idx, value, date_fmt)
+                        widths[col_idx] = max(widths[col_idx], 10)
+                        continue
+                    worksheet.write(row_idx, col_idx, value)
+                    widths[col_idx] = max(widths[col_idx], len(str(value)))
+
+            # add_table writes the header row itself. Its range must always
+            # include one row beyond the header, even when the table is empty.
+            worksheet.add_table(0, 0, max(len(rows), 1), len(columns) - 1, {
+                'name': f'tbl_{sheet_name}',
+                'columns': [{'header': c.name} for c in columns],
+            })
+            worksheet.freeze_panes(1, 0)
+            for col_idx, width in enumerate(widths):
+                worksheet.set_column(col_idx, col_idx, min(max(width + 2, 8), 50))
+
+            summary.append((table.name, len(rows), truncated))
+
+        _write_workbook_readme(readme, header_fmt, summary)
+        workbook.close()
+    except Exception:
+        # Close on the way out so xlsxwriter does not leak its temp files.
+        try:
+            workbook.close()
+        except Exception:
+            pass
+        raise
+
+    logger.info("Excel workbook exported by %s (%d tables)", current_user.username, len(summary))
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
+
+def _write_workbook_readme(worksheet, header_fmt, summary):
+    """Fill the leading _README sheet of the workbook export."""
+    worksheet.set_column(0, 0, 26)
+    worksheet.set_column(1, 1, 60)
+
+    excluded = ', '.join(
+        f'{table}.{column}'
+        for table, columns in EXPORT_EXCLUDED_COLUMNS.items()
+        for column in sorted(columns)
+    )
+    lines = [
+        ('REMS database export', None),
+        ('Exported at', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+        ('Exported by', current_user.username or current_user.name),
+        ('Source database', db.engine.url.get_backend_name()),
+        (None, None),
+        ('Snapshot', 'This is a point-in-time copy, not a live connection. '
+                     'Re-download to refresh the data.'),
+        ('Omitted for security', excluded),
+        (None, None),
+        ('Querying in Excel', 'Data > Get Data > From File > From Workbook, pick this file,'),
+        (None, 'select the sheets you need, then Merge Queries on the ID columns'),
+        (None, '(e.g. equipment.class_id -> equipment_classes.id).'),
+        (None, None),
+        ('Table', 'Rows'),
+    ]
+    row_idx = 0
+    for label, value in lines:
+        if label is not None:
+            worksheet.write(row_idx, 0, label, header_fmt)
+        if value is not None:
+            worksheet.write(row_idx, 1, value)
+        row_idx += 1
+
+    for name, count, truncated in summary:
+        worksheet.write(row_idx, 0, name)
+        worksheet.write(row_idx, 1, f'{count} (TRUNCATED)' if truncated else count)
+        row_idx += 1
+
 
 @app.route('/admin/equipment-classes')
 @login_required

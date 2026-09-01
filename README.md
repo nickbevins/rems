@@ -156,11 +156,35 @@ Access the application at `http://localhost:5000`
 
 ## Maintenance
 
-### Database Backup
+### Database Export and Backup
+
+Admins can download the whole database from **Admin Dashboard → Database Export**, in two formats:
+
+| Format | Use it for | Notes |
+|---|---|---|
+| `.sqlite3` backup | Restoring the application | Complete and restorable. Contains user accounts and password hashes — store it securely. |
+| `.xlsx` workbook | Analysis in Excel | One worksheet per table, each formatted as a named Excel Table. Opens natively — no drivers, add-ins, or ODBC setup. Password hashes are excluded. |
+
+The workbook is a point-in-time snapshot, not a live connection; download it again to refresh. To
+query across tables in Excel, use **Data → Get Data → From File → From Workbook**, select the sheets
+you need, then Merge Queries on the ID columns (e.g. `equipment.class_id` → `equipment_classes.id`).
+
+The backup button uses SQLite's `VACUUM INTO`, which produces a transactionally consistent,
+defragmented single file. Prefer it over copying `physdb.db` directly: a plain copy of a database in
+WAL mode can capture a torn read and silently omit committed transactions that have not yet been
+checkpointed. It is only available on SQLite; on another backend the button is disabled and you
+should use that server's own backup tooling.
+
+Scripted alternative for automated/offsite backups:
+
 ```bash
-# Copy the SQLite database file
-cp instance/physdb.db physdb_backup_$(date +%Y%m%d).db
+# Consistent snapshot from the CLI (do NOT use plain cp on a running app)
+sqlite3 instance/physdb.db ".backup physdb_backup_$(date +%Y%m%d).db"
 ```
+
+**Restoring:** stop the service first, and delete any existing `physdb.db-wal` and `physdb.db-shm`
+alongside the target — a stale WAL paired with a restored database file is a corruption path. See
+`PRODUCTION_DEPLOYMENT_GUIDE.md` for the full procedure.
 
 ### Log Files
 - Application logs stored in `physdb.log`

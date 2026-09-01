@@ -8,12 +8,18 @@ Coverage areas:
   - Role enforcement: viewer vs physicist on manage_equipment_required routes
   - CSV row limit rejection (>500 rows)
   - get_estimated_eol_date date arithmetic
+  - Admin database export (.sqlite3 backup and .xlsx workbook)
 """
 import io
+import os
+import sqlite3
+import tempfile
+import openpyxl
 import pytest
 from datetime import date
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from app import db, Equipment, EquipmentClass
 from conftest import make_user, login
 
 
@@ -293,3 +299,125 @@ class TestEstimatedEolDate:
             eq = self._make_equipment_stub(mandt=date(2015, 1, 1), lifetime=0)
             result = eq.get_estimated_eol_date()
             assert result == date(2015, 1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Admin database export
+# ---------------------------------------------------------------------------
+
+class TestDatabaseExport:
+    """The /admin/database/* endpoints: access control, file validity, secrets."""
+
+    BACKUP_URL = '/admin/database/backup'
+    WORKBOOK_URL = '/admin/database/workbook'
+
+    @pytest.mark.parametrize('url', [BACKUP_URL, WORKBOOK_URL])
+    def test_anonymous_is_redirected_to_login(self, app, client, url):
+        resp = client.get(url)
+        assert resp.status_code == 302
+        assert '/login' in resp.location
+
+    @pytest.mark.parametrize('url', [BACKUP_URL, WORKBOOK_URL])
+    def test_non_admin_is_rejected(self, app, client, url):
+        with app.app_context():
+            make_user(username='viewer', password='pw', is_admin=False)
+        login(client, 'viewer', 'pw')
+        resp = client.get(url, follow_redirects=True)
+        assert b'Admin access required.' in resp.data
+
+    def test_backup_returns_a_valid_sqlite_file(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+        login(client, 'admin', 'pw')
+
+        resp = client.get(self.BACKUP_URL)
+        assert resp.status_code == 200
+        assert 'attachment' in resp.headers['Content-Disposition']
+        assert '.sqlite3' in resp.headers['Content-Disposition']
+        assert resp.data.startswith(b'SQLite format 3\x00')
+
+        # The snapshot must actually open and contain the schema.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'restored.sqlite3')
+            with open(path, 'wb') as fh:
+                fh.write(resp.data)
+            conn = sqlite3.connect(path)
+            try:
+                names = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+            finally:
+                conn.close()
+        assert {'equipment', 'personnel', 'compliance_tests'} <= names
+
+    def test_backup_retains_password_hashes(self, app, client):
+        """A backup you cannot restore logins from is not a backup."""
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+        login(client, 'admin', 'pw')
+
+        resp = client.get(self.BACKUP_URL)
+        assert b'password_hash' in resp.data
+
+    def test_workbook_has_one_sheet_per_table(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+        login(client, 'admin', 'pw')
+
+        resp = client.get(self.WORKBOOK_URL)
+        assert resp.status_code == 200
+        assert resp.headers['Content-Type'] == (
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        assert '.xlsx' in resp.headers['Content-Disposition']
+        assert resp.data.startswith(b'PK')  # xlsx is a zip container
+
+        workbook = openpyxl.load_workbook(io.BytesIO(resp.data), read_only=True)
+        try:
+            sheets = workbook.sheetnames
+        finally:
+            workbook.close()
+        assert sheets[0] == '_README'
+        assert {'equipment', 'personnel', 'equipment_classes'} <= set(sheets)
+
+    def test_workbook_omits_password_hash(self, app, client):
+        """The one regression that actually matters."""
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+        login(client, 'admin', 'pw')
+
+        resp = client.get(self.WORKBOOK_URL)
+        workbook = openpyxl.load_workbook(io.BytesIO(resp.data), read_only=True)
+        try:
+            headers = [c.value for c in next(workbook['personnel'].iter_rows(max_row=1))]
+        finally:
+            workbook.close()
+        assert 'username' in headers
+        assert 'password_hash' not in headers
+
+    def test_workbook_keeps_foreign_keys_as_integers(self, app, client):
+        """pandas would coerce a nullable int column to float ('3.0'); we must not."""
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            cls = EquipmentClass(name='CT')
+            db.session.add(cls)
+            db.session.commit()
+            db.session.add(Equipment(class_id=cls.id, eq_mod='Optima'))
+            db.session.commit()
+        login(client, 'admin', 'pw')
+
+        resp = client.get(self.WORKBOOK_URL)
+        workbook = openpyxl.load_workbook(io.BytesIO(resp.data), read_only=True)
+        try:
+            rows = list(workbook['equipment'].iter_rows(max_row=2, values_only=True))
+        finally:
+            workbook.close()
+        class_id = rows[1][rows[0].index('class_id')]
+        assert isinstance(class_id, int) and not isinstance(class_id, bool)
+
+    def test_backup_unavailable_on_non_sqlite_backend(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+        login(client, 'admin', 'pw')
+
+        with patch('app._is_sqlite_backend', return_value=False):
+            resp = client.get(self.BACKUP_URL, follow_redirects=True)
+        assert b'only available for SQLite' in resp.data

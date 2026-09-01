@@ -187,6 +187,48 @@
                 </div>
             </div>
         </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-database"></i> Database Export</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Download the entire database. Two formats, for two different jobs:</p>
+                        <ul>
+                            <li><strong>Backup (.sqlite3)</strong> &mdash; a complete, restorable copy of the
+                                database. Includes user accounts and password hashes, so store it somewhere
+                                secure. See the deployment guide for restore instructions.</li>
+                            <li><strong>Excel workbook (.xlsx)</strong> &mdash; one worksheet per table, opens
+                                directly in Excel with no add-ins or drivers. Password hashes are excluded.
+                                This is a point-in-time snapshot, not a live connection &mdash; download again
+                                to refresh.</li>
+                        </ul>
+                        {% if backup_available %}
+                        <a href="{{ url_for('admin_backup_database') }}" class="btn btn-danger me-2">
+                            <i class="fas fa-download"></i> Download Backup (.sqlite3)
+                        </a>
+                        {% else %}
+                        <button type="button" class="btn btn-danger me-2" disabled
+                                title="Only available when the app is backed by SQLite">
+                            <i class="fas fa-download"></i> Download Backup (.sqlite3)
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('admin_export_workbook') }}" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Download Excel Workbook (.xlsx)
+                        </a>
+                        {% if not backup_available %}
+                        <p class="text-muted mt-3 mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            This app is running against a non-SQLite database, so the file-level backup is
+                            unavailable. Use your database server's own backup tooling instead.
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
