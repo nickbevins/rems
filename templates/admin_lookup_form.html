@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% set action = 'Edit' if item else 'Add' %}
+{# Re-show what was submitted after an error; otherwise the saved values #}
+{% macro current(attr) %}{% set v = values[attr] if attr in values else (item[attr] if item else none) %}{{ '' if v is none else v }}{% endmacro %}
+
+{% block title %}{{ action }} {{ table.singular }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-{{ 'edit' if item else 'plus' }}"></i> {{ action }} {{ table.singular }}</h1>
+            <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to {{ table.plural }}
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">{{ table.singular }} Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ current('name') }}"
+                               required maxlength="{{ table.name_maxlength }}">
+                        {% if table.name_help %}<div class="form-text">{{ table.name_help }}</div>{% endif %}
+                    </div>
+
+                    {% for field in table.fields %}
+                    <div class="mb-3">
+                        <label for="{{ field.attr }}" class="form-label">{{ field.label }}{{ ' *' if field.required }}</label>
+                        {% if field.kind == 'select' %}
+                            <select class="form-select" id="{{ field.attr }}" name="{{ field.attr }}" {{ 'required' if field.required }}>
+                                <option value="">Select {{ field.label }}</option>
+                                {% for value, label in field.options() %}
+                                    <option value="{{ value }}" {{ 'selected' if current(field.attr) == value|string }}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        {% elif field.kind == 'textarea' %}
+                            <textarea class="form-control" id="{{ field.attr }}" name="{{ field.attr }}" rows="3"
+                                      {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}>{{ current(field.attr) }}</textarea>
+                        {% else %}
+                            <input type="{{ 'number' if field.kind == 'int' else 'text' }}" class="form-control"
+                                   id="{{ field.attr }}" name="{{ field.attr }}" value="{{ current(field.attr) }}"
+                                   {% if field.kind == 'int' %}min="0"{% endif %}
+                                   {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+                                   {{ 'required' if field.required }}>
+                        {% endif %}
+                        {% if field.help %}<div class="form-text">{{ field.help }}</div>{% endif %}
+                    </div>
+                    {% endfor %}
+
+                    {% if table.note %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> {{ table.note }}
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {{ 'Update' if item else 'Add' }} {{ table.singular }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

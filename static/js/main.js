@@ -1,5 +1,17 @@
 // Main JavaScript file for Physics Database
 
+// Escape a value for insertion into HTML built from strings (template literals,
+// innerHTML, d3 .html()). null/undefined become ''. Use it for every data value.
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips

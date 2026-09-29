@@ -72,6 +72,7 @@
                         {% endif %}
                     </div>
 
+                    {% if current_user.is_admin %}
                     <div class="mb-3">
                         <div class="form-check">
                             {{ form.login_required(class="form-check-input") }}
@@ -113,7 +114,7 @@
                                 {% if personnel %}
                                     <small class="form-text text-muted">Leave blank to keep current password</small>
                                 {% else %}
-                                    <small class="form-text text-muted">Leave blank to use default password "radiology"</small>
+                                    <small class="form-text text-muted">Required when a username is set</small>
                                 {% endif %}
                             </div>
                         </div>
@@ -136,6 +137,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('personnel_list') }}" class="btn btn-secondary">
@@ -154,6 +156,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const loginRequiredCheckbox = document.getElementById('login_required');
+    if (!loginRequiredCheckbox) return;  // login fields are only rendered for admins
     const loginAccessHeader = document.getElementById('loginAccessHeader');
     const loginAccessSection = document.getElementById('loginAccessSection');
     

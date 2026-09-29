@@ -18,6 +18,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
                         <label for="csv_file" class="form-label">CSV File</label>
                         <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
@@ -33,7 +34,7 @@
                         <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> name</li>
-                            <li><strong>Optional columns:</strong> id, address, is_active</li>
+                            <li><strong>Optional columns:</strong> id, facility_full, address, is_active</li>
                             <li><strong>Boolean values:</strong> TRUE/FALSE for is_active (defaults to TRUE)</li>
                             <li><strong>Duplicate handling:</strong> Existing facilities will be updated</li>
                         </ul>

@@ -344,34 +344,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const facilitySelect = document.getElementById('facility_id');
-    const addressTextarea = document.getElementById('eq_address');
-
-    if (facilitySelect && addressTextarea) {
-        facilitySelect.addEventListener('change', function() {
-            const facilityId = this.value;
-            if (facilityId) {
-                fetch(`/api/facility/${facilityId}/address`)
-                    .then(response => {
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.address !== undefined) {
-                            addressTextarea.value = data.address || '';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching facility address:', error);
-                        addressTextarea.placeholder = 'Error loading facility address';
-                    });
-            } else {
-                addressTextarea.value = '';
-                addressTextarea.placeholder = 'Address will be automatically populated when facility is selected';
-            }
-        });
-    }
-
     // Cascading filter: Update subclasses when class changes
     const classSelect = document.getElementById('class_id');
     const subclassSelect = document.getElementById('subclass_id');
@@ -434,11 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Location & Department
                     if (eq.department_id) document.getElementById('department_id').value = eq.department_id;
-                    if (eq.facility_id) {
-                        document.getElementById('facility_id').value = eq.facility_id;
-                        // Trigger change event to update address
-                        document.getElementById('facility_id').dispatchEvent(new Event('change'));
-                    }
+                    if (eq.facility_id) document.getElementById('facility_id').value = eq.facility_id;
 
                     // Personnel Contacts
                     if (eq.contact_id) document.getElementById('contact_id').value = eq.contact_id;
@@ -464,8 +432,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('eq_radcap').value = eq.eq_radcap;
                     }
                     if (eq.eq_captype) document.getElementById('eq_captype').value = eq.eq_captype;
-                    if (eq.eq_capcat) document.getElementById('eq_capcat').value = eq.eq_capcat;
-                    if (eq.eq_capecst) document.getElementById('eq_capecst').value = eq.eq_capecst;
 
                     alert('Template data loaded successfully! Please review and update as needed.');
                 })

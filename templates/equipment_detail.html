@@ -78,6 +78,12 @@
                                         <th>Facility:</th>
                                         <td>{{ equipment.facility.name if equipment.facility else 'N/A' }}</td>
                                     </tr>
+                                    {% if equipment.facility and equipment.facility.facility_full %}
+                                    <tr>
+                                        <th>Full Facility:</th>
+                                        <td>{{ equipment.facility.facility_full }}</td>
+                                    </tr>
+                                    {% endif %}
                                     <tr>
                                         <th>Department:</th>
                                         <td>{{ equipment.department.name if equipment.department else 'N/A' }}</td>
@@ -205,7 +211,6 @@
                             <div class="alert alert-warning">
                                 <h6><i class="fas fa-clock"></i> Next Test Due</h6>
                                 <p class="mb-0">
-                                    <strong>{{ next_test.get_test_type_display() }}</strong><br>
                                     Due: {{ next_test.next_due_date.strftime('%Y-%m-%d') }}
                                 </p>
                             </div>
@@ -372,7 +377,7 @@
                                     data-submission-date="{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else '' }}"
                                     data-modified-by="{{ test.modified_by if test.modified_by else '' }}"
                                     data-notes="{{ test.notes if test.notes else '' }}">
-                                    <td>{{ test.get_test_type_display() }}</td>
+                                    <td>{{ test.test_type }}</td>
                                     <td>{{ test.test_date.strftime('%Y-%m-%d') }}</td>
                                     <td>{{ test.report_date.strftime('%Y-%m-%d') if test.report_date else 'N/A' }}</td>
                                     <td>{{ test.submission_date.strftime('%Y-%m-%d') if test.submission_date else 'N/A' }}</td>
@@ -394,7 +399,10 @@
                                             </a>
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteComplianceTest({{ test.test_id }}, '{{ test.get_test_type_display() }}', '{{ test.test_date.strftime('%Y-%m-%d') }}')"
+                                                    data-test-id="{{ test.test_id }}"
+                                                    data-test-type="{{ test.test_type }}"
+                                                    data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}"
+                                                    onclick="deleteComplianceTest(this.dataset.testId, this.dataset.testType, this.dataset.testDate)"
                                                     title="Delete Test">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -808,85 +816,85 @@ function generateEquipmentDetailsForm(eq, choices) {
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Equipment ID</label>
-                        <input type="text" class="form-control" value="${eq.eq_id}" disabled style="color: #495057;">
+                        <input type="text" class="form-control" value="${escapeHtml(eq.eq_id)}" disabled style="color: #495057;">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Equipment Class *</label>
                         <select class="form-control" name="class_id" id="edit-class-id" required>
                             <option value="">Select Class</option>
-                            ${choices.classes.map(c => `<option value="${c.id}" ${eq.class_id == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                            ${choices.classes.map(c => `<option value="${escapeHtml(c.id)}" ${eq.class_id == c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Subclass</label>
                         <select class="form-control" name="subclass_id" id="edit-subclass-id">
                             <option value="">Select Subclass</option>
-                            ${choices.subclasses.map(s => `<option value="${s.id}" ${eq.subclass_id == s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+                            ${choices.subclasses.map(s => `<option value="${escapeHtml(s.id)}" ${eq.subclass_id == s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Manufacturer</label>
                         <select class="form-control" name="manufacturer_id">
                             <option value="">Select Manufacturer</option>
-                            ${choices.manufacturers.map(m => `<option value="${m.id}" ${eq.manufacturer_id == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                            ${choices.manufacturers.map(m => `<option value="${escapeHtml(m.id)}" ${eq.manufacturer_id == m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Model</label>
-                        <input type="text" class="form-control" name="eq_mod" value="${eq.eq_mod || ''}">
+                        <input type="text" class="form-control" name="eq_mod" value="${escapeHtml(eq.eq_mod)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Facility</label>
                         <select class="form-control" name="facility_id">
                             <option value="">Select Facility</option>
-                            ${choices.facilities.map(f => `<option value="${f.id}" ${eq.facility_id == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                            ${choices.facilities.map(f => `<option value="${escapeHtml(f.id)}" ${eq.facility_id == f.id ? 'selected' : ''}>${escapeHtml(f.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Department</label>
                         <select class="form-control" name="department_id">
                             <option value="">Select Department</option>
-                            ${choices.departments.map(d => `<option value="${d.id}" ${eq.department_id == d.id ? 'selected' : ''}>${d.name}</option>`).join('')}
+                            ${choices.departments.map(d => `<option value="${escapeHtml(d.id)}" ${eq.department_id == d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Room</label>
-                        <input type="text" class="form-control" name="eq_rm" value="${eq.eq_rm || ''}">
+                        <input type="text" class="form-control" name="eq_rm" value="${escapeHtml(eq.eq_rm)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone</label>
-                        <input type="text" class="form-control" name="eq_phone" value="${eq.eq_phone || ''}">
+                        <input type="text" class="form-control" name="eq_phone" value="${escapeHtml(eq.eq_phone)}">
                     </div>
 
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Asset ID</label>
-                        <input type="text" class="form-control" name="eq_assetid" value="${eq.eq_assetid || ''}">
+                        <input type="text" class="form-control" name="eq_assetid" value="${escapeHtml(eq.eq_assetid)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Serial Number</label>
-                        <input type="text" class="form-control" name="eq_sn" value="${eq.eq_sn || ''}">
+                        <input type="text" class="form-control" name="eq_sn" value="${escapeHtml(eq.eq_sn)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Manufacturer ID</label>
-                        <input type="text" class="form-control" name="eq_manid" value="${eq.eq_manid || ''}">
+                        <input type="text" class="form-control" name="eq_manid" value="${escapeHtml(eq.eq_manid)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Installation Date</label>
-                        <input type="date" class="form-control" name="eq_instdt" value="${eq.eq_instdt || ''}">
+                        <input type="date" class="form-control" name="eq_instdt" value="${escapeHtml(eq.eq_instdt)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Manufacture Date</label>
-                        <input type="date" class="form-control" name="eq_mandt" value="${eq.eq_mandt || ''}">
+                        <input type="date" class="form-control" name="eq_mandt" value="${escapeHtml(eq.eq_mandt)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Refurbish Date</label>
-                        <input type="date" class="form-control" name="eq_rfrbdt" value="${eq.eq_rfrbdt || ''}">
+                        <input type="date" class="form-control" name="eq_rfrbdt" value="${escapeHtml(eq.eq_rfrbdt)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">End of Life Date</label>
-                        <input type="date" class="form-control" name="eq_eoldate" value="${eq.eq_eoldate || ''}">
+                        <input type="date" class="form-control" name="eq_eoldate" value="${escapeHtml(eq.eq_eoldate)}">
                         <small class="form-text text-muted">Leave blank to use estimated EOL from subclass</small>
                     </div>
                     <div class="mb-3">
@@ -897,7 +905,7 @@ function generateEquipmentDetailsForm(eq, choices) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Retirement Date</label>
-                        <input type="date" class="form-control" name="eq_retdate" value="${eq.eq_retdate || ''}">
+                        <input type="date" class="form-control" name="eq_retdate" value="${escapeHtml(eq.eq_retdate)}">
                     </div>
                     <div class="mb-3">
                         <div class="form-check">
@@ -930,25 +938,25 @@ function generateEquipmentDetailsForm(eq, choices) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ACR Site</label>
-                        <input type="text" class="form-control" name="eq_acrsite" value="${eq.eq_acrsite || ''}">
+                        <input type="text" class="form-control" name="eq_acrsite" value="${escapeHtml(eq.eq_acrsite)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ACR Unit</label>
-                        <input type="text" class="form-control" name="eq_acrunit" value="${eq.eq_acrunit || ''}">
+                        <input type="text" class="form-control" name="eq_acrunit" value="${escapeHtml(eq.eq_acrunit)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ME Facility</label>
-                        <input type="text" class="form-control" name="eq_mefac" value="${eq.eq_mefac || ''}">
+                        <input type="text" class="form-control" name="eq_mefac" value="${escapeHtml(eq.eq_mefac)}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ME Registration</label>
-                        <input type="text" class="form-control" name="eq_mereg" value="${eq.eq_mereg || ''}">
+                        <input type="text" class="form-control" name="eq_mereg" value="${escapeHtml(eq.eq_mereg)}">
                     </div>
                 </div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Notes</label>
-                <textarea class="form-control" name="eq_notes" rows="3">${eq.eq_notes || ''}</textarea>
+                <textarea class="form-control" name="eq_notes" rows="3">${escapeHtml(eq.eq_notes)}</textarea>
             </div>
         </form>
     `;
@@ -975,13 +983,13 @@ function generateCapitalDetailsForm(eq) {
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Cost (thousands $)</label>
-                <input type="number" class="form-control" name="eq_capcst" value="${eq.eq_capcst || ''}">
+                <input type="number" class="form-control" name="eq_capcst" value="${escapeHtml(eq.eq_capcst)}">
                 ${eq.eq_capecst && !eq.eq_capcst ? `<small class="form-text text-muted">Estimated: $${(eq.eq_capecst * 1000).toLocaleString()} (from subclass)</small>` : ''}
                 <small class="form-text text-muted">Capital category will be automatically assigned based on cost</small>
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Year</label>
-                <input type="number" class="form-control" name="eq_capyr" min="1900" max="2100" value="${eq.eq_capyr || ''}">
+                <input type="number" class="form-control" name="eq_capyr" min="1900" max="2100" value="${escapeHtml(eq.eq_capyr)}">
                 <small class="form-text text-muted">4-digit year</small>
             </div>
             <div class="mb-3">
@@ -993,7 +1001,7 @@ function generateCapitalDetailsForm(eq) {
             </div>
             <div class="mb-3">
                 <label class="form-label">Capital Notes</label>
-                <input type="text" class="form-control" name="eq_capnote" maxlength="140" value="${eq.eq_capnote || ''}">
+                <input type="text" class="form-control" name="eq_capnote" maxlength="140" value="${escapeHtml(eq.eq_capnote)}">
                 <small class="form-text text-muted">Maximum 140 characters</small>
             </div>
         </form>
@@ -1007,21 +1015,21 @@ function generateContactInfoForm(eq, choices) {
                 <label class="form-label">Primary Contact</label>
                 <select class="form-control" name="contact_id">
                     <option value="">Select Contact</option>
-                    ${choices.contacts.map(p => `<option value="${p.id}" ${eq.contact_id == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    ${choices.contacts.map(p => `<option value="${escapeHtml(p.id)}" ${eq.contact_id == p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
                 </select>
             </div>
             <div class="mb-3">
                 <label class="form-label">Supervisor</label>
                 <select class="form-control" name="supervisor_id">
                     <option value="">Select Supervisor</option>
-                    ${choices.supervisors.map(p => `<option value="${p.id}" ${eq.supervisor_id == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    ${choices.supervisors.map(p => `<option value="${escapeHtml(p.id)}" ${eq.supervisor_id == p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
                 </select>
             </div>
             <div class="mb-3">
                 <label class="form-label">Physician</label>
                 <select class="form-control" name="physician_id">
                     <option value="">Select Physician</option>
-                    ${choices.physicians.map(p => `<option value="${p.id}" ${eq.physician_id == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                    ${choices.physicians.map(p => `<option value="${escapeHtml(p.id)}" ${eq.physician_id == p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
                 </select>
             </div>
         </form>

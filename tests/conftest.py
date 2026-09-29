@@ -16,7 +16,7 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
-from app import app as flask_app, db, Personnel
+from app import app as flask_app, db, login_throttle, Personnel
 
 
 @pytest.fixture()
@@ -27,6 +27,7 @@ def app():
         'WTF_CSRF_ENABLED': False,
         'SERVER_NAME': 'localhost',
     })
+    login_throttle.reset()  # failed-login counts are process-wide
     with flask_app.app_context():
         db.create_all()
         yield flask_app

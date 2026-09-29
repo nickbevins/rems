@@ -1,62 +1,69 @@
 {% extends "base.html" %}
 
-{% block title %}Manage Departments - REMS{% endblock %}
+{% block title %}Manage {{ table.plural }} - REMS{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-building"></i> Departments</h1>
+            <h1><i class="fas {{ table.icon }}"></i> {{ table.plural }}</h1>
             <div>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Admin
                 </a>
-                <a href="{{ url_for('admin_add_department') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Department
+                <a href="{{ url_for(table.endpoint('add')) }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add {{ table.singular }}
                 </a>
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-body">
-                {% if departments %}
+                {% if items %}
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
                                 <tr>
                                     <th>Name</th>
                                     <th>Status</th>
+                                    {% for heading, _ in table.columns %}<th>{{ heading }}</th>{% endfor %}
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for dept in departments %}
-                                <tr class="{{ '' if dept.is_active else 'table-secondary text-muted' }}">
-                                    <td>{{ dept.name }}</td>
+                                {% for item in items %}
+                                <tr class="{{ '' if item.is_active else 'table-secondary text-muted' }}">
+                                    <td>{{ item.name }}</td>
                                     <td>
-                                        {% if dept.is_active %}
+                                        {% if item.is_active %}
                                             <span class="badge bg-success">Active</span>
                                         {% else %}
                                             <span class="badge bg-secondary">Inactive</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ dept.created_at.strftime('%Y-%m-%d') if dept.created_at else 'N/A' }}</td>
+                                    {% for _, display in table.columns %}
+                                        {% set value = display(item) %}
+                                        <td>{% if value %}{{ value }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
+                                    {% endfor %}
+                                    <td>{{ item.created_at.strftime('%Y-%m-%d') if item.created_at else 'N/A' }}</td>
                                     <td>
-                                        <a href="{{ url_for('admin_edit_department', dept_id=dept.id) }}" class="btn btn-sm btn-outline-primary me-2">
+                                        <a href="{{ url_for(table.endpoint('edit'), item_id=item.id) }}" class="btn btn-sm btn-outline-primary me-2">
                                             <i class="fas fa-edit"></i> Edit
                                         </a>
-                                        {% if dept.is_active %}
-                                            <form method="POST" action="{{ url_for('admin_delete_department', dept_id=dept.id) }}"
+                                        {% if item.is_active %}
+                                            <form method="POST" action="{{ url_for(table.endpoint('delete'), item_id=item.id) }}"
                                                   style="display: inline;"
-                                                  onsubmit="return confirm('Are you sure you want to deactivate this department?')">
+                                                  onsubmit="return confirm('Are you sure you want to deactivate this {{ table.singular|lower }}?')">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     <i class="fas fa-ban"></i> Deactivate
                                                 </button>
                                             </form>
                                         {% else %}
-                                            <form method="POST" action="{{ url_for('admin_activate_department', dept_id=dept.id) }}"
+                                            <form method="POST" action="{{ url_for(table.endpoint('activate'), item_id=item.id) }}"
                                                   style="display: inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-success">
                                                     <i class="fas fa-check"></i> Activate
                                                 </button>
@@ -70,10 +77,10 @@
                     </div>
                 {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-building fa-3x text-muted"></i>
-                        <h4 class="text-muted mt-3">No departments</h4>
+                        <i class="fas {{ table.icon }} fa-3x text-muted"></i>
+                        <h4 class="text-muted mt-3">No {{ table.plural|lower }}</h4>
                         <p class="text-muted">
-                            <a href="{{ url_for('admin_add_department') }}">Add the first department</a>
+                            <a href="{{ url_for(table.endpoint('add')) }}">Add the first {{ table.singular|lower }}</a>
                         </p>
                     </div>
                 {% endif %}

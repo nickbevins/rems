@@ -433,6 +433,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form method="POST" action="{{ url_for('import_scheduled_tests') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="modal-body">
                             <div class="mb-3">
                                 <label for="file" class="form-label">CSV File</label>
@@ -501,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cascading filter: Update subclasses when class changes
     const classSelect = document.getElementById('eq_class');
     const subclassSelect = document.getElementById('eq_subclass');
-    const currentSubclass = '{{ eq_subclass }}';
+    const currentSubclass = {{ eq_subclass|tojson }};
     
     function updateSubclasses() {
         const selectedClass = classSelect.value;

@@ -88,6 +88,7 @@ erDiagram
     facilities {
         int id PK
         string name
+        string facility_full
         string address
     }
 

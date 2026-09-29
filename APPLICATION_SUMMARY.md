@@ -23,7 +23,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 - **Role-Based Access**: Different permission levels (Admin, Physics Staff, Technician, Viewer)
 
 ### Data Management
-- **CSV Import/Export**: Bulk data operations with backward compatibility
+- **CSV Import/Export**: Bulk data operations; exporting, editing, and re-importing equipment is the bulk-edit workflow
 - **Advanced Search**: Multi-field filtering and search capabilities
 - **Data Validation**: Form validation and data integrity checks
 - **Audit Trail**: Creation and modification tracking
@@ -43,7 +43,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 
 ### Security Features
 - **User Authentication**: Flask-Login with username/password; no default credentials — admin created via `flask create-admin`
-- **CSRF Protection**: Form security with Flask-WTF
+- **CSRF Protection**: Flask-WTF `CSRFProtect` on every POST, including in-page requests
 - **Input Validation**: Comprehensive form validation; safe date parsing with `strptime('%Y-%m-%d')`
 - **Role-Based Access Control**: Route-level decorators (`manage_equipment_required`, `manage_compliance_required`, `manage_personnel_required`)
 - **Forced Password Change**: `enforce_password_change` before_request hook; all routes blocked until password updated
@@ -66,7 +66,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 ### Form Handling
 - **Equipment Forms**: Multi-section forms with validation and auto-population
 - **Contact Integration**: Automatic address population based on facility selection
-- **Bulk Operations**: CSV-based bulk editing and import functionality
+- **Bulk Operations**: Equipment import updates existing records by `eq_id`; only the columns in the file change
 
 ## Data Import/Export
 

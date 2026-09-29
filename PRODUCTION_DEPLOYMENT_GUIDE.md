@@ -92,6 +92,9 @@ pip install -r requirements.txt
 # FLASK_ENV is deprecated in Flask 2.x and is not used. Do not set FLASK_DEBUG in production.
 cat > .env << EOF
 SECRET_KEY=your_very_secure_secret_key_here
+# NGINX serves HTTPS and forwards to Gunicorn, so:
+SESSION_COOKIE_SECURE=1     # session cookie only sent over HTTPS
+TRUSTED_PROXY_COUNT=1       # trust NGINX's X-Forwarded-For/-Proto (one proxy hop)
 EOF
 ```
 
@@ -122,6 +125,9 @@ pip install --no-index --find-links=/path/to/python-packages -r requirements.txt
 # FLASK_ENV is deprecated in Flask 2.x and is not used. Do not set FLASK_DEBUG in production.
 cat > .env << EOF
 SECRET_KEY=your_very_secure_secret_key_here
+# NGINX serves HTTPS and forwards to Gunicorn, so:
+SESSION_COOKIE_SECURE=1     # session cookie only sent over HTTPS
+TRUSTED_PROXY_COUNT=1       # trust NGINX's X-Forwarded-For/-Proto (one proxy hop)
 EOF
 ```
 

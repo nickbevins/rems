@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMC Radiology Equipment Fleet by EOSL, Cost, and Category</title>
     <script src="{{ url_for('static', filename='vendor/d3.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -119,27 +120,11 @@
         fetch('/capital/bubble-data?' + window.location.search.substring(1))
             .then(response => response.json())
             .then(result => {
-                const rawData = result.data;
-
-                // Parse data
-                const data = rawData.trim().split('\n').map(line => {
-                    const [category, year, cost, facility, room, eolDate, isEstimated] = line.split(',');
-                    let adjustedYear = parseInt(year);
-                    // Move everything before current year to this year
-                    const currentYear = new Date().getFullYear();
-                    if (adjustedYear < currentYear) {
-                        adjustedYear = currentYear;
-                    }
-                    return {
-                        category: category.trim(),
-                        year: adjustedYear,
-                        cost: parseInt(cost) * 1000, // Convert to thousands for bubble sizing
-                        facility: facility.trim(),
-                        room: room.trim(),
-                        eolDate: eolDate.trim(),
-                        isEstimated: isEstimated.trim() === 'true'
-                    };
-                });
+                // Server already moves past-due years to the current year
+                const data = result.data.map(d => ({
+                    ...d,
+                    cost: d.cost * 1000 // Convert to thousands for bubble sizing
+                }));
 
         // Color mapping based on the original chart
         const colorMap = {
@@ -308,7 +293,7 @@
                 const eolLabel = d.isEstimated ? 'Est. EOL' : 'EOL';
                 tooltip
                     .style("opacity", 1)
-                    .html(`<strong>${d.category}</strong><br>${eolLabel}: ${d.eolDate}<br>Facility: ${d.facility}<br>Room: ${d.room}<br>Cost: $${d.originalCost}k`)
+                    .html(`<strong>${escapeHtml(d.category)}</strong><br>${eolLabel}: ${escapeHtml(d.eolDate)}<br>Facility: ${escapeHtml(d.facility)}<br>Room: ${escapeHtml(d.room)}<br>Cost: $${escapeHtml(d.originalCost)}k`)
                     .style("left", (event.pageX + 10) + "px")
                     .style("top", (event.pageY - 10) + "px");
 

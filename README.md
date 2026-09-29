@@ -133,17 +133,22 @@ Access the application at `http://localhost:5000`
 - `DATABASE_URL`: Database connection string (defaults to `instance/physdb.db` SQLite)
 - `FLASK_DEBUG`: Set to `1` for local development only; omit or set to `0` in production (`FLASK_ENV` is deprecated in Flask 2.x)
 - `ITEMS_PER_PAGE`: Number of items displayed per page
+- `SESSION_COOKIE_SECURE`: Set to `1` behind HTTPS so the session cookie is only sent over HTTPS (automatic on Render)
+- `TRUSTED_PROXY_COUNT`: Number of reverse proxies in front of the app, e.g. `1` for NGINX (automatic `1` on Render). Leave unset when nothing sits in front, or clients could spoof their IP address
 
 ### Database Options
 - **SQLite** (default): File-based database, no separate server required. Suitable for most deployments.
 - **MySQL/PostgreSQL**: Supported for larger deployments by setting the `DATABASE_URL` environment variable (e.g. `mysql+pymysql://user:pass@localhost/physdb` or a PostgreSQL connection string). If using MySQL, also add `PyMySQL` to `requirements.txt`.
 
 ## Security Features
-- CSRF protection on all forms
+- CSRF protection on every POST (forms send `csrf_token`; in-page requests send the `X-CSRFToken` header)
 - Input validation and sanitization
-- Secure session management with forced password change on first login
+- Secure session management with forced password change on first login; session cookie is HttpOnly, SameSite=Lax, and Secure over HTTPS
+- Failed logins throttled per client IP (10 per 15 minutes); logout requires POST
+- Only admins can grant admin rights, set usernames or passwords, change active status, or edit/delete admin accounts; nobody can demote, deactivate, or delete their own account
 - SQL injection prevention via SQLAlchemy ORM
-- XSS protection
+- XSS protection: Jinja autoescaping, plus `escapeHtml()` (static/js/main.js) for HTML built in JavaScript
+- Spreadsheet formula injection prevention: CSV exports prefix formula-like text with `'` (removed again on import); the Excel workbook writes all text literally
 - Open redirect prevention on login `next` parameter
 - Role-based access control with route-level enforcement decorators
 - Security audit logging for login success, failure, and logout events
@@ -208,40 +213,30 @@ alongside the target — a stale WAL paired with a restored database file is a c
 ## Data Format
 
 ### Equipment CSV Import
-Required: `equipment_class`
+Column names match the equipment export, so the way to edit in bulk is: export from the Equipment List (filters apply), edit the file, and import it.
+
+- Rows whose `eq_id` exists update that record; a blank `eq_id` creates new equipment (`equipment_class` required)
+- Only the columns present in the file change; a blank cell clears that field
+- Each row is saved on its own; problem rows are reported with their row number and the rest still import
+- Every cell is read as text, so values like room `101` or serial `00123` are kept exactly
+- Dates: `YYYY-MM-DD`, or `M/D/YYYY` as Excel re-saves them
+- Unrecognized column names are reported and ignored
+- Export-only calculated columns (`eq_mefacreg`, `eq_eeoldate`, `eq_capecst`, `eq_capcat`) are ignored on import
 
 | Field | Description |
 |---|---|
-| `eq_id` | Equipment ID (for updating existing records) |
-| `equipment_class` | Equipment class (CT, MRI, X-ray, etc.) — **required** |
-| `equipment_subclass` | Equipment subclass |
-| `manufacturer` | Manufacturer name |
-| `eq_mod` | Model number |
-| `department` | Department name |
-| `eq_rm` | Room number |
-| `facility` | Facility name |
-| `facility_address` | Facility address |
-| `contact_person` | Contact person name |
-| `contact_email` | Contact person email |
-| `supervisor` | Supervisor name |
-| `supervisor_email` | Supervisor email |
-| `physician` | Physician name |
-| `physician_email` | Physician email |
-| `eq_assetid` | Asset ID |
-| `eq_sn` | Serial number |
-| `eq_mefac` | ME facility |
-| `eq_mereg` | ME registration |
-| `eq_manid` | Manufacturer ID |
-| `eq_mandt` | Manufacture date |
-| `eq_instdt` | Installation date |
-| `eq_eoldate` | End of life date |
-| `eq_eeoldate` | Extended end of life date |
-| `eq_retdate` | Retirement date |
-| `eq_retired` | Retirement status (TRUE/FALSE) |
-| `eq_auditfreq` | Audit frequency |
-| `eq_acrsite` | ACR site number |
-| `eq_acrunit` | ACR unit number |
-| `eq_notes` | Notes |
+| `eq_id` | Equipment ID (blank for new equipment) |
+| `equipment_class` | Equipment class (CT, MRI, X-ray, etc.) — **required** for new equipment |
+| `equipment_subclass` | Subclass, matched within the class |
+| `manufacturer`, `department` | Lookup names (created if new) |
+| `facility` | Facility name; `facility_full` and `facility_address` are used only when the import creates the facility |
+| `contact_id`, `contact_person`, `contact_email` | Contact, matched by ID then name; a new person needs an email. Same pattern for `supervisor*` and `physician*` |
+| `eq_mod`, `eq_rm`, `eq_phone`, `eq_assetid`, `eq_sn`, `eq_mefac`, `eq_mereg`, `eq_manid`, `eq_acrsite`, `eq_acrunit`, `eq_notes` | Text fields |
+| `eq_mandt`, `eq_rfrbdt`, `eq_instdt`, `eq_eoldate`, `eq_retdate` | Manufacture, refurbish, install, end-of-life, and retirement dates |
+| `eq_retired`, `eq_planned`, `eq_physcov` | TRUE/FALSE (blank: not retired, not planned, physics covered) |
+| `eq_auditfreq` | Comma-separated: Quarterly, Semiannual, Annual - ACR, Annual - TJC, Annual - ME |
+| `eq_radcap`, `eq_capfund` | Radiology owned / replacement funded: 1, 0, or blank |
+| `eq_capcst`, `eq_capyr`, `eq_captype`, `eq_capnote` | Capital cost (thousands), year, Replacement/Upgrade, notes |
 
 ### Personnel CSV Import
 Required: `name`, `email`
@@ -278,6 +273,7 @@ Required: `name`
 |---|---|
 | `id` | Facility ID (for updating existing records) |
 | `name` | Facility name |
+| `facility_full` | Full Facility name (shown on equipment details; column omitted = existing values kept) |
 | `address` | Address |
 | `is_active` | Active status (TRUE/FALSE) |
 
@@ -298,9 +294,16 @@ pip install pytest
 pytest tests/ -v
 ```
 
-Tests cover: authentication, open redirect rejection, role enforcement, `must_change_password` enforcement, CSV row limits, and date arithmetic. See `tests/test_app.py`.
+Tests cover: authentication and login throttling, open redirect rejection, role and personnel-permission enforcement, CSRF, output escaping, `must_change_password` enforcement, CSV import/export round trips, shared equipment filters, startup migrations, and date arithmetic. See `tests/test_app.py`.
 
 ## Version History
+
+### v1.3.0
+- **Full Facility**: new `facilities.facility_full` for the formal facility name, set in admin, shown on the equipment details page, and exported/imported as `facility_full`
+- **Security**: CSRF protection on every form; personnel permissions (only admins manage logins, admin rights, and admin accounts; the `admin` role is gone — `is_admin` is the only source of admin rights); XSS fixes on the equipment details inline editor and the capital bubble chart; formula-injection-safe exports; secure session cookie and proxy headers on Render; failed-login throttling; POST-only logout
+- **Import**: bulk edit merged into the equipment import (update by `eq_id`, only listed columns change); cells read as text; per-row errors instead of failing the whole file; Excel BOM and `M/D/YYYY` dates handled; compliance test types validated; legacy column-name aliases removed
+- **Bugs**: compliance dashboard/export crash when combining a filter with search; exports now match the page's filters (list or capital planning); inline retire sets the retirement date; capital category overlap check at open-ended boundaries; bad query parameters no longer cause errors
+- **Cleanup**: the six admin lookup tables share one set of routes and two templates (`LOOKUP_TABLES` in app.py); all CSV imports share one row-by-row runner and all CSV exports one download helper; compliance export now includes `performed_by_id`/`reviewed_by_id` so it re-imports cleanly; one shared equipment filter query for the list, capital, compliance, and export pages; dashboard, compliance, list, and export pages use a fixed number of queries instead of several per row; startup migration drops unused columns (`eq_address`, `eq_eeoldate`, `eq_capcat`, `eq_capecst`) and renames old lowercase test types; unused `/api/equipment`, `/api/equipment/search`, and `/api/facility/<id>/address` routes removed
 
 ### v1.2.0
 - Bulk personnel import no longer creates login credentials; contact records only — login access granted individually via UI

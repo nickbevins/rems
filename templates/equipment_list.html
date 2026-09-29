@@ -578,7 +578,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const classSelect = document.getElementById('eq_class');
         const subclassSelect = document.getElementById('eq_subclass');
-        const currentSubclass = '{{ request.args.get("eq_subclass", "") }}';
+        const currentSubclass = {{ request.args.get("eq_subclass", "")|tojson }};
         
         function updateSubclasses() {
             const selectedClass = classSelect.value;
