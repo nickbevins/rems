@@ -1,0 +1,12 @@
+{# One status badge per person: whether they are still active, and whether they can log in #}
+{% macro status_badge(person) -%}
+    {% if not person.is_active %}
+        <span class="badge bg-danger">Inactive</span>
+    {% elif person.can_log_in %}
+        <span class="badge bg-success">Login Enabled</span>
+    {% elif person.login_required %}
+        <span class="badge bg-warning">Login Required (Not Configured)</span>
+    {% else %}
+        <span class="badge bg-secondary">Contact Only</span>
+    {% endif %}
+{%- endmacro %}

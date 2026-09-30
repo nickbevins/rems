@@ -241,11 +241,31 @@ def _paginate(items, page, per_page, default_per_page):
                                        page=page, per_page=per_page, total=len(items))
     return items.paginate(page=page, per_page=per_page, error_out=False, max_per_page=1000)
 
-def _equipment_choices():
-    """Dropdown options for equipment forms: active lookup values, and personnel by role."""
-    choices = _active_lookups()
-    for key, role in (('contacts', 'contact'), ('supervisors', 'supervisor'), ('physicians', 'physician')):
-        choices[key] = Personnel.query.filter(Personnel.roles.ilike(f'%{role}%')).order_by(Personnel.name).all()
+def _dropdown_options(model, keep_id=None, condition=None):
+    """Active rows (matching `condition`), plus the row a record has assigned now (`keep_id`)
+    even if since deactivated, so saving a form never silently clears an existing assignment."""
+    shown = model.is_active == True
+    if condition is not None:
+        shown = and_(shown, condition)
+    if keep_id:
+        shown = or_(shown, model.id == keep_id)
+    return model.query.filter(shown).order_by(model.name).all()
+
+def _option_label(obj):
+    return obj.name if obj.is_active else f'{obj.name} (inactive)'
+
+def _equipment_choices(equipment=None):
+    """Dropdown options for equipment forms: active lookup values and personnel by role,
+    plus whatever `equipment` has assigned now."""
+    sources = {'classes': (EquipmentClass, None), 'subclasses': (EquipmentSubclass, None),
+               'manufacturers': (Manufacturer, None), 'departments': (Department, None),
+               'facilities': (Facility, None), 'contacts': (Personnel, 'contact'),
+               'supervisors': (Personnel, 'supervisor'), 'physicians': (Personnel, 'physician')}
+    choices = {}
+    for field, (key, _) in EQUIPMENT_FORM_CHOICES.items():
+        model, role = sources[key]
+        condition = Personnel.roles.ilike(f'%{role}%') if role else None
+        choices[key] = _dropdown_options(model, getattr(equipment, field, None), condition)
     return choices
 
 # EquipmentForm field -> (_equipment_choices key, placeholder label)
@@ -271,10 +291,10 @@ def _save_equipment_form(form, equipment):
         setattr(equipment, field, getattr(equipment, field) or None)
     _apply_equipment_rules(equipment)
 
-def _set_equipment_form_choices(form):
-    choices = _equipment_choices()
+def _set_equipment_form_choices(form, equipment=None):
+    choices = _equipment_choices(equipment)
     for field, (key, placeholder) in EQUIPMENT_FORM_CHOICES.items():
-        getattr(form, field).choices = [('', placeholder)] + [(str(o.id), o.name) for o in choices[key]]
+        getattr(form, field).choices = [('', placeholder)] + [(str(o.id), _option_label(o)) for o in choices[key]]
 
 def _join_equipment_lookups(query):
     """Outer-join each equipment lookup table exactly once, so filters and search
@@ -494,6 +514,7 @@ def check_and_migrate_db():
         if rows:
             logger.info("Migration: removed the 'admin' role from %d personnel records", len(rows))
 
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -502,7 +523,10 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(Personnel, int(user_id))
+    # Checked on every request, so deactivating someone or turning off their login
+    # access also ends any session they already have open.
+    user = db.session.get(Personnel, int(user_id))
+    return user if user and user.can_log_in else None
 
 # Database Models
 
@@ -730,6 +754,11 @@ class Personnel(UserMixin, db.Model):
         if self.password_hash:
             return check_password_hash(self.password_hash, password)
         return False
+
+    @property
+    def can_log_in(self):
+        """Login needs an active person, with login access turned on and credentials set."""
+        return bool(self.is_active and self.login_required and self.username and self.password_hash)
 
     def has_role(self, role):
         """Check if user has a specific role"""
@@ -979,6 +1008,8 @@ class ScheduleTestForm(FlaskForm):
     scheduling_date = DateField('Scheduling Date', validators=[DataRequired()], default=lambda: datetime.now().date())
     notes = TextAreaField('Notes', validators=[Optional()])
 
+MIN_PASSWORD_LENGTH = 12
+
 class PersonnelForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired(), Length(max=200)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=200)])
@@ -993,7 +1024,7 @@ class PersonnelForm(FlaskForm):
     ], validators=[DataRequired()])
     login_required = BooleanField('Requires Login Access', default=False)
     username = StringField('Username', validators=[Optional(), Length(max=80)])
-    password = PasswordField('Password', validators=[Optional(), Length(min=6)])
+    password = PasswordField('Password', validators=[Optional(), Length(min=MIN_PASSWORD_LENGTH)])
     is_admin = BooleanField('Admin User')
     is_active = BooleanField('Active', default=True)
 
@@ -1002,7 +1033,7 @@ class CsvUploadForm(FlaskForm):
 
 class PasswordChangeForm(FlaskForm):
     current_password = PasswordField('Current Password', validators=[DataRequired()])
-    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=6)])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=MIN_PASSWORD_LENGTH)])
     confirm_password = PasswordField('Confirm New Password', validators=[
         DataRequired(),
         EqualTo('new_password', message='Passwords must match')
@@ -1137,7 +1168,7 @@ def login():
             return render_template('login.html', form=form), 429
 
         user = Personnel.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data) and user.is_active and user.login_required:
+        if user and user.can_log_in and user.check_password(form.password.data):
             login_throttle.reset(client_ip)
             login_user(user)
             user.last_login = datetime.now(timezone.utc)
@@ -1204,6 +1235,9 @@ def create_admin_command():
         email = click.prompt('Email')
         username = click.prompt('Username')
         password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
+        while len(password) < MIN_PASSWORD_LENGTH:
+            click.echo(f'Password must be at least {MIN_PASSWORD_LENGTH} characters.')
+            password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
         admin = Personnel(
             name=name,
             email=email,
@@ -1364,7 +1398,7 @@ def equipment_edit(eq_id):
         form = EquipmentForm(data=form_data)
     else:
         form = EquipmentForm()
-    _set_equipment_form_choices(form)
+    _set_equipment_form_choices(form, equipment)
 
     if form.validate_on_submit():
         _save_equipment_form(form, equipment)
@@ -1483,7 +1517,7 @@ def get_equipment_form_data(eq_id):
     """AJAX endpoint to get dropdown choices and current values for edit forms"""
     equipment = db.get_or_404(Equipment, eq_id)
 
-    choices = _equipment_choices()
+    choices = _equipment_choices(equipment)
 
     return jsonify({
         'equipment': {
@@ -1525,7 +1559,7 @@ def get_equipment_form_data(eq_id):
             'physician_id': equipment.physician_id,
         },
         'choices': {
-            **{key: [{'id': obj.id, 'name': obj.name} for obj in objs] for key, objs in choices.items()},
+            **{key: [{'id': obj.id, 'name': _option_label(obj)} for obj in objs] for key, objs in choices.items()},
             'audit_frequencies': AUDIT_FREQUENCIES,
         }
     })
@@ -1688,16 +1722,16 @@ def _redirect_after_test_change(eq_id, params):
         return redirect(url_for('compliance_dashboard'))
     return _redirect_to_equipment(eq_id, params)
 
-def _personnel_with_roles(*roles):
-    return Personnel.query.filter(or_(*[Personnel.roles.ilike(f'%{r}%') for r in roles])) \
-        .order_by(Personnel.name).all()
+def _personnel_choices(roles, keep_id=None):
+    people = _dropdown_options(Personnel, keep_id, or_(*[Personnel.roles.ilike(f'%{r}%') for r in roles]))
+    return [('', 'Select...')] + [(p.id, _option_label(p)) for p in people]
 
 def _compliance_test_form(equipment, test):
     """Add (test=None) or edit a compliance test for `equipment`."""
     form = ComplianceTestForm(obj=test)
-    form.performed_by_id.choices = [('', 'Select...')] + [
-        (p.id, p.name) for p in _personnel_with_roles('physics_assistant', 'physicist')]
-    form.reviewed_by_id.choices = [('', 'Select...')] + [(p.id, p.name) for p in _personnel_with_roles('physicist')]
+    form.performed_by_id.choices = _personnel_choices(('physics_assistant', 'physicist'),
+                                                      test.performed_by_id if test else None)
+    form.reviewed_by_id.choices = _personnel_choices(('physicist',), test.reviewed_by_id if test else None)
 
     if form.validate_on_submit():
         is_new = test is None
@@ -1799,16 +1833,19 @@ def api_subclasses():
         else:
             subclasses = []
     elif class_id:
-        # Get subclasses for specific class (by ID - for equipment forms)
-        subclasses = EquipmentSubclass.query.filter_by(
-            class_id=_int_or_none(class_id), is_active=True
+        # Get subclasses for specific class (by ID - for equipment forms). `keep` is the form's
+        # current subclass, listed even if since deactivated so saving doesn't clear it.
+        keep_id = _int_or_none(request.args.get('keep'))
+        subclasses = EquipmentSubclass.query.filter(
+            EquipmentSubclass.class_id == _int_or_none(class_id),
+            or_(EquipmentSubclass.is_active == True, EquipmentSubclass.id == keep_id)
         ).order_by(EquipmentSubclass.name).all()
     else:
         subclasses = EquipmentSubclass.query.filter_by(is_active=True).order_by(EquipmentSubclass.name).all()
 
     if class_id:
         # Return id/name pairs for forms
-        subclass_list = [{'id': s.id, 'name': s.name} for s in subclasses]
+        subclass_list = [{'id': s.id, 'name': _option_label(s)} for s in subclasses]
     else:
         # Return names only, for the list page filters
         subclass_list = [s.name for s in subclasses]
@@ -2011,6 +2048,16 @@ def _flash_row_messages(messages, category, limit=8):
     for message in messages:
         logger.info("Import %s: %s", category, message)
 
+def _database_error_message(error):
+    """A readable reason for a rejected row, without the raw database error text."""
+    match = re.search(r'(UNIQUE|NOT NULL) constraint failed: \w+\.(\w+)', str(getattr(error, 'orig', '')))
+    if not match:
+        return 'the database rejected this row'
+    kind, column = match.groups()
+    if kind == 'UNIQUE':
+        return f'another record already has this {column}'
+    return f'{column} is required'
+
 def _run_csv_import(file, apply_row, noun, required=(), known=None):
     """Import an uploaded CSV one row at a time, flashing a summary and any problems.
 
@@ -2053,9 +2100,14 @@ def _run_csv_import(file, apply_row, noun, required=(), known=None):
             if is_new:
                 db.session.add(record)
             db.session.commit()
-        except (ValueError, sa_exc.SQLAlchemyError) as e:
+        except ValueError as e:
             db.session.rollback()
-            errors.append(f'Row {line}: {getattr(e, "orig", e)}')
+            errors.append(f'Row {line}: {e}')
+            continue
+        except sa_exc.SQLAlchemyError as e:
+            db.session.rollback()
+            logger.error("CSV import (%s) row %s failed: %s", noun, line, e)
+            errors.append(f'Row {line}: {_database_error_message(e)}')
             continue
         created += is_new
         updated += not is_new
@@ -2064,7 +2116,7 @@ def _run_csv_import(file, apply_row, noun, required=(), known=None):
     summary = f'Imported {created} new and updated {updated} existing {noun}'
     if skipped:
         summary += f', skipped {skipped} empty rows'
-    flash(summary + '.', 'success' if not errors else 'warning')
+    flash(summary + '.', 'info' if not errors else 'warning')  # info stays on screen to be read
     _flash_row_messages(errors, 'error')
     _flash_row_messages(warnings, 'warning')
     return True
@@ -2118,6 +2170,8 @@ def personnel_list():
 def _apply_personnel_form(personnel, form):
     """Copy the submitted PersonnelForm onto `personnel`, honoring who may change what.
 
+    Active is whether the person is still around: inactive people cannot log in and are left out of
+    new dropdown choices. Requires Login Access is whether they have an account at all.
     Login credentials, admin rights, and active status are admin-only. Anyone else with personnel rights manages contact details and
     non-admin roles, so they cannot grant themselves or others more access.
     Returns an error message, or None if the form was applied.
@@ -2127,11 +2181,14 @@ def _apply_personnel_form(personnel, form):
         return 'Select at least one role.'
 
     if current_user.is_admin:
-        if personnel.id == current_user.id and (not form.is_admin.data or not form.is_active.data):
-            return 'You cannot remove your own admin rights or deactivate your own account.'
-        needs_password = form.username.data and not personnel.password_hash
-        if needs_password and not form.password.data:
-            return 'A password is required when enabling login for this account.'
+        if personnel.id == current_user.id and not (form.is_admin.data and form.is_active.data
+                                                    and form.login_required.data):
+            return 'You cannot remove your own admin rights or login access, or deactivate your own account.'
+        if form.login_required.data:
+            if not form.username.data:
+                return 'A username is required for login access.'
+            if not personnel.password_hash and not form.password.data:
+                return 'A password is required when enabling login for this account.'
 
     personnel.name = form.name.data
     personnel.email = form.email.data
@@ -2172,7 +2229,7 @@ def new_personnel():
                 logger.error("Error adding personnel: %s", e)
                 flash('Error adding personnel. Email or username may already exist.', 'error')
 
-    return render_template('personnel_form.html', form=form, title='Add Personnel')
+    return render_template('personnel_form.html', form=form, title='Add Personnel', min_password_length=MIN_PASSWORD_LENGTH)
 
 @app.route('/personnel/<int:id>')
 @login_required
@@ -2207,7 +2264,7 @@ def edit_personnel(id):
                 logger.error("Error updating personnel id=%s: %s", id, e)
                 flash('Error updating personnel.', 'error')
 
-    return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel)
+    return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel, min_password_length=MIN_PASSWORD_LENGTH)
 
 @app.route('/personnel/<int:id>/delete', methods=['POST'])
 @login_required
@@ -2375,8 +2432,9 @@ def import_compliance():
 
     # Personnel IDs for the help text
     return render_template('import_compliance.html', form=form,
-                           performed_by_personnel=_personnel_with_roles('physics_assistant', 'physicist'),
-                           reviewed_by_personnel=_personnel_with_roles('physicist'))
+                           performed_by_personnel=_dropdown_options(Personnel, condition=or_(
+                               Personnel.roles.ilike('%physics_assistant%'), Personnel.roles.ilike('%physicist%'))),
+                           reviewed_by_personnel=_dropdown_options(Personnel, condition=Personnel.roles.ilike('%physicist%')))
 
 @app.route('/export-scheduled-tests')
 @login_required
@@ -2535,7 +2593,7 @@ def admin_backup_database():
             payload = fh.read()
     except (sa_exc.SQLAlchemyError, sqlite3.Error, OSError) as e:
         logger.error("Database backup failed for user %s: %s", current_user.username, e)
-        flash(f'Error creating database backup: {str(e)}', 'error')
+        flash('Error creating database backup. The details are in the server log.', 'error')
         return redirect(url_for('admin_dashboard'))
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

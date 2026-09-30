@@ -13,6 +13,7 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 
 ### Personnel Management
 - **User Accounts**: Role-based access control with secure authentication
+- **Active vs. Login Access**: Active means the person is still around (inactive people cannot log in and are left out of new equipment and test dropdowns, though existing assignments are kept); Requires Login Access means they have an account at all
 - **Role Management**: Admin, physicist, supervisor, contact person, and other specialized roles
 - **Password Management**: Secure password reset and change functionality
 - **Import/Export**: Bulk personnel management with CSV files
@@ -145,6 +146,9 @@ Access the application at `http://localhost:5000`
 - Input validation and sanitization
 - Secure session management with forced password change on first login; session cookie is HttpOnly, SameSite=Lax, and Secure over HTTPS
 - Failed logins throttled per client IP (10 per 15 minutes); logout requires POST
+- Passwords must be at least 12 characters (existing shorter passwords keep working until changed)
+- Deactivating someone or turning off their login access ends any session they already have open
+- Database error details go to the server log, not the page; import errors name the row and the conflicting field
 - Only admins can grant admin rights, set usernames or passwords, change active status, or edit/delete admin accounts; nobody can demote, deactivate, or delete their own account
 - SQL injection prevention via SQLAlchemy ORM
 - XSS protection: Jinja autoescaping, plus `escapeHtml()` (static/js/main.js) for HTML built in JavaScript
@@ -297,6 +301,11 @@ pytest tests/ -v
 Tests cover: authentication and login throttling, open redirect rejection, role and personnel-permission enforcement, CSRF, output escaping, `must_change_password` enforcement, CSV import/export round trips, shared equipment filters, startup migrations, and date arithmetic. See `tests/test_app.py`.
 
 ## Version History
+
+### v1.3.1
+- **Personnel**: equipment and compliance test dropdowns list active people and lookup values only, plus whatever the record already has assigned (marked "(inactive)"), so saving never clears an existing assignment; turning off login access now ends an open session; login access requires a username and password; admins cannot turn off their own login access; personnel list and details show one status (Inactive, Login Enabled, Login Required (Not Configured), or Contact Only)
+- **Messages**: only green success confirmations close on their own; help boxes on the import and admin pages, import summaries, and info, warning, and error messages stay until closed
+- **Security**: minimum password length raised from 6 to 12; raw database error text no longer shown in the backup and import messages
 
 ### v1.3.0
 - **Full Facility**: new `facilities.facility_full` for the formal facility name, set in admin, shown on the equipment details page, and exported/imported as `facility_full`

@@ -32,14 +32,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }, false);
     });
 
-    // Auto-hide alerts after 5 seconds
+    // Flashed success confirmations close after 5 seconds. Everything else stays until closed:
+    // info, warning, and error messages, and the help boxes that are part of a page.
     setTimeout(function() {
-        var alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function(alert) {
-            if (alert.classList.contains('alert-success') || alert.classList.contains('alert-info')) {
-                var bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            }
+        document.querySelectorAll('.flash-message.alert-success').forEach(function(alert) {
+            new bootstrap.Alert(alert).close();
         });
     }, 5000);
 });

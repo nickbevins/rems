@@ -687,7 +687,7 @@ function setupSubclassFilter() {
                 return;
             }
 
-            const url = `/api/subclasses?class_id=${encodeURIComponent(selectedClassId)}`;
+            const url = `/api/subclasses?class_id=${encodeURIComponent(selectedClassId)}&keep=${encodeURIComponent(subclassSelect.value)}`;
 
             try {
                 const response = await fetch(url);

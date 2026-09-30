@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_personnel_status.html" import status_badge %}
 
 {% block title %}{{ personnel.name }} - REMS{% endblock %}
 
@@ -40,6 +41,10 @@
                                 <td>
                                     <a href="mailto:{{ personnel.email }}">{{ personnel.email }}</a>
                                 </td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>{{ status_badge(personnel) }}</td>
                             </tr>
                             <tr>
                                 <th>Phone:</th>

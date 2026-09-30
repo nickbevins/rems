@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_personnel_status.html" import status_badge %}
 
 {% block title %}Personnel - REMS{% endblock %}
 
@@ -95,17 +96,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if person.login_required %}
-                                            {% if person.username and person.password_hash and person.is_active %}
-                                                <span class="badge bg-success">Login Enabled</span>
-                                            {% elif person.username and person.password_hash and not person.is_active %}
-                                                <span class="badge bg-danger">Login Disabled (Inactive)</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">Login Required (Not Configured)</span>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="badge bg-secondary">Contact Only</span>
-                                        {% endif %}
+                                        {{ status_badge(person) }}
                                     </td>
                                     <td>
                                         <a href="{{ url_for('personnel_detail', id=person.id) }}" class="btn btn-sm btn-outline-info btn-icon" title="View Details">

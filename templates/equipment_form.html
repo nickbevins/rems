@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedClassId = classSelect.value;
             if (!selectedClassId) return;
 
-            fetch('/api/subclasses?class_id=' + encodeURIComponent(selectedClassId))
+            fetch('/api/subclasses?class_id=' + encodeURIComponent(selectedClassId) + '&keep=' + encodeURIComponent(subclassSelect.value))
                 .then(response => response.json())
                 .then(subclasses => {
                     const currentValue = subclassSelect.value;

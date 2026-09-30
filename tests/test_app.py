@@ -25,6 +25,7 @@ import pytest
 from datetime import date
 from unittest.mock import MagicMock, patch
 
+from flask import g
 from sqlalchemy import inspect, text
 
 from app import db, check_and_migrate_db, login_throttle, ComplianceTest, Department, Equipment, EquipmentClass, Facility, Personnel
@@ -712,6 +713,23 @@ class TestImportRoundTrip:
         assert db.session.get(Equipment, 1).eq_notes == '=1+2'
 
 
+    def test_id_only_import_rebuilds_stale_mefacreg(self, app, client):
+        # Older imports copied eq_mefacreg from the file (often a '-' placeholder);
+        # re-importing just the IDs rebuilds it from eq_mefac and eq_mereg
+        with app.app_context():
+            make_user(username='p', password='pw', roles='physicist')
+            db.session.add(EquipmentClass(name='US'))
+            db.session.commit()
+            with db.engine.begin() as conn:
+                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_mefacreg) VALUES (1, 'US', '-')"))
+                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_mefac, eq_mereg, eq_mefacreg) "
+                                  "VALUES (1, 'CT', 'FAC-12', 'REG-345', 'old')"))
+        login(client, 'p', 'pw')
+        _post_import(client, 'eq_id\n1\n2\n')
+        db.session.expire_all()
+        assert [(e.eq_mod, e.eq_mefacreg) for e in Equipment.query.order_by(Equipment.eq_id)] == \
+            [('US', None), ('CT', '12-345')]
+
 class TestOtherImporters:
     def _setup(self, app, client):
         with app.app_context():
@@ -881,7 +899,7 @@ class TestPersonnelPermissions:
             other_id = other.id
         login(client, 'phys', 'pw')
         client.post(f'/personnel/{other_id}/edit',
-                    data=_personnel_form(other, phone='555-1234', username='hijacked', password='newpass1'))
+                    data=_personnel_form(other, phone='555-1234', username='hijacked', password='newpassword1'))
         other = db.session.get(Personnel, other_id)
         assert other.phone == '555-1234'
         assert other.username == 'other'
@@ -943,6 +961,113 @@ class TestPersonnelPermissions:
                     data=_personnel_form(other, is_admin='y', is_active='y', login_required='y', username='other'))
         assert db.session.get(Personnel, other_id).is_admin is True
 
+
+class TestActiveAndLoginAccess:
+    def _deactivate(self, user_id, **changes):
+        person = db.session.get(Personnel, user_id)
+        for attr, value in changes.items():
+            setattr(person, attr, value)
+        db.session.commit()
+        g.pop('_login_user', None)  # the test app context outlives requests; a real request reloads the user
+
+    @pytest.mark.parametrize('changes', [{'is_active': False}, {'login_required': False}])
+    def test_open_session_ends_when_access_is_removed(self, app, client, changes):
+        with app.app_context():
+            user_id = make_user(username='p', password='pw', roles='physicist').id
+        login(client, 'p', 'pw')
+        assert client.get('/personnel').status_code == 200
+        self._deactivate(user_id, **changes)
+        resp = client.get('/personnel')
+        assert resp.status_code == 302 and '/login' in resp.location
+
+    def test_login_access_needs_username(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            other = Personnel(name='New, Person', email='new@example.com', roles='contact')
+            db.session.add(other)
+            db.session.commit()
+            other_id = other.id
+        login(client, 'admin', 'pw')
+        page = client.post(f'/personnel/{other_id}/edit',
+                           data=_personnel_form(other, is_active='y', login_required='y')).data
+        assert b'A username is required for login access.' in page
+        assert db.session.get(Personnel, other_id).login_required is False
+
+    def test_short_password_rejected(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            other = Personnel(name='New, Person', email='new@example.com', roles='contact')
+            db.session.add(other)
+            db.session.commit()
+            other_id = other.id
+        login(client, 'admin', 'pw')
+        client.post(f'/personnel/{other_id}/edit',
+                    data=_personnel_form(other, is_active='y', login_required='y', username='new', password='short'))
+        assert db.session.get(Personnel, other_id).password_hash is None
+        client.post(f'/personnel/{other_id}/edit',
+                    data=_personnel_form(other, is_active='y', login_required='y', username='new',
+                                         password='long enough pw'))
+        assert db.session.get(Personnel, other_id).can_log_in
+
+    def test_admin_cannot_remove_own_login_access(self, app, client):
+        with app.app_context():
+            admin = make_user(username='admin', password='pw', is_admin=True, roles='physicist')
+            admin_id = admin.id
+        login(client, 'admin', 'pw')
+        client.post(f'/personnel/{admin_id}/edit',
+                    data=_personnel_form(admin, is_admin='y', is_active='y', username='admin'))
+        assert db.session.get(Personnel, admin_id).login_required is True
+
+    def test_inactive_people_only_listed_when_assigned(self, app, client):
+        with app.app_context():
+            make_user(username='p', password='pw', roles='physicist')
+            kept = make_user(username='kept', roles='contact', is_active=False)
+            kept.name = 'Kept, Contact'
+            gone = make_user(username='gone', roles='contact', is_active=False)
+            gone.name = 'Gone, Contact'
+            _seed_equipment()
+            db.session.get(Equipment, 1).contact_id = kept.id
+            db.session.commit()
+        login(client, 'p', 'pw')
+        names = [c['name'] for c in client.get('/api/equipment/1/form-data').get_json()['choices']['contacts']]
+        assert names == ['Kept, Contact (inactive)']
+        assert client.get('/api/equipment/2/form-data').get_json()['choices']['contacts'] == []
+
+        # Saving the edit form keeps the inactive contact rather than rejecting or clearing it
+        page = client.get('/equipment/1/edit').data.decode()
+        assert 'Kept, Contact (inactive)' in page and 'Gone, Contact' not in page
+        eq = db.session.get(Equipment, 1)
+        client.post('/equipment/1/edit', data={'class_id': str(eq.class_id), 'contact_id': str(eq.contact_id),
+                                               'eq_mod': 'Changed', 'eq_captype': 'Replacement'})
+        eq = db.session.get(Equipment, 1)
+        assert eq.eq_mod == 'Changed' and eq.contact_id is not None
+
+    def test_inactive_reviewer_kept_on_existing_test(self, app, client):
+        with app.app_context():
+            make_user(username='p', password='pw', roles='physicist')
+            reviewer = make_user(username='r', roles='physicist', is_active=False)
+            reviewer.name = 'Former, Reviewer'
+            _seed_equipment()
+            db.session.add(ComplianceTest(eq_id=1, test_type='Annual', test_date=date(2024, 1, 1),
+                                          reviewed_by_id=reviewer.id))
+            db.session.commit()
+        login(client, 'p', 'pw')
+        assert 'Former, Reviewer (inactive)' in client.get('/compliance/test/1/edit').data.decode()
+        assert 'Former, Reviewer' not in client.get('/compliance/test/1/new').data.decode()
+
+
+class TestDatabaseErrorText:
+    def test_import_reports_duplicate_without_raw_error(self, app, client):
+        with app.app_context():
+            admin = make_user(username='admin', password='pw', is_admin=True)
+            make_user(username='taken', roles='contact')
+            admin_id = admin.id
+        login(client, 'admin', 'pw')
+        csv_file = io.BytesIO(f'id,name,email\n{admin_id},Admin,taken@example.com\n'.encode())
+        page = client.post('/import-personnel', data={'csv_file': (csv_file, 'p.csv')},
+                           content_type='multipart/form-data', follow_redirects=True).data.decode()
+        assert 'Row 2: another record already has this email' in page
+        assert 'constraint' not in page.lower()
 
 class TestCSRF:
     @pytest.fixture()
