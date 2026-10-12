@@ -10,9 +10,9 @@
 <div class="row">
     <div class="col-md-8 offset-md-2">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-{{ 'edit' if item else 'plus' }}"></i> {{ action }} {{ table.singular }}</h1>
+            <h1>{{ icon('edit' if item else 'plus') }} {{ action }} {{ table.singular }}</h1>
             <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to {{ table.plural }}
+                {{ icon('arrow-left') }} Back to {{ table.plural }}
             </a>
         </div>
 
@@ -53,16 +53,16 @@
 
                     {% if table.note %}
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> {{ table.note }}
+                        {{ icon('info-circle') }} {{ table.note }}
                     </div>
                     {% endif %}
 
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancel
+                            {{ icon('times') }} Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> {{ 'Update' if item else 'Add' }} {{ table.singular }}
+                            {{ icon('save') }} {{ 'Update' if item else 'Add' }} {{ table.singular }}
                         </button>
                     </div>
                 </form>

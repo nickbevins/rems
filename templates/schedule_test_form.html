@@ -6,14 +6,14 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-calendar-plus"></i> {{ title }}</h1>
+            <h1>{{ icon('calendar-plus') }} {{ title }}</h1>
             {% if redirect_to == 'compliance' %}
                 <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Compliance Dashboard
+                    {{ icon('arrow-left') }} Back to Compliance Dashboard
                 </a>
             {% else %}
                 <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Equipment
+                    {{ icon('arrow-left') }} Back to Equipment
                 </a>
             {% endif %}
         </div>
@@ -21,7 +21,7 @@
         <!-- Equipment Info Card -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5><i class="fas fa-cog"></i> Equipment Information</h5>
+                <h5>Equipment Information</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -55,7 +55,7 @@
 
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-calendar-alt"></i> Schedule Details</h5>
+                    <h5>Schedule Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -95,7 +95,7 @@
             {% if scheduled_test %}
             <div class="card mt-4">
                 <div class="card-header">
-                    <h5><i class="fas fa-history"></i> Audit Information</h5>
+                    <h5>Audit Information</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -133,21 +133,21 @@
                         <div>
                             {% if redirect_to == 'compliance' %}
                                 <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Cancel
+                                    {{ icon('times') }} Cancel
                                 </a>
                             {% else %}
                                 <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                                    <i class="fas fa-times"></i> Cancel
+                                    {{ icon('times') }} Cancel
                                 </a>
                             {% endif %}
                             {% if scheduled_test %}
                                 <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                                    <i class="fas fa-trash"></i> Delete Schedule
+                                    {{ icon('trash') }} Delete Schedule
                                 </button>
                             {% endif %}
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Schedule
+                            {{ icon('save') }} Save Schedule
                         </button>
                     </div>
                 </div>

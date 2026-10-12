@@ -7,19 +7,19 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1><i class="fas fa-users"></i> Personnel</h1>
+            <h1>{{ icon('users') }} Personnel</h1>
             <div>
                 {% if current_user.can_manage_personnel() %}
                     <a href="{{ url_for('new_personnel') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Personnel
+                        {{ icon('plus') }} Add Personnel
                     </a>
                 {% endif %}
                 <a href="{{ url_for('export_personnel') }}" class="btn btn-success">
-                    <i class="fas fa-download"></i> Export CSV
+                    {{ icon('download') }} Export CSV
                 </a>
                 {% if current_user.can_manage_personnel() %}
                     <a href="{{ url_for('import_personnel') }}" class="btn btn-info">
-                        <i class="fas fa-upload"></i> Import CSV
+                        {{ icon('upload') }} Import CSV
                     </a>
                 {% endif %}
             </div>
@@ -42,12 +42,12 @@
                     </div>
                     <div class="col-md-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Search
+                            {{ icon('search') }} Search
                         </button>
                     </div>
                     <div class="col-md-2">
                         <a href="{{ url_for('personnel_list') }}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Clear
+                            {{ icon('times') }} Clear
                         </a>
                     </div>
                 </form>
@@ -63,19 +63,19 @@
                             <thead>
                                 <tr>
                                     <th class="sortable" data-column="name">
-                                        Name <i class="fas fa-sort"></i>
+                                        Name {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="email">
-                                        Email <i class="fas fa-sort"></i>
+                                        Email {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="phone">
-                                        Phone <i class="fas fa-sort"></i>
+                                        Phone {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="roles">
-                                        Roles <i class="fas fa-sort"></i>
+                                        Roles {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="login_status">
-                                        Login Status <i class="fas fa-sort"></i>
+                                        Login Status {{ icon('sort') }}
                                     </th>
                                     <th>Actions</th>
                                 </tr>
@@ -100,16 +100,16 @@
                                     </td>
                                     <td>
                                         <a href="{{ url_for('personnel_detail', id=person.id) }}" class="btn btn-sm btn-outline-info btn-icon" title="View Details">
-                                            <i class="fas fa-eye"></i>
+                                            {{ icon('eye') }}
                                         </a>
                                         {% if current_user.can_manage_personnel() %}
                                             <a href="{{ url_for('edit_personnel', id=person.id) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
-                                                <i class="fas fa-edit"></i>
+                                                {{ icon('edit') }}
                                             </a>
                                             <form method="POST" action="{{ url_for('delete_personnel', id=person.id) }}" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this personnel record?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="Delete">
-                                                    <i class="fas fa-trash"></i>
+                                                    {{ icon('trash') }}
                                                 </button>
                                             </form>
                                         {% endif %}
@@ -158,12 +158,12 @@
                     {% endif %}
                 {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        {{ icon('users', 'icon-3x text-muted mb-3') }}
                         <h4>No Personnel Found</h4>
                         <p class="text-muted">{% if current_user.can_manage_personnel() %}Start by adding personnel to the database.{% else %}No personnel records are available to view.{% endif %}</p>
                         {% if current_user.can_manage_personnel() %}
                             <a href="{{ url_for('new_personnel') }}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add First Personnel
+                                {{ icon('plus') }} Add First Personnel
                             </a>
                         {% endif %}
                     </div>
@@ -182,16 +182,12 @@
     background-color: #f8f9fa;
     color: #212529;
 }
-.sortable i {
+.sortable .icon {
     margin-left: 5px;
     opacity: 0.3;
 }
-.sortable.asc i:before {
-    content: "\f0de";
-    opacity: 1;
-}
-.sortable.desc i:before {
-    content: "\f0dd";
+.sortable.asc .icon,
+.sortable.desc .icon {
     opacity: 1;
 }
 .personnel-row {
@@ -242,10 +238,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const isAsc = this.classList.contains('asc');
             
             // Reset all headers
-            headers.forEach(h => h.classList.remove('asc', 'desc'));
+            headers.forEach(h => {
+                h.classList.remove('asc', 'desc');
+                setIcon(h.querySelector('.icon'), 'sort');
+            });
             
             // Set current header direction
             this.classList.add(isAsc ? 'desc' : 'asc');
+            setIcon(this.querySelector('.icon'), isAsc ? 'sort-down' : 'sort-up');
             
             // Sort rows
             rows.sort((a, b) => {

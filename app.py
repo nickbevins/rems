@@ -1,3 +1,4 @@
+from markupsafe import Markup, escape
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file, has_request_context, Response
 from urllib.parse import urlparse, urljoin
 from flask_sqlalchemy import SQLAlchemy
@@ -58,18 +59,18 @@ def extract_personnel_initials(name):
     return initials[:3]  # Limit to 3 characters max
 
 
-def _generate_mefacreg(mefac, mereg):
-    """Derive eq_mefacreg by combining trailing digits of eq_mefac and eq_mereg.
+def _generate_statefacreg(statefac, statereg):
+    """Derive eq_statefacreg by combining trailing digits of eq_statefac and eq_statereg.
 
-    Returns a '<mefac_digits>-<mereg_digits>' string, or None if either value
+    Returns a '<statefac_digits>-<statereg_digits>' string, or None if either value
     is missing or contains no trailing digits.
     """
-    if not mefac or not mereg:
+    if not statefac or not statereg:
         return None
-    mefac_m = re.search(r'\d+$', mefac)
-    mereg_m = re.search(r'\d+$', mereg)
-    if mefac_m and mereg_m:
-        return f"{mefac_m.group()}-{mereg_m.group()}"
+    statefac_m = re.search(r'\d+$', statefac)
+    statereg_m = re.search(r'\d+$', statereg)
+    if statefac_m and statereg_m:
+        return f"{statefac_m.group()}-{statereg_m.group()}"
     return None
 
 
@@ -140,6 +141,35 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Let browsers cache static assets (CSS, JS, icon fonts) for a year instead of
+# revalidating them on every page load. url_for('static', ...) appends ?v=<mtime>
+# so an edited file gets a new URL and is fetched fresh.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
+
+# Icons are inline SVG: templates/_icons.svg holds one <symbol> per icon and is
+# included once in base.html; {{ icon('name') }} renders a tiny <svg><use> pointing
+# at it, so icons draw with the page instead of waiting on a font download.
+with open(os.path.join(app.root_path, 'templates', '_icons.svg'), encoding='utf-8') as _f:
+    ICON_VIEWBOXES = dict(re.findall(r'<symbol id="i-([\w-]+)" viewBox="([^"]+)"', _f.read()))
+
+@app.template_global()
+def icon(name, cls=''):
+    """Inline SVG icon. `cls` adds classes, e.g. 'icon-2x text-muted'."""
+    viewbox = ICON_VIEWBOXES.get(name)
+    if viewbox is None:
+        raise ValueError(f'Unknown icon {name!r}: add it to templates/_icons.svg')
+    classes = f'icon {cls}'.strip()
+    return Markup(f'<svg class="{escape(classes)}" viewBox="{viewbox}" aria-hidden="true">'
+                  f'<use href="#i-{name}"></use></svg>')
+
+@app.url_defaults
+def _static_cache_bust(endpoint, values):
+    if endpoint == 'static' and 'filename' in values and 'v' not in values:
+        try:
+            values['v'] = int(os.stat(os.path.join(app.static_folder, values['filename'])).st_mtime)
+        except OSError:
+            pass
+
 # Session cookie hardening. Secure (HTTPS-only) is on for Render, or set
 # SESSION_COOKIE_SECURE=1 for any other HTTPS deployment; plain-HTTP local dev
 # would otherwise be unable to log in.
@@ -180,7 +210,21 @@ def ensure_personnel_role(person, role_name):
     else:
         person.roles = role_name
 
-AUDIT_FREQUENCIES = ['Quarterly', 'Semiannual', 'Annual - ACR', 'Annual - TJC', 'Annual - ME']
+def _end_of_month(d):
+    return d.replace(day=calendar.monthrange(d.year, d.month)[1])
+
+# The single definition of audit frequencies: each name maps to its due-date rule,
+# taking the date of the last acceptance/annual test. The forms, CSV import and
+# Equipment.get_next_due_date() all read this. State rules are named
+# 'Annual - <state>'; add another state with its own rule here.
+AUDIT_FREQUENCIES = {
+    'Quarterly': lambda d: _end_of_month(d + relativedelta(months=3)),
+    'Semiannual': lambda d: _end_of_month(d + relativedelta(months=6)),
+    'Annual - ACR': lambda d: d + relativedelta(months=14),                   # 1 year + 2 months
+    'Annual - TJC': lambda d: d + relativedelta(years=1) + timedelta(days=30),
+    'Annual - ME': lambda d: date(d.year + 1, 12, 31),                        # end of next calendar year
+}
+app.jinja_env.globals['audit_frequencies'] = list(AUDIT_FREQUENCIES)
 
 def _int_or_none(val):
     """int(val), or None for blanks and anything that is not a whole number."""
@@ -280,7 +324,7 @@ def _apply_equipment_rules(equipment):
     """Derived fields, applied by every path that saves equipment (forms, inline edits, import)."""
     if equipment.eq_retired and not equipment.eq_retdate:
         equipment.eq_retdate = datetime.now().date()  # retired with no date means retired today
-    equipment.eq_mefacreg = _generate_mefacreg(equipment.eq_mefac, equipment.eq_mereg)
+    equipment.eq_statefacreg = _generate_statefacreg(equipment.eq_statefac, equipment.eq_statereg)
 
 def _save_equipment_form(form, equipment):
     form.populate_obj(equipment)
@@ -311,8 +355,8 @@ def _equipment_search_columns():
     return [
         EquipmentClass.name, EquipmentSubclass.name, Manufacturer.name, Department.name,
         Facility.name, Facility.facility_full, Equipment.eq_mod, Equipment.eq_rm,
-        Equipment.eq_assetid, Equipment.eq_sn, Equipment.eq_mefac, Equipment.eq_mereg,
-        Equipment.eq_mefacreg, Equipment.eq_manid, Equipment.eq_acrsite, Equipment.eq_acrunit,
+        Equipment.eq_assetid, Equipment.eq_sn, Equipment.eq_statefac, Equipment.eq_statereg,
+        Equipment.eq_statefacreg, Equipment.eq_manid, Equipment.eq_acrsite, Equipment.eq_acrunit,
         Equipment.eq_notes,
     ]
 
@@ -483,6 +527,13 @@ def check_and_migrate_db():
                 conn.execute(text(f'ALTER TABLE equipment DROP COLUMN {col}'))
                 logger.info("Migration: dropped column equipment.%s", col)
 
+        # Rename the Maine-specific state registration columns to generic names
+        for old, new in (('eq_mefac', 'eq_statefac'), ('eq_mereg', 'eq_statereg'),
+                         ('eq_mefacreg', 'eq_statefacreg')):
+            if old in equipment_cols and new not in equipment_cols:
+                conn.execute(text(f'ALTER TABLE equipment RENAME COLUMN {old} TO {new}'))
+                logger.info("Migration: renamed column equipment.%s to %s", old, new)
+
         # Add must_change_password to personnel (added in v1.1.0)
         if 'must_change_password' not in personnel_cols:
             conn.execute(text('ALTER TABLE personnel ADD COLUMN must_change_password BOOLEAN DEFAULT 0'))
@@ -555,9 +606,9 @@ class Equipment(db.Model):
     # Asset Information
     eq_assetid = db.Column(db.String(100))
     eq_sn = db.Column(db.String(200))
-    eq_mefac = db.Column(db.String(100))
-    eq_mereg = db.Column(db.String(100))
-    eq_mefacreg = db.Column(db.String(100))
+    eq_statefac = db.Column(db.String(100))
+    eq_statereg = db.Column(db.String(100))
+    eq_statefacreg = db.Column(db.String(100))
     eq_manid = db.Column(db.String(100))
 
     # Important Dates
@@ -619,26 +670,8 @@ class Equipment(db.Model):
             # No acceptance or annual test found, or no audit frequency set
             return None
 
-        due_dates = []
-        for freq in (f.strip() for f in self.eq_auditfreq.split(',')):
-            if freq == 'Quarterly':
-                # End of month 3 months from test date
-                next_month = test_date + relativedelta(months=3)
-                due_dates.append(next_month.replace(day=calendar.monthrange(next_month.year, next_month.month)[1]))
-            elif freq == 'Semiannual':
-                # End of month 6 months from test date
-                next_month = test_date + relativedelta(months=6)
-                due_dates.append(next_month.replace(day=calendar.monthrange(next_month.year, next_month.month)[1]))
-            elif freq == 'Annual - ACR':
-                # 1 year + 2 months from test date
-                due_dates.append(test_date + relativedelta(months=14))
-            elif freq == 'Annual - TJC':
-                # 1 year + 30 days from test date
-                due_dates.append(test_date + relativedelta(years=1) + timedelta(days=30))
-            elif freq == 'Annual - ME':
-                # End of next calendar year
-                due_dates.append(date(test_date.year + 1, 12, 31))
-
+        rules = (AUDIT_FREQUENCIES.get(f.strip()) for f in self.eq_auditfreq.split(','))
+        due_dates = [rule(test_date) for rule in rules if rule]
         return min(due_dates) if due_dates else None
 
     def get_last_tested_date(self):
@@ -950,9 +983,9 @@ class EquipmentForm(FlaskForm):
     physician_id = SelectField('Physician', choices=[], validators=[Optional()])
     eq_assetid = StringField('Asset ID', validators=[Optional(), Length(max=100)])
     eq_sn = StringField('Serial Number', validators=[Optional(), Length(max=200)])
-    eq_mefac = StringField('ME Facility', validators=[Optional(), Length(max=100)])
-    eq_mereg = StringField('ME Registration', validators=[Optional(), Length(max=100)])
-    eq_mefacreg = StringField('ME Facility Registration', validators=[Optional(), Length(max=100)])
+    eq_statefac = StringField('State Facility', validators=[Optional(), Length(max=100)])
+    eq_statereg = StringField('State Registration', validators=[Optional(), Length(max=100)])
+    eq_statefacreg = StringField('State Facility Registration', validators=[Optional(), Length(max=100)])
     eq_manid = StringField('Manufacturer ID', validators=[Optional(), Length(max=100)])
     eq_mandt = DateField('Manufacture Date', validators=[Optional()])
     eq_rfrbdt = DateField('Refurbish Date', validators=[Optional()])
@@ -962,13 +995,8 @@ class EquipmentForm(FlaskForm):
     eq_retired = BooleanField('Retired')
     eq_planned = BooleanField('Planned (not yet installed)')
     eq_physcov = BooleanField('Physics Coverage', default=True)
-    eq_auditfreq = SelectMultipleField('Audit Frequencies', choices=[
-        ('Quarterly', 'Quarterly'),
-        ('Semiannual', 'Semiannual'),
-        ('Annual - ACR', 'Annual - ACR'),
-        ('Annual - TJC', 'Annual - TJC'),
-        ('Annual - ME', 'Annual - ME')
-    ], validators=[Optional()])
+    eq_auditfreq = SelectMultipleField('Audit Frequencies', choices=[(f, f) for f in AUDIT_FREQUENCIES],
+                                       validators=[Optional()])
     eq_acrsite = StringField('ACR Site', validators=[Optional(), Length(max=100)])
     eq_acrunit = StringField('ACR Unit', validators=[Optional(), Length(max=100)])
     eq_radcap = SelectField('Radiology Owned', choices=[
@@ -1434,8 +1462,8 @@ def update_equipment_details(eq_id):
     equipment.facility_id = _int_or_none(data.get('facility_id'))
     equipment.eq_assetid = data.get('eq_assetid', '')
     equipment.eq_sn = data.get('eq_sn', '')
-    equipment.eq_mefac = data.get('eq_mefac', '')
-    equipment.eq_mereg = data.get('eq_mereg', '')
+    equipment.eq_statefac = data.get('eq_statefac', '')
+    equipment.eq_statereg = data.get('eq_statereg', '')
     equipment.eq_manid = data.get('eq_manid', '')
     frequencies = [f.strip() for f in str(data.get('eq_auditfreq') or '').split(',')]
     equipment.eq_auditfreq = ', '.join(f for f in frequencies if f in AUDIT_FREQUENCIES) or None
@@ -1532,8 +1560,8 @@ def get_equipment_form_data(eq_id):
             'facility_id': equipment.facility_id,
             'eq_assetid': equipment.eq_assetid,
             'eq_sn': equipment.eq_sn,
-            'eq_mefac': equipment.eq_mefac,
-            'eq_mereg': equipment.eq_mereg,
+            'eq_statefac': equipment.eq_statefac,
+            'eq_statereg': equipment.eq_statereg,
             'eq_manid': equipment.eq_manid,
             'eq_mandt': equipment.eq_mandt.strftime('%Y-%m-%d') if equipment.eq_mandt else '',
             'eq_rfrbdt': equipment.eq_rfrbdt.strftime('%Y-%m-%d') if equipment.eq_rfrbdt else '',
@@ -1560,7 +1588,7 @@ def get_equipment_form_data(eq_id):
         },
         'choices': {
             **{key: [{'id': obj.id, 'name': _option_label(obj)} for obj in objs] for key, objs in choices.items()},
-            'audit_frequencies': AUDIT_FREQUENCIES,
+            'audit_frequencies': list(AUDIT_FREQUENCIES),
         }
     })
 
@@ -1868,7 +1896,7 @@ EQUIPMENT_EXPORT_COLUMNS = [
     ('supervisor_id', None), ('supervisor', _related('supervisor')),
     ('supervisor_email', _related('supervisor', 'email')),
     ('physician_id', None), ('physician', _related('physician')), ('physician_email', _related('physician', 'email')),
-    ('eq_assetid', None), ('eq_sn', None), ('eq_mefac', None), ('eq_mereg', None), ('eq_mefacreg', None),
+    ('eq_assetid', None), ('eq_sn', None), ('eq_statefac', None), ('eq_statereg', None), ('eq_statefacreg', None),
     ('eq_manid', None), ('eq_mandt', None), ('eq_rfrbdt', None), ('eq_instdt', None), ('eq_eoldate', None),
     ('eq_eeoldate', lambda eq: eq.get_estimated_eol_date()), ('eq_retdate', None),
     ('eq_retired', lambda eq: bool(eq.eq_retired)), ('eq_planned', lambda eq: bool(eq.eq_planned)),
@@ -1892,7 +1920,7 @@ def export_equipment():
 # Equipment CSV import. Column names match /export-equipment, so export -> edit ->
 # import is the bulk-edit workflow: rows with a known eq_id update that record,
 # only the columns present in the file change, and a blank cell clears the field.
-EQUIPMENT_TEXT_COLUMNS = ('eq_mod', 'eq_rm', 'eq_phone', 'eq_assetid', 'eq_sn', 'eq_mefac', 'eq_mereg',
+EQUIPMENT_TEXT_COLUMNS = ('eq_mod', 'eq_rm', 'eq_phone', 'eq_assetid', 'eq_sn', 'eq_statefac', 'eq_statereg',
                           'eq_manid', 'eq_acrsite', 'eq_acrunit', 'eq_capnote', 'eq_notes')
 EQUIPMENT_DATE_COLUMNS = ('eq_mandt', 'eq_rfrbdt', 'eq_instdt', 'eq_eoldate', 'eq_retdate')
 EQUIPMENT_BOOL_COLUMNS = {'eq_retired': False, 'eq_planned': False, 'eq_physcov': True}  # value when blank
@@ -1904,7 +1932,7 @@ EQUIPMENT_PERSONNEL_COLUMNS = (
     ('physician', 'physician_id', 'physician_id', 'physician', 'physician_email'),
 )
 # Written by the export for reference but calculated, so ignored on import
-EQUIPMENT_CALCULATED_COLUMNS = {'eq_mefacreg', 'eq_eeoldate', 'eq_capecst', 'eq_capcat'}
+EQUIPMENT_CALCULATED_COLUMNS = {'eq_statefacreg', 'eq_eeoldate', 'eq_capecst', 'eq_capcat'}
 EQUIPMENT_IMPORT_COLUMNS = (
     {'eq_id', 'equipment_class', 'equipment_subclass', 'manufacturer', 'department',
      'facility', 'facility_full', 'facility_address', 'eq_auditfreq', 'eq_captype'}
@@ -2811,9 +2839,9 @@ def _thousands(value):
     return f'${value * 1000:,}' if value else None
 
 LOOKUP_TABLES = [
-    LookupTable(EquipmentClass, 'equipment-classes', 'Equipment Class', 'Equipment Classes', 'fa-tags'),
+    LookupTable(EquipmentClass, 'equipment-classes', 'Equipment Class', 'Equipment Classes', 'tags'),
     LookupTable(
-        EquipmentSubclass, 'equipment-subclasses', 'Equipment Subclass', 'Equipment Subclasses', 'fa-layer-group',
+        EquipmentSubclass, 'equipment-subclasses', 'Equipment Subclass', 'Equipment Subclasses', 'layer-group',
         name_help='Unique within its equipment class',
         fields=[
             LookupField('class_id', 'Equipment Class', 'select', required=True,
@@ -2828,9 +2856,9 @@ LOOKUP_TABLES = [
                  ('Est. Capital Cost', lambda s: _thousands(s.estimated_capital_cost)),
                  ('Expected Lifetime', lambda s: f'{s.expected_lifetime} years' if s.expected_lifetime else None)],
         unique_within=('class_id',)),
-    LookupTable(Department, 'departments', 'Department', 'Departments', 'fa-building'),
+    LookupTable(Department, 'departments', 'Department', 'Departments', 'building'),
     LookupTable(
-        Facility, 'facilities', 'Facility', 'Facilities', 'fa-hospital', name_maxlength=200,
+        Facility, 'facilities', 'Facility', 'Facilities', 'hospital', name_maxlength=200,
         name_help='Short name shown throughout the app',
         fields=[
             LookupField('facility_full', 'Full Facility', maxlength=300,
@@ -2839,9 +2867,9 @@ LOOKUP_TABLES = [
         ],
         columns=[('Full Facility', lambda f: f.facility_full), ('Address', lambda f: f.address)],
         validate=_validate_facility),
-    LookupTable(Manufacturer, 'manufacturers', 'Manufacturer', 'Manufacturers', 'fa-industry'),
+    LookupTable(Manufacturer, 'manufacturers', 'Manufacturer', 'Manufacturers', 'industry'),
     LookupTable(
-        CapitalCategory, 'capital-categories', 'Capital Category', 'Capital Categories', 'fa-tags',
+        CapitalCategory, 'capital-categories', 'Capital Category', 'Capital Categories', 'tags',
         name_maxlength=50, name_help='For example "A", "B", or "Category 1"',
         fields=[
             LookupField('min_cost', 'Minimum Cost (thousands $)', 'int', required=True,

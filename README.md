@@ -225,7 +225,7 @@ Column names match the equipment export, so the way to edit in bulk is: export f
 - Every cell is read as text, so values like room `101` or serial `00123` are kept exactly
 - Dates: `YYYY-MM-DD`, or `M/D/YYYY` as Excel re-saves them
 - Unrecognized column names are reported and ignored
-- Export-only calculated columns (`eq_mefacreg`, `eq_eeoldate`, `eq_capecst`, `eq_capcat`) are ignored on import
+- Export-only calculated columns (`eq_statefacreg`, `eq_eeoldate`, `eq_capecst`, `eq_capcat`) are ignored on import
 
 | Field | Description |
 |---|---|
@@ -235,7 +235,7 @@ Column names match the equipment export, so the way to edit in bulk is: export f
 | `manufacturer`, `department` | Lookup names (created if new) |
 | `facility` | Facility name; `facility_full` and `facility_address` are used only when the import creates the facility |
 | `contact_id`, `contact_person`, `contact_email` | Contact, matched by ID then name; a new person needs an email. Same pattern for `supervisor*` and `physician*` |
-| `eq_mod`, `eq_rm`, `eq_phone`, `eq_assetid`, `eq_sn`, `eq_mefac`, `eq_mereg`, `eq_manid`, `eq_acrsite`, `eq_acrunit`, `eq_notes` | Text fields |
+| `eq_mod`, `eq_rm`, `eq_phone`, `eq_assetid`, `eq_sn`, `eq_statefac`, `eq_statereg`, `eq_manid`, `eq_acrsite`, `eq_acrunit`, `eq_notes` | Text fields |
 | `eq_mandt`, `eq_rfrbdt`, `eq_instdt`, `eq_eoldate`, `eq_retdate` | Manufacture, refurbish, install, end-of-life, and retirement dates |
 | `eq_retired`, `eq_planned`, `eq_physcov` | TRUE/FALSE (blank: not retired, not planned, physics covered) |
 | `eq_auditfreq` | Comma-separated: Quarterly, Semiannual, Annual - ACR, Annual - TJC, Annual - ME |
@@ -317,7 +317,7 @@ Tests cover: authentication and login throttling, open redirect rejection, role 
 ### v1.2.0
 - Bulk personnel import no longer creates login credentials; contact records only — login access granted individually via UI
 - `FLASK_ENV` deprecated; replaced with `FLASK_DEBUG`; local dev server binds `127.0.0.1` only
-- Duplicate `eq_mefacreg` generation extracted to `_generate_mefacreg()` utility function
+- Duplicate `eq_statefacreg` generation extracted to `_generate_statefacreg()` utility function
 - `MockPagination` dynamic `type()` pattern replaced with a proper module-level class
 - Redundant in-function `import re` statements removed (now top-level); missing `import logging` added
 - Unused `today` variable removed from `get_last_tested_date()`

@@ -12,6 +12,14 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// Switch an inline SVG icon (rendered by the icon() template helper) to another
+// symbol from the sprite in templates/_icons.svg, e.g. setIcon(el, 'sort-up').
+function setIcon(svg, name) {
+    const symbol = document.getElementById('i-' + name);
+    if (symbol) svg.setAttribute('viewBox', symbol.getAttribute('viewBox'));
+    svg.querySelector('use').setAttribute('href', '#i-' + name);
+}
+
 // Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips

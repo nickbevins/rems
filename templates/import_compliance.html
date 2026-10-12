@@ -6,15 +6,15 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-file-import"></i> Import Compliance Tests</h1>
+            <h1>{{ icon('upload') }} Import Compliance Tests</h1>
             <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                {{ icon('arrow-left') }} Back to Dashboard
             </a>
         </div>
         
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-upload"></i> Upload CSV File</h5>
+                <h5>Upload CSV File</h5>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
@@ -38,7 +38,7 @@
                     </div>
                     
                     <div class="alert alert-primary">
-                        <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                        <h6>CSV Format Requirements:</h6>
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> eq_id, test_type, test_date</li>
                             <li><strong>Optional columns:</strong> test_id, report_date, submission_date, performed_by_id, reviewed_by_id, notes</li>
@@ -52,7 +52,7 @@
                     
                     <div class="card border-success mb-3">
                         <div class="card-header bg-success text-white">
-                            <h6 class="mb-0"><i class="fas fa-users"></i> Personnel IDs Reference</h6>
+                            <h6 class="mb-0">Personnel IDs Reference</h6>
                         </div>
                         <div class="card-body">
                             <p><strong>Use these personnel IDs for accuracy in your CSV file:</strong></p>
@@ -80,7 +80,7 @@
                     </div>
                     
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Import Tests
+                        {{ icon('upload') }} Import Tests
                     </button>
                 </form>
             </div>

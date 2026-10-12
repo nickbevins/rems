@@ -6,14 +6,14 @@
 <div class="row">
     <div class="col-12">
         <h1 class="mb-4">
-            <i class="fas fa-file-import"></i> Import Equipment Data
+            {{ icon('upload') }} Import Equipment Data
         </h1>
         
         <div class="row">
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-upload"></i> Upload CSV File</h5>
+                        <h5>Upload CSV File</h5>
                     </div>
                     <div class="card-body">
                         <form method="POST" enctype="multipart/form-data">
@@ -28,7 +28,7 @@
                             
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-upload"></i> Import Data
+                                    {{ icon('upload') }} Import Data
                                 </button>
                             </div>
                         </form>
@@ -37,7 +37,7 @@
                 
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-info-circle"></i> Import Instructions</h5>
+                        <h5>Import Instructions</h5>
                     </div>
                     <div class="card-body">
                         <h6>Adding and updating equipment</h6>
@@ -52,13 +52,13 @@
                         <ul>
                             <li>Dates: YYYY-MM-DD (Excel's M/D/YYYY also works)</li>
                             <li>TRUE/FALSE fields also accept YES/NO and 1/0. A blank means No, except Physics Coverage, where blank means Yes.</li>
-                            <li>Audit frequencies: comma-separated, from Quarterly, Semiannual, Annual - ACR, Annual - TJC, Annual - ME</li>
+                            <li>Audit frequencies: comma-separated, from {{ audit_frequencies|join(', ') }}</li>
                             <li>Unrecognized column names are reported and ignored, so check headers match the export exactly</li>
                         </ul>
 
                         <div class="alert alert-info mt-3 mb-0">
-                            <i class="fas fa-info-circle"></i>
-                            Export-only columns (<code>eq_mefacreg</code>, <code>eq_eeoldate</code>, <code>eq_capecst</code>, <code>eq_capcat</code>)
+                            {{ icon('info-circle') }}
+                            Export-only columns (<code>eq_statefacreg</code>, <code>eq_eeoldate</code>, <code>eq_capecst</code>, <code>eq_capcat</code>)
                             are calculated by the system and ignored on import, so it is fine to leave them in the file.
                         </div>
                     </div>
@@ -68,7 +68,7 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-table"></i> Expected CSV Format</h5>
+                        <h5>Expected CSV Format</h5>
                     </div>
                     <div class="card-body">
                         <p><strong>Expected columns (matches export format):</strong></p>
@@ -104,8 +104,8 @@
                                     <tr><td>physician_email</td><td>Text</td><td>Required only when creating a new physician</td></tr>
                                     <tr><td>eq_assetid</td><td>Text</td><td>Asset ID</td></tr>
                                     <tr><td>eq_sn</td><td>Text</td><td>Serial Number</td></tr>
-                                    <tr><td>eq_mefac</td><td>Text</td><td>ME Facility</td></tr>
-                                    <tr><td>eq_mereg</td><td>Text</td><td>ME Registration</td></tr>
+                                    <tr><td>eq_statefac</td><td>Text</td><td>State Facility</td></tr>
+                                    <tr><td>eq_statereg</td><td>Text</td><td>State Registration</td></tr>
                                     <tr><td>eq_manid</td><td>Text</td><td>Manufacturer ID</td></tr>
                                     <tr><td>eq_mandt</td><td>Date</td><td>Manufacture Date</td></tr>
                                     <tr><td>eq_rfrbdt</td><td>Date</td><td>Refurbish Date</td></tr>
@@ -130,7 +130,7 @@
                         </div>
                         
                         <div class="alert alert-info mt-3">
-                            <h6><i class="fas fa-info-circle"></i> Personnel Matching:</h6>
+                            <h6>Personnel Matching:</h6>
                             <ul class="mb-0">
                                 <li>A personnel ID matches that person exactly; otherwise the name is matched</li>
                                 <li>A name that is not found creates a new person, which needs the email column filled in</li>
@@ -141,7 +141,7 @@
 
                         <div class="mt-3">
                             <a href="{{ url_for('static', filename='sample_import.csv') }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-download"></i> Download Sample CSV
+                                {{ icon('download') }} Download Sample CSV
                             </a>
                         </div>
                     </div>
@@ -149,7 +149,7 @@
                 
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-question-circle"></i> Need Help?</h5>
+                        <h5>Need Help?</h5>
                     </div>
                     <div class="card-body">
                         <p>If you encounter issues with the import process:</p>

@@ -6,22 +6,22 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-cog"></i> {{ title }}</h1>
+            <h1>{{ icon('cog') }} {{ title }}</h1>
             <div>
                 {% if equipment %}
                     <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Details
+                        {{ icon('arrow-left') }} Back to Details
                     </a>
                 {% else %}
                     <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to List
+                        {{ icon('arrow-left') }} Back to List
                     </a>
                     <button type="button" class="btn btn-info" id="copyFromEquipmentBtn">
-                        <i class="fas fa-copy"></i> Copy from Equipment
+                        {{ icon('copy') }} Copy from Equipment
                     </button>
                 {% endif %}
                 <button type="submit" form="equipmentForm" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save Equipment
+                    {{ icon('save') }} Save Equipment
                 </button>
             </div>
         </div>
@@ -34,7 +34,7 @@
                 <div class="col-md-8">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Equipment Details</h5>
+                            <h5 class="mb-0">Equipment Details</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -175,7 +175,7 @@
                             <hr>
 
                             <!-- Compliance & Technical sub-section -->
-                            <h6 class="text-muted mb-3"><i class="fas fa-cogs"></i> Compliance & Technical</h6>
+                            <h6 class="text-muted mb-3">Compliance & Technical</h6>
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="mb-3">
@@ -215,16 +215,16 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="mb-3">
-                                        {{ form.eq_mefac.label(class="form-label") }}
-                                        {{ form.eq_mefac(class="form-control") }}
-                                        {% for error in form.eq_mefac.errors %}
+                                        {{ form.eq_statefac.label(class="form-label") }}
+                                        {{ form.eq_statefac(class="form-control") }}
+                                        {% for error in form.eq_statefac.errors %}
                                             <div class="invalid-feedback d-block">{{ error }}</div>
                                         {% endfor %}
                                     </div>
                                     <div class="mb-3">
-                                        {{ form.eq_mereg.label(class="form-label") }}
-                                        {{ form.eq_mereg(class="form-control") }}
-                                        {% for error in form.eq_mereg.errors %}
+                                        {{ form.eq_statereg.label(class="form-label") }}
+                                        {{ form.eq_statereg(class="form-control") }}
+                                        {% for error in form.eq_statereg.errors %}
                                             <div class="invalid-feedback d-block">{{ error }}</div>
                                         {% endfor %}
                                     </div>
@@ -234,7 +234,7 @@
                             <hr>
 
                             <!-- Notes sub-section -->
-                            <h6 class="text-muted mb-3"><i class="fas fa-sticky-note"></i> Notes</h6>
+                            <h6 class="text-muted mb-3">Notes</h6>
                             <div class="mb-0">
                                 {{ form.eq_notes(class="form-control", rows="3") }}
                                 {% for error in form.eq_notes.errors %}
@@ -249,7 +249,7 @@
                 <div class="col-md-4">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> Capital Details</h5>
+                            <h5 class="mb-0">Capital Details</h5>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
@@ -290,26 +290,26 @@
             <!-- Contact Information (full width, matching detail page) -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-address-book"></i> Contact Information</h5>
+                    <h5 class="mb-0">Contact Information</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
-                            <h6><i class="fas fa-user"></i> Primary Contact</h6>
+                            <h6>Primary Contact</h6>
                             {{ form.contact_id(class="form-control") }}
                             {% for error in form.contact_id.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="col-md-4">
-                            <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
+                            <h6>Supervisor</h6>
                             {{ form.supervisor_id(class="form-control") }}
                             {% for error in form.supervisor_id.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
                             {% endfor %}
                         </div>
                         <div class="col-md-4">
-                            <h6><i class="fas fa-user-md"></i> Physician</h6>
+                            <h6>Physician</h6>
                             {{ form.physician_id(class="form-control") }}
                             {% for error in form.physician_id.errors %}
                                 <div class="invalid-feedback d-block">{{ error }}</div>
@@ -325,15 +325,15 @@
                     <div class="d-flex justify-content-between">
                         {% if equipment %}
                             <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                {{ icon('times') }} Cancel
                             </a>
                         {% else %}
                             <a href="{{ url_for('equipment_list') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                {{ icon('times') }} Cancel
                             </a>
                         {% endif %}
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Equipment
+                            {{ icon('save') }} Save Equipment
                         </button>
                     </div>
                 </div>
@@ -425,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     }
                     if (eq.eq_acrsite) document.getElementById('eq_acrsite').value = eq.eq_acrsite;
-                    if (eq.eq_mefac) document.getElementById('eq_mefac').value = eq.eq_mefac;
+                    if (eq.eq_statefac) document.getElementById('eq_statefac').value = eq.eq_statefac;
 
                     // Capital Planning Defaults
                     if (eq.eq_radcap !== null && eq.eq_radcap !== undefined) {

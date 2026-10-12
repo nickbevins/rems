@@ -9,7 +9,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 - **Inventory Tracking**: Complete equipment lifecycle from installation to retirement
 - **Asset Information**: Serial numbers, asset IDs, manufacture dates, end-of-life tracking
 - **Location Management**: Department, room, and facility assignments
-- **Technical Details**: ACR site/unit codes, ME facility registrations, audit frequencies
+- **Technical Details**: ACR site/unit codes, state facility registrations, audit frequencies
 
 ### Compliance Testing
 - **Test Scheduling**: Automated compliance test scheduling based on equipment requirements
@@ -99,7 +99,7 @@ REMS is a Flask-based web application designed for comprehensive tracking and ma
 - **Import/Export**: Personnel CSV import creates contact records only (no login credentials); equipment/compliance/facility import unchanged
 - **UI/UX**: Modern Bootstrap-based responsive interface; service credential fields removed from equipment form and detail views
 - **Security**: Hardened per internal security triage (2025-05); all addressable PDF findings resolved through v1.2.0 — see README for full feature list
-- **Code Quality**: Duplicate `eq_mefacreg` logic extracted to `_generate_mefacreg()`; `MockPagination` promoted to module-level class; redundant in-function imports removed
+- **Code Quality**: Duplicate `eq_statefacreg` logic extracted to `_generate_statefacreg()`; `MockPagination` promoted to module-level class; redundant in-function imports removed
 - **Testing**: Integration test scaffold in `tests/` covering auth, roles, CSV limits, and date arithmetic
 
 The application provides a complete solution for radiology equipment management with robust data handling, compliance tracking, and user-friendly interfaces suitable for healthcare environments.

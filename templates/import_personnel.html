@@ -7,11 +7,11 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h3><i class="fas fa-file-import"></i> Import Personnel Data</h3>
+                <h3>{{ icon('upload') }} Import Personnel Data</h3>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
-                    <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                    <h6>CSV Format Requirements:</h6>
                     <ul class="mb-0">
                         <li><strong>Required columns:</strong> name, email</li>
                         <li><strong>Optional columns:</strong> phone, roles</li>
@@ -37,10 +37,10 @@
 
                     <div class="d-flex justify-content-between">
                         <a href="{{ url_for('personnel_list') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to Personnel
+                            {{ icon('arrow-left') }} Back to Personnel
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-upload"></i> Import Personnel
+                            {{ icon('upload') }} Import Personnel
                         </button>
                     </div>
                 </form>
@@ -49,7 +49,7 @@
 
         <div class="card mt-4">
             <div class="card-header">
-                <h5><i class="fas fa-download"></i> Sample CSV Template</h5>
+                <h5>Sample CSV Template</h5>
             </div>
             <div class="card-body">
                 <p>Download a sample CSV template to get started:</p>
@@ -62,7 +62,7 @@
                     </code>
                 </div>
                 <button class="btn btn-outline-primary mt-2" onclick="downloadTemplate()">
-                    <i class="fas fa-download"></i> Download Template
+                    {{ icon('download') }} Download Template
                 </button>
             </div>
         </div>

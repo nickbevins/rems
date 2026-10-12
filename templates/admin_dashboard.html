@@ -6,7 +6,7 @@
 <div class="row">
     <div class="col-12">
         <div class="mb-4">
-            <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
+            <h1>{{ icon('screwdriver-wrench') }} Admin Dashboard</h1>
             <p class="text-muted">Manage standardized options for equipment data entry</p>
         </div>
         
@@ -21,7 +21,7 @@
                                 <h3 class="mb-0">{{ classes_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-tags fa-2x"></i>
+                                {{ icon('tags', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -37,7 +37,7 @@
                                 <h3 class="mb-0">{{ subclasses_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-layer-group fa-2x"></i>
+                                {{ icon('layer-group', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -53,7 +53,7 @@
                                 <h3 class="mb-0">{{ departments_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-building fa-2x"></i>
+                                {{ icon('building', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -69,7 +69,7 @@
                                 <h3 class="mb-0">{{ facilities_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-hospital fa-2x"></i>
+                                {{ icon('hospital', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -85,7 +85,7 @@
                                 <h3 class="mb-0">{{ manufacturers_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-industry fa-2x"></i>
+                                {{ icon('industry', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -101,7 +101,7 @@
                                 <h3 class="mb-0">{{ capital_categories_count }}</h3>
                             </div>
                             <div class="align-self-center">
-                                <i class="fas fa-dollar-sign fa-2x"></i>
+                                {{ icon('dollar-sign', 'icon-2x') }}
                             </div>
                         </div>
                     </div>
@@ -114,15 +114,15 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-tags"></i> Equipment Classifications</h5>
+                        <h5>Equipment Classifications</h5>
                     </div>
                     <div class="card-body">
                         <p>Manage equipment classes and subclasses for consistent categorization.</p>
                         <a href="{{ url_for('admin_equipment_classes') }}" class="btn btn-primary me-2">
-                            <i class="fas fa-edit"></i> Manage Classes
+                            {{ icon('edit') }} Manage Classes
                         </a>
                         <a href="{{ url_for('admin_equipment_subclasses') }}" class="btn btn-secondary">
-                            <i class="fas fa-edit"></i> Manage Subclasses
+                            {{ icon('edit') }} Manage Subclasses
                         </a>
                     </div>
                 </div>
@@ -131,12 +131,12 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-building"></i> Departments</h5>
+                        <h5>Departments</h5>
                     </div>
                     <div class="card-body">
                         <p>Manage department names for equipment location tracking.</p>
                         <a href="{{ url_for('admin_departments') }}" class="btn btn-success">
-                            <i class="fas fa-edit"></i> Manage Departments
+                            {{ icon('edit') }} Manage Departments
                         </a>
                     </div>
                 </div>
@@ -147,12 +147,12 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-hospital"></i> Facilities</h5>
+                        <h5>Facilities</h5>
                     </div>
                     <div class="card-body">
                         <p>Manage facility names and addresses for equipment location.</p>
                         <a href="{{ url_for('admin_facilities') }}" class="btn btn-info">
-                            <i class="fas fa-edit"></i> Manage Facilities
+                            {{ icon('edit') }} Manage Facilities
                         </a>
                     </div>
                 </div>
@@ -161,12 +161,12 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-industry"></i> Manufacturers</h5>
+                        <h5>Manufacturers</h5>
                     </div>
                     <div class="card-body">
                         <p>Manage manufacturer names for equipment tracking.</p>
                         <a href="{{ url_for('admin_manufacturers') }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Manage Manufacturers
+                            {{ icon('edit') }} Manage Manufacturers
                         </a>
                     </div>
                 </div>
@@ -176,12 +176,12 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-dollar-sign"></i> Capital Categories</h5>
+                        <h5>Capital Categories</h5>
                     </div>
                     <div class="card-body">
                         <p>Define capital cost ranges for automatic equipment categorization based on actual or estimated capital costs.</p>
                         <a href="{{ url_for('admin_capital_categories') }}" class="btn btn-dark">
-                            <i class="fas fa-edit"></i> Manage Capital Categories
+                            {{ icon('edit') }} Manage Capital Categories
                         </a>
                     </div>
                 </div>
@@ -192,7 +192,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-database"></i> Database Export</h5>
+                        <h5>Database Export</h5>
                     </div>
                     <div class="card-body">
                         <p>Download the entire database. Two formats, for two different jobs:</p>
@@ -207,20 +207,20 @@
                         </ul>
                         {% if backup_available %}
                         <a href="{{ url_for('admin_backup_database') }}" class="btn btn-danger me-2">
-                            <i class="fas fa-download"></i> Download Backup (.sqlite3)
+                            {{ icon('download') }} Download Backup (.sqlite3)
                         </a>
                         {% else %}
                         <button type="button" class="btn btn-danger me-2" disabled
                                 title="Only available when the app is backed by SQLite">
-                            <i class="fas fa-download"></i> Download Backup (.sqlite3)
+                            {{ icon('download') }} Download Backup (.sqlite3)
                         </button>
                         {% endif %}
                         <a href="{{ url_for('admin_export_workbook') }}" class="btn btn-success">
-                            <i class="fas fa-file-excel"></i> Download Excel Workbook (.xlsx)
+                            {{ icon('file-excel') }} Download Excel Workbook (.xlsx)
                         </a>
                         {% if not backup_available %}
                         <p class="text-muted mt-3 mb-0">
-                            <i class="fas fa-info-circle"></i>
+                            {{ icon('info-circle') }}
                             This app is running against a non-SQLite database, so the file-level backup is
                             unavailable. Use your database server's own backup tooling instead.
                         </p>

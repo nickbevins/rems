@@ -109,8 +109,6 @@ cd /opt/rems
 # Ensure static/vendor/ directory contains all CDN assets:
 # - bootstrap.min.css
 # - bootstrap.bundle.min.js
-# - font-awesome.min.css
-# - webfonts/ directory (fa-solid-900.woff2, fa-regular-400.woff2, fa-brands-400.woff2)
 # - Sortable.min.js
 # - d3.min.js
 

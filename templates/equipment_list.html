@@ -6,19 +6,19 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-cogs"></i> Equipment List</h1>
+            <h1>{{ icon('cog') }} Equipment List</h1>
             <div>
                 {% if current_user.can_manage_equipment() %}
                     <a href="{{ url_for('equipment_new') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add New Equipment
+                        {{ icon('plus') }} Add New Equipment
                     </a>
                 {% endif %}
                 <a href="{{ url_for('export_equipment', **request.args) }}" class="btn btn-success">
-                    <i class="fas fa-download"></i> Export CSV
+                    {{ icon('download') }} Export CSV
                 </a>
                 {% if current_user.can_manage_equipment() %}
                     <a href="{{ url_for('import_data') }}" class="btn btn-info">
-                        <i class="fas fa-file-import"></i> Import Data
+                        {{ icon('upload') }} Import Data
                     </a>
                 {% endif %}
             </div>
@@ -27,7 +27,7 @@
         <!-- Filters -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5><i class="fas fa-filter"></i> Filters</h5>
+                <h5>Filters</h5>
             </div>
             <div class="card-body">
                 <form method="GET" id="filterForm" class="row g-3">
@@ -101,7 +101,7 @@
                 <div class="row mt-2">
                     <div class="col-6">
                         <button type="button" class="btn btn-secondary" onclick="clearFilters()">
-                            <i class="fas fa-times"></i> Clear
+                            {{ icon('times') }} Clear
                         </button>
                         <span class="text-muted small ms-3">{{ equipment.total }} total results</span>
                     </div>
@@ -140,15 +140,15 @@
                             <div class="d-flex gap-2">
                                 {% if request.args.get('show_all') == 'true' %}
                                     <a href="{{ url_for('equipment_list', **request.args) | replace('&show_all=true', '') | replace('show_all=true&', '') | replace('show_all=true', '') }}" class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-list"></i> Paginate
+                                        {{ icon('list') }} Paginate
                                     </a>
                                 {% else %}
                                     <a href="{{ url_for('equipment_list', show_all='true', **request.args) }}" class="btn btn-sm btn-outline-primary" style="white-space: nowrap;">
-                                        <i class="fas fa-eye"></i> Show All
+                                        {{ icon('eye') }} Show All
                                     </a>
                                 {% endif %}
                                 <button type="button" class="btn btn-sm btn-outline-info" onclick="resetColumnOrder()" title="Reset column order to default" style="white-space: nowrap;">
-                                    <i class="fas fa-undo"></i> Reset Columns
+                                    {{ icon('undo') }} Reset Columns
                                 </button>
                             </div>
                         </div>
@@ -166,25 +166,25 @@
                             <thead>
                                 <tr id="equipmentTableHeader">
                                     <th class="sortable" data-sort="eq_class">
-                                        Class <i class="fas fa-sort"></i>
+                                        Class {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-sort="eq_manu">
-                                        Manufacturer <i class="fas fa-sort"></i>
+                                        Manufacturer {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-sort="eq_dept">
-                                        Department <i class="fas fa-sort"></i>
+                                        Department {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-sort="eq_rm">
-                                        Room <i class="fas fa-sort"></i>
+                                        Room {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-sort="eq_fac">
-                                        Facility <i class="fas fa-sort"></i>
+                                        Facility {{ icon('sort') }}
                                     </th>
-                                    <th class="sortable" data-sort="eq_mereg">
-                                        ME Registration <i class="fas fa-sort"></i>
+                                    <th class="sortable" data-sort="eq_statereg">
+                                        State Reg. {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-sort="days_until_due" style="white-space: nowrap; min-width: 140px;">
-                                        Days Until Due <i class="fas fa-sort"></i>
+                                        Days Until Due {{ icon('sort') }}
                                     </th>
                                     <th>Actions</th>
                                 </tr>
@@ -211,9 +211,9 @@
                                     <td>{{ eq.eq_rm or 'N/A' }}</td>
                                     <td>{{ eq.facility.name if eq.facility else 'N/A' }}</td>
                                     <td>
-                                        <div>{{ eq.eq_mereg or 'N/A' }}</div>
-                                        {% if eq.eq_mefac %}
-                                            <div class="text-muted">{{ eq.eq_mefac }}</div>
+                                        <div>{{ eq.eq_statereg or 'N/A' }}</div>
+                                        {% if eq.eq_statefac %}
+                                            <div class="text-muted">{{ eq.eq_statefac }}</div>
                                         {% endif %}
                                     </td>
                                     <td style="white-space: nowrap;">
@@ -249,19 +249,19 @@
                                     <td style="white-space: nowrap;">
                                         <div>
                                             <a href="{{ url_for('equipment_detail', eq_id=eq.eq_id, **request.args) }}" class="btn btn-sm btn-outline-info btn-icon" title="View Details">
-                                                <i class="fas fa-eye"></i>
+                                                {{ icon('eye') }}
                                             </a>
                                             {% if current_user.can_manage_equipment() %}
                                                 <a href="{{ url_for('equipment_detail', eq_id=eq.eq_id, edit='equipment_details', **request.args) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
-                                                    <i class="fas fa-edit"></i>
+                                                    {{ icon('edit') }}
                                                 </a>
                                             {% endif %}
                                             {% if current_user.can_manage_compliance() %}
                                                 <a href="{{ url_for('compliance_test_new', eq_id=eq.eq_id) }}" class="btn btn-sm btn-outline-warning btn-icon" title="Add Test">
-                                                    <i class="fas fa-check-circle"></i>
+                                                    {{ icon('check-circle') }}
                                                 </a>
                                                 <a href="{{ url_for('schedule_test_new', eq_id=eq.eq_id) }}" class="btn btn-sm btn-outline-success btn-icon" title="Schedule Test">
-                                                    <i class="fas fa-calendar-plus"></i>
+                                                    {{ icon('calendar-plus') }}
                                                 </a>
                                             {% endif %}
                                         </div>
@@ -296,15 +296,15 @@
                                 <div class="d-flex gap-2">
                                     {% if request.args.get('show_all') == 'true' %}
                                         <a href="{{ url_for('equipment_list', **request.args) | replace('&show_all=true', '') | replace('show_all=true&', '') | replace('show_all=true', '') }}" class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-list"></i> Paginate
+                                            {{ icon('list') }} Paginate
                                         </a>
                                     {% else %}
                                         <a href="{{ url_for('equipment_list', show_all='true', **request.args) }}" class="btn btn-sm btn-outline-primary" style="white-space: nowrap;">
-                                            <i class="fas fa-eye"></i> Show All
+                                            {{ icon('eye') }} Show All
                                         </a>
                                     {% endif %}
                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="resetColumnOrder()" title="Reset column order to default" style="white-space: nowrap;">
-                                        <i class="fas fa-undo"></i> Reset Columns
+                                        {{ icon('undo') }} Reset Columns
                                     </button>
                                 </div>
                             </div>
@@ -350,7 +350,7 @@
                     </div>
                 {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-search fa-3x text-muted"></i>
+                        {{ icon('search', 'icon-3x text-muted') }}
                         <h4 class="text-muted mt-3">No equipment found</h4>
                         <p class="text-muted">Try adjusting your search filters{% if current_user.can_manage_equipment() %} or <a href="{{ url_for('equipment_new') }}">add new equipment</a>{% endif %}.</p>
                     </div>
@@ -370,16 +370,12 @@
     background-color: #555;
     color: #e9ecef;
 }
-.sortable i {
+.sortable .icon {
     margin-left: 5px;
     opacity: 0.3;
 }
-.sortable.asc i:before {
-    content: "\f0de";
-    opacity: 1;
-}
-.sortable.desc i:before {
-    content: "\f0dd";
+.sortable.asc .icon,
+.sortable.desc .icon {
     opacity: 1;
 }
 .equipment-row {
@@ -516,8 +512,8 @@
         function updateSortIndicators() {
             // Reset all icons
             sortableHeaders.forEach(header => {
-                const icon = header.querySelector('i');
-                icon.className = 'fas fa-sort';
+                const icon = header.querySelector('.icon');
+                setIcon(icon, 'sort');
                 
                 // Remove any existing sort level indicators
                 const existingBadge = header.querySelector('.sort-level-badge');
@@ -530,13 +526,13 @@
             sortStack.forEach((sort, index) => {
                 const activeHeader = document.querySelector(`[data-sort="${sort.field}"]`);
                 if (activeHeader) {
-                    const icon = activeHeader.querySelector('i');
+                    const icon = activeHeader.querySelector('.icon');
                     
                     // Set sort direction icon
                     if (sort.order === 'asc') {
-                        icon.className = 'fas fa-sort-up';
+                        setIcon(icon, 'sort-up');
                     } else {
-                        icon.className = 'fas fa-sort-down';
+                        setIcon(icon, 'sort-down');
                     }
                     
                     // Add sort level indicator (1, 2, 3)

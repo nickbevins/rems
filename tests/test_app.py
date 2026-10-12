@@ -495,12 +495,54 @@ class TestLegacyMigration:
         cols = {c['name'] for c in inspect(db.engine).get_columns('equipment')}
         assert not cols & {'eq_address', 'eq_eeoldate', 'eq_capcat', 'eq_capecst'}
 
+    def test_maine_registration_columns_are_renamed_with_data_kept(self, app):
+        renames = (('eq_statefac', 'eq_mefac'), ('eq_statereg', 'eq_mereg'), ('eq_statefacreg', 'eq_mefacreg'))
+        cls = EquipmentClass(name='CT')
+        db.session.add(cls)
+        db.session.commit()
+        with db.engine.begin() as conn:
+            for new, old in renames:  # put the database back to the old column names
+                conn.execute(text(f'ALTER TABLE equipment RENAME COLUMN {new} TO {old}'))
+            conn.execute(text("INSERT INTO equipment (class_id, eq_mefac, eq_mereg, eq_mefacreg) "
+                              "VALUES (:cls, 'FAC-12', 'REG-345', '12-345')"), {'cls': cls.id})
+        check_and_migrate_db()
+        check_and_migrate_db()
+        cols = {c['name'] for c in inspect(db.engine).get_columns('equipment')}
+        assert {'eq_statefac', 'eq_statereg', 'eq_statefacreg'} <= cols
+        assert not cols & {'eq_mefac', 'eq_mereg', 'eq_mefacreg'}
+        eq = Equipment.query.one()
+        assert (eq.eq_statefac, eq.eq_statereg, eq.eq_statefacreg) == ('FAC-12', 'REG-345', '12-345')
+
     def test_admin_role_is_removed_but_admin_rights_kept(self, app):
         admin = make_user(username='admin', password='pw', is_admin=True, roles='admin, physicist')
         check_and_migrate_db()
         db.session.expire_all()
         assert admin.get_roles_list() == ['physicist']
         assert admin.is_admin is True
+
+
+class TestAuditFrequencies:
+    """Each audit frequency's due-date rule, from a last test on 2024-03-15."""
+
+    @pytest.mark.parametrize('freq, due', [
+        ('Quarterly', date(2024, 6, 30)),         # end of month, 3 months out
+        ('Semiannual', date(2024, 9, 30)),        # end of month, 6 months out
+        ('Annual - ACR', date(2025, 5, 15)),      # 14 months
+        ('Annual - TJC', date(2025, 4, 14)),      # 1 year + 30 days
+        ('Annual - ME', date(2025, 12, 31)),      # end of next calendar year
+        ('Annual - ACR, Annual - TJC', date(2025, 4, 14)),  # earliest of several
+    ])
+    def test_next_due_date(self, app, freq, due):
+        cls = EquipmentClass(name='CT')
+        db.session.add(cls)
+        db.session.commit()
+        eq = Equipment(class_id=cls.id, eq_auditfreq=freq)
+        db.session.add(eq)
+        db.session.commit()
+        db.session.add(ComplianceTest(eq_id=eq.eq_id, test_type='Annual', test_date=date(2024, 3, 15)))
+        db.session.commit()
+        db.session.expire_all()
+        assert eq.get_next_due_date() == due
 
 
 class TestFacilityFull:
@@ -713,21 +755,21 @@ class TestImportRoundTrip:
         assert db.session.get(Equipment, 1).eq_notes == '=1+2'
 
 
-    def test_id_only_import_rebuilds_stale_mefacreg(self, app, client):
-        # Older imports copied eq_mefacreg from the file (often a '-' placeholder);
-        # re-importing just the IDs rebuilds it from eq_mefac and eq_mereg
+    def test_id_only_import_rebuilds_stale_statefacreg(self, app, client):
+        # Older imports copied eq_statefacreg from the file (often a '-' placeholder);
+        # re-importing just the IDs rebuilds it from eq_statefac and eq_statereg
         with app.app_context():
             make_user(username='p', password='pw', roles='physicist')
             db.session.add(EquipmentClass(name='US'))
             db.session.commit()
             with db.engine.begin() as conn:
-                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_mefacreg) VALUES (1, 'US', '-')"))
-                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_mefac, eq_mereg, eq_mefacreg) "
+                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_statefacreg) VALUES (1, 'US', '-')"))
+                conn.execute(text("INSERT INTO equipment (class_id, eq_mod, eq_statefac, eq_statereg, eq_statefacreg) "
                                   "VALUES (1, 'CT', 'FAC-12', 'REG-345', 'old')"))
         login(client, 'p', 'pw')
         _post_import(client, 'eq_id\n1\n2\n')
         db.session.expire_all()
-        assert [(e.eq_mod, e.eq_mefacreg) for e in Equipment.query.order_by(Equipment.eq_id)] == \
+        assert [(e.eq_mod, e.eq_statefacreg) for e in Equipment.query.order_by(Equipment.eq_id)] == \
             [('US', None), ('CT', '12-345')]
 
 class TestOtherImporters:

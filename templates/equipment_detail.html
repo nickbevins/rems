@@ -8,7 +8,7 @@
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>
-                <i class="fas fa-cog"></i> 
+                {{ icon('cog') }} 
                 {{ equipment.equipment_class.name if equipment.equipment_class else 'Equipment' }} 
                 {% if is_retired %}
                     <span class="badge bg-danger">Retired</span>
@@ -19,20 +19,20 @@
             <div>
                 {% if redirect_to == 'compliance' %}
                     <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to List
+                        {{ icon('arrow-left') }} Back to List
                     </a>
                 {% elif redirect_to == 'capital' %}
                     <a href="{{ url_for('capital_planning', **search_params) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Capital Planning
+                        {{ icon('arrow-left') }} Back to Capital Planning
                     </a>
                 {% else %}
                     <a href="{{ url_for('equipment_list', **search_params) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to List
+                        {{ icon('arrow-left') }} Back to List
                     </a>
                 {% endif %}
                 {% if current_user.can_manage_compliance() %}
                     <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, **request.args) }}" class="btn btn-warning">
-                        <i class="fas fa-plus"></i> Add Test
+                        {{ icon('plus') }} Add Test
                     </a>
                 {% endif %}
             </div>
@@ -43,10 +43,10 @@
             <div class="col-md-8">
                 <div class="card" id="equipment-details-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Equipment Details</h5>
+                        <h5 class="mb-0">Equipment Details</h5>
                         {% if current_user.can_manage_equipment() %}
                             <button class="btn btn-sm btn-outline-primary edit-card-btn" data-card="equipment-details" title="Edit Equipment Details">
-                                <i class="fas fa-pencil-alt"></i>
+                                {{ icon('edit') }}
                             </button>
                         {% endif %}
                     </div>
@@ -158,12 +158,12 @@
                                         <td>{{ equipment.eq_acrunit or 'N/A' }}</td>
                                     </tr>
                                     <tr>
-                                        <th>ME Facility:</th>
-                                        <td>{{ equipment.eq_mefac or 'N/A' }}</td>
+                                        <th>State Facility:</th>
+                                        <td>{{ equipment.eq_statefac or 'N/A' }}</td>
                                     </tr>
                                     <tr>
-                                        <th>ME Registration:</th>
-                                        <td>{{ equipment.eq_mereg or 'N/A' }}</td>
+                                        <th>State Registration:</th>
+                                        <td>{{ equipment.eq_statereg or 'N/A' }}</td>
                                     </tr>
                                 </table>
                             </div>
@@ -171,14 +171,14 @@
                         
                         {% if equipment.facility and equipment.facility.address %}
                         <div class="mt-3">
-                            <h6><i class="fas fa-map-marker-alt"></i> Address</h6>
+                            <h6>Address</h6>
                             <p>{{ equipment.facility.address }}</p>
                         </div>
                         {% endif %}
                         
                         {% if equipment.eq_notes %}
                         <div class="mt-3">
-                            <h6><i class="fas fa-sticky-note"></i> Notes</h6>
+                            <h6>Notes</h6>
                             <p>{{ equipment.eq_notes }}</p>
                         </div>
                         {% endif %}
@@ -190,13 +190,13 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="fas fa-check-circle"></i> Compliance Status</h5>
+                        <h5>Compliance Status</h5>
                     </div>
                     <div class="card-body">
                         {% if is_retired %}
                         <div class="card mb-2" style="background-color: #d1ecf1 !important; border-color: #bee5eb !important; color: #212529 !important;">
                             <div class="card-body">
-                                <h6 style="color: #212529 !important;"><i class="fas fa-info-circle"></i> Equipment Status</h6>
+                                <h6 style="color: #212529 !important;">Equipment Status</h6>
                                 <p class="mb-0" style="color: #212529 !important;">
                                     <strong>Retired Equipment</strong><br>
                                     No further compliance testing required.
@@ -209,7 +209,7 @@
                         {% else %}
                             {% if next_test %}
                             <div class="alert alert-warning">
-                                <h6><i class="fas fa-clock"></i> Next Test Due</h6>
+                                <h6>Next Test Due</h6>
                                 <p class="mb-0">
                                     Due: {{ next_test.next_due_date.strftime('%Y-%m-%d') }}
                                 </p>
@@ -220,7 +220,7 @@
                                 {% for scheduled in scheduled_tests %}
                                 <div class="card text-dark mb-2" style="background-color: #d1f2d1 !important; color: #000 !important; cursor: pointer;" ondblclick="window.location.href='{{ url_for('schedule_test_edit', schedule_id=scheduled.schedule_id, **search_params) }}'" title="Double-click to edit">
                                     <div class="card-body py-2">
-                                        <h6><i class="fas fa-calendar-check"></i> Scheduled Test</h6>
+                                        <h6>Scheduled Test</h6>
                                         <p class="mb-0">
                                             <strong>Scheduled for:</strong> {{ scheduled.scheduled_date.strftime('%Y-%m-%d') }}<br>
                                             <small>Set on: {{ scheduled.scheduling_date.strftime('%Y-%m-%d') }}</small>
@@ -245,11 +245,11 @@
                                 <div class="text-center">
                                     <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, **request.args) }}"
                                        class="btn btn-warning me-2">
-                                        <i class="fas fa-plus"></i> Add New Test
+                                        {{ icon('plus') }} Add New Test
                                     </a>
                                     <a href="{{ url_for('schedule_test_new', eq_id=equipment.eq_id, **request.args) }}"
                                        class="btn btn-success">
-                                        <i class="fas fa-calendar-plus"></i> Schedule
+                                        {{ icon('calendar-plus') }} Schedule
                                     </a>
                                 </div>
                             {% endif %}
@@ -260,10 +260,10 @@
                 <!-- Capital Details -->
                 <div class="card mt-4" id="capital-details-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-dollar-sign"></i> Capital Details</h5>
+                        <h5 class="mb-0">Capital Details</h5>
                         {% if current_user.can_manage_equipment() %}
                             <button class="btn btn-sm btn-outline-primary edit-card-btn" data-card="capital-details" title="Edit Capital Details">
-                                <i class="fas fa-pencil-alt"></i>
+                                {{ icon('edit') }}
                             </button>
                         {% endif %}
                     </div>
@@ -327,10 +327,10 @@
         <!-- Compliance Tests History -->
         <div class="card mt-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-history"></i> Compliance Tests History</h5>
+                <h5 class="mb-0">Compliance Tests History</h5>
                 {% if not is_retired and current_user.can_manage_compliance() %}
                     <a href="{{ url_for('compliance_test_new', eq_id=equipment.eq_id, **request.args) }}" class="btn btn-warning btn-sm">
-                        <i class="fas fa-plus"></i> Add New Test
+                        {{ icon('plus') }} Add New Test
                     </a>
                 {% endif %}
             </div>
@@ -341,28 +341,28 @@
                             <thead>
                                 <tr>
                                     <th class="sortable" data-column="test_type">
-                                        Test Type <i class="fas fa-sort"></i>
+                                        Test Type {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="test_date">
-                                        Test Date <i class="fas fa-sort"></i>
+                                        Test Date {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="report_date">
-                                        Report Date <i class="fas fa-sort"></i>
+                                        Report Date {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="submission_date">
-                                        Submission Date <i class="fas fa-sort"></i>
+                                        Submission Date {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="performed_by">
-                                        Performed By <i class="fas fa-sort"></i>
+                                        Performed By {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="reviewed_by">
-                                        Reviewing Physicist <i class="fas fa-sort"></i>
+                                        Reviewing Physicist {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="modified_by">
-                                        Modified By <i class="fas fa-sort"></i>
+                                        Modified By {{ icon('sort') }}
                                     </th>
                                     <th class="sortable" data-column="notes">
-                                        Notes <i class="fas fa-sort"></i>
+                                        Notes {{ icon('sort') }}
                                     </th>
                                     <th>Actions</th>
                                 </tr>
@@ -395,7 +395,7 @@
                                         {% if current_user.can_manage_compliance() %}
                                             <a href="{{ url_for('compliance_test_edit', test_id=test.test_id, **search_params) }}"
                                                class="btn btn-sm btn-outline-primary me-1" title="Edit Test">
-                                                <i class="fas fa-edit"></i>
+                                                {{ icon('edit') }}
                                             </a>
                                             <button type="button" 
                                                     class="btn btn-sm btn-outline-danger" 
@@ -404,7 +404,7 @@
                                                     data-test-date="{{ test.test_date.strftime('%Y-%m-%d') }}"
                                                     onclick="deleteComplianceTest(this.dataset.testId, this.dataset.testType, this.dataset.testDate)"
                                                     title="Delete Test">
-                                                <i class="fas fa-trash"></i>
+                                                {{ icon('trash') }}
                                             </button>
                                         {% else %}
                                             <span class="text-muted">View Only</span>
@@ -459,7 +459,7 @@
                     {% endif %}
                 {% else %}
                     <div class="text-center py-4">
-                        <i class="fas fa-clipboard-list fa-3x text-muted"></i>
+                        {{ icon('clipboard-list', 'icon-3x text-muted') }}
                         <h4 class="text-muted mt-3">No compliance tests recorded</h4>
                         <p class="text-muted">
                             {% if current_user.can_manage_compliance() %}
@@ -476,92 +476,92 @@
         <!-- Contact Information -->
         <div class="card mt-4" id="contact-info-card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-address-book"></i> Contact Information</h5>
+                <h5 class="mb-0">Contact Information</h5>
                 {% if current_user.can_manage_equipment() %}
                     <button class="btn btn-sm btn-outline-primary edit-card-btn" data-card="contact-info" title="Edit Contact Information">
-                        <i class="fas fa-pencil-alt"></i>
+                        {{ icon('edit') }}
                     </button>
                 {% endif %}
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4 mb-3">
-                        <h6><i class="fas fa-user"></i> Primary Contact</h6>
+                        <h6>Primary Contact</h6>
                         <div class="border rounded p-3 h-100">
                             {% if equipment.contact %}
                                 <div><strong>{{ equipment.contact.name }}</strong></div>
                                 {% if equipment.contact.email %}
                                     <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i>
+                                        {{ icon('envelope', 'text-primary') }}
                                         <a href="mailto:{{ equipment.contact.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.contact.email }}</a>
                                     </div>
                                 {% endif %}
                                 {% if equipment.contact.phone %}
                                     <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.contact.phone }}
+                                        {{ icon('phone', 'text-success') }} {{ equipment.contact.phone }}
                                     </div>
                                 {% endif %}
                                 {% if equipment.contact.department %}
                                     <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.contact.department }}
+                                        {{ icon('building', 'text-secondary') }} {{ equipment.contact.department }}
                                     </div>
                                 {% endif %}
                             {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No contact assigned</div>
+                                <div class="text-muted">{{ icon('user-slash') }} No contact assigned</div>
                             {% endif %}
                         </div>
                     </div>
                     
                     <div class="col-md-4 mb-3">
-                        <h6><i class="fas fa-user-tie"></i> Supervisor</h6>
+                        <h6>Supervisor</h6>
                         <div class="border rounded p-3 h-100">
                             {% if equipment.supervisor %}
                                 <div><strong>{{ equipment.supervisor.name }}</strong></div>
                                 {% if equipment.supervisor.email %}
                                     <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i>
+                                        {{ icon('envelope', 'text-primary') }}
                                         <a href="mailto:{{ equipment.supervisor.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.supervisor.email }}</a>
                                     </div>
                                 {% endif %}
                                 {% if equipment.supervisor.phone %}
                                     <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.supervisor.phone }}
+                                        {{ icon('phone', 'text-success') }} {{ equipment.supervisor.phone }}
                                     </div>
                                 {% endif %}
                                 {% if equipment.supervisor.department %}
                                     <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.supervisor.department }}
+                                        {{ icon('building', 'text-secondary') }} {{ equipment.supervisor.department }}
                                     </div>
                                 {% endif %}
                             {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No supervisor assigned</div>
+                                <div class="text-muted">{{ icon('user-slash') }} No supervisor assigned</div>
                             {% endif %}
                         </div>
                     </div>
 
                     <div class="col-md-4 mb-3">
-                        <h6><i class="fas fa-user-md"></i> Physician</h6>
+                        <h6>Physician</h6>
                         <div class="border rounded p-3 h-100">
                             {% if equipment.physician %}
                                 <div><strong>{{ equipment.physician.name }}</strong></div>
                                 {% if equipment.physician.email %}
                                     <div class="mt-1">
-                                        <i class="fas fa-envelope text-primary"></i>
+                                        {{ icon('envelope', 'text-primary') }}
                                         <a href="mailto:{{ equipment.physician.email }}" style="font-family: monospace; font-size: 0.9em; text-decoration: none;">{{ equipment.physician.email }}</a>
                                     </div>
                                 {% endif %}
                                 {% if equipment.physician.phone %}
                                     <div class="mt-1">
-                                        <i class="fas fa-phone text-success"></i> {{ equipment.physician.phone }}
+                                        {{ icon('phone', 'text-success') }} {{ equipment.physician.phone }}
                                     </div>
                                 {% endif %}
                                 {% if equipment.physician.department %}
                                     <div class="mt-1">
-                                        <i class="fas fa-building text-secondary"></i> {{ equipment.physician.department }}
+                                        {{ icon('building', 'text-secondary') }} {{ equipment.physician.department }}
                                     </div>
                                 {% endif %}
                             {% else %}
-                                <div class="text-muted"><i class="fas fa-user-slash"></i> No physician assigned</div>
+                                <div class="text-muted">{{ icon('user-slash') }} No physician assigned</div>
                             {% endif %}
                         </div>
                     </div>
@@ -651,13 +651,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSortIcons(activeHeader, direction) {
         // Reset all icons
         sortableHeaders.forEach(header => {
-            const icon = header.querySelector('i');
-            icon.className = 'fas fa-sort';
+            const icon = header.querySelector('.icon');
+            setIcon(icon, 'sort');
         });
         
         // Set active icon
-        const activeIcon = activeHeader.querySelector('i');
-        activeIcon.className = direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        const activeIcon = activeHeader.querySelector('.icon');
+        setIcon(activeIcon, direction === 'asc' ? 'sort-up' : 'sort-down');
     }
 });
 
@@ -787,10 +787,10 @@ async function enterEditMode(cardName) {
     editBtn.outerHTML = `
         <div>
             <button class="btn btn-sm btn-success me-2" onclick="saveCard('${cardName}')">
-                <i class="fas fa-save"></i> Save
+                {{ icon('save') }} Save
             </button>
             <button class="btn btn-sm btn-secondary" onclick="cancelEdit('${cardName}')">
-                <i class="fas fa-times"></i> Cancel
+                {{ icon('times') }} Cancel
             </button>
         </div>
     `;
@@ -945,12 +945,12 @@ function generateEquipmentDetailsForm(eq, choices) {
                         <input type="text" class="form-control" name="eq_acrunit" value="${escapeHtml(eq.eq_acrunit)}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">ME Facility</label>
-                        <input type="text" class="form-control" name="eq_mefac" value="${escapeHtml(eq.eq_mefac)}">
+                        <label class="form-label">State Facility</label>
+                        <input type="text" class="form-control" name="eq_statefac" value="${escapeHtml(eq.eq_statefac)}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">ME Registration</label>
-                        <input type="text" class="form-control" name="eq_mereg" value="${escapeHtml(eq.eq_mereg)}">
+                        <label class="form-label">State Registration</label>
+                        <input type="text" class="form-control" name="eq_statereg" value="${escapeHtml(eq.eq_statereg)}">
                     </div>
                 </div>
             </div>
@@ -1126,7 +1126,7 @@ function cancelEdit(cardName) {
     const buttonContainer = card.querySelector('.card-header > div');
     buttonContainer.innerHTML = `
         <button class="btn btn-sm btn-outline-primary edit-card-btn" data-card="${cardName}" title="Edit ${cardName.replace('-', ' ')}">
-            <i class="fas fa-pencil-alt"></i>
+            {{ icon('edit') }}
         </button>
     `;
 

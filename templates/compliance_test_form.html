@@ -6,14 +6,14 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-check-circle"></i> {{ title }}</h1>
+            <h1>{{ icon('check-circle') }} {{ title }}</h1>
             {% if redirect_to == 'compliance' %}
                 <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Compliance Dashboard
+                    {{ icon('arrow-left') }} Back to Compliance Dashboard
                 </a>
             {% else %}
                 <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Equipment
+                    {{ icon('arrow-left') }} Back to Equipment
                 </a>
             {% endif %}
         </div>
@@ -21,7 +21,7 @@
         <!-- Equipment Info Card -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5><i class="fas fa-cog"></i> Equipment Information</h5>
+                <h5>Equipment Information</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -55,7 +55,7 @@
             
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-clipboard-check"></i> Test Details</h5>
+                    <h5>Test Details</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -140,7 +140,7 @@
             {% if test %}
             <div class="card mt-4">
                 <div class="card-header">
-                    <h5><i class="fas fa-history"></i> Audit Information</h5>
+                    <h5>Audit Information</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -177,15 +177,15 @@
                     <div class="d-flex justify-content-between">
                         {% if redirect_to == 'compliance' %}
                             <a href="{{ url_for('compliance_dashboard') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                {{ icon('times') }} Cancel
                             </a>
                         {% else %}
                             <a href="{{ url_for('equipment_detail', eq_id=equipment.eq_id) }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                {{ icon('times') }} Cancel
                             </a>
                         {% endif %}
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Test Record
+                            {{ icon('save') }} Save Test Record
                         </button>
                     </div>
                 </div>

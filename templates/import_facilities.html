@@ -6,15 +6,15 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-file-import"></i> Import Facilities</h1>
+            <h1>{{ icon('upload') }} Import Facilities</h1>
             <a href="{{ url_for('admin_facilities') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Facilities
+                {{ icon('arrow-left') }} Back to Facilities
             </a>
         </div>
         
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-upload"></i> Upload CSV File</h5>
+                <h5>Upload CSV File</h5>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
@@ -31,7 +31,7 @@
                     </div>
                     
                     <div class="alert alert-primary">
-                        <h6><i class="fas fa-info-circle"></i> CSV Format Requirements:</h6>
+                        <h6>CSV Format Requirements:</h6>
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> name</li>
                             <li><strong>Optional columns:</strong> id, facility_full, address, is_active</li>
@@ -41,7 +41,7 @@
                     </div>
                     
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-upload"></i> Import Facilities
+                        {{ icon('upload') }} Import Facilities
                     </button>
                 </form>
             </div>
