@@ -1287,6 +1287,26 @@ class TestSharedFilters:
         rows = list(csv.DictReader(io.StringIO(client.get('/export-compliance').data.decode())))
         assert [r['eq_id'] for r in rows] == ['3']
 
+    def test_subclass_from_another_class_is_ignored(self, app, client):
+        from app import EquipmentSubclass
+        with app.app_context():
+            make_user(username='v', password='pw')
+            _seed_equipment()
+            ct, mr = EquipmentClass.query.filter_by(name='CT').one(), EquipmentClass.query.filter_by(name='MR').one()
+            head = EquipmentSubclass(name='Head', class_id=mr.id)
+            db.session.add_all([head, EquipmentSubclass(name='Body', class_id=ct.id)])
+            db.session.commit()
+            Equipment.query.filter_by(eq_mod='Gamma').one().subclass_id = head.id
+            db.session.commit()
+        login(client, 'v', 'pw')
+        everything = '&include_planned=true&include_retired=true'
+        # Matching class and subclass still narrows
+        assert _exported_models(client.get('/export-equipment?eq_class=MR&eq_subclass=Head' + everything)) == ['Gamma']
+        assert _exported_models(client.get('/export-equipment?eq_class=CT&eq_subclass=Body' + everything)) == []
+        # Switching class with an MR subclass still in the URL shows the CT equipment
+        assert _exported_models(client.get('/export-equipment?eq_class=CT&eq_subclass=Head' + everything)) == \
+            ['Alpha', 'Beta']
+
     def test_search_matches_full_facility_name(self, app, client):
         with app.app_context():
             make_user(username='v', password='pw')

@@ -386,12 +386,19 @@ def _filtered_equipment_query(args, view='list', query=None):
         term = f'%{search}%'
         query = query.filter(or_(*[col.ilike(term) for col in _equipment_search_columns()]))
 
+    filters = {param: (args.get(param) or '').strip()
+               for param in ('eq_class', 'eq_subclass', 'eq_manu', 'eq_dept', 'eq_fac')}
+    # A subclass only narrows its own class. One left over from another class (an
+    # old link) is ignored; otherwise it matches nothing while the subclass menu,
+    # which lists only the class's subclasses, shows "All Subclasses".
+    if filters['eq_class'] and filters['eq_subclass'] and not EquipmentSubclass.query.join(EquipmentClass).filter(
+            EquipmentClass.name == filters['eq_class'], EquipmentSubclass.name == filters['eq_subclass']).first():
+        filters['eq_subclass'] = ''
     for param, column in (('eq_class', EquipmentClass.name), ('eq_subclass', EquipmentSubclass.name),
                           ('eq_manu', Manufacturer.name), ('eq_dept', Department.name),
                           ('eq_fac', Facility.name)):
-        value = (args.get(param) or '').strip()
-        if value:
-            query = query.filter(column == value)
+        if filters[param]:
+            query = query.filter(column == filters[param])
 
     if view == 'all':
         return query

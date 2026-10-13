@@ -454,74 +454,12 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/list_page.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-filter functionality
-    const autoFilterElements = document.querySelectorAll('.auto-filter');
-    const searchInput = document.getElementById('search');
-    
-    autoFilterElements.forEach(element => {
-        element.addEventListener('change', function() {
-            document.getElementById('filterForm').submit();
-        });
-    });
-    
-    // Handle search input with Enter key
-    if (searchInput) {
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('filterForm').submit();
-            }
-        });
-    }
-    
-    // Cascading filter: Update subclasses when class changes
-    const classSelect = document.getElementById('eq_class');
-    const subclassSelect = document.getElementById('eq_subclass');
-    const currentSubclass = {{ eq_subclass|tojson }};
-    
-    function updateSubclasses() {
-        const selectedClass = classSelect.value;
-        const url = selectedClass ? '/api/subclasses?eq_class=' + encodeURIComponent(selectedClass) : '/api/subclasses';
-        
-        fetch(url)
-            .then(response => response.json())
-            .then(subclasses => {
-                // Clear existing options
-                subclassSelect.innerHTML = '<option value="">All Subclasses</option>';
-                
-                // Add new options
-                subclasses.forEach(subclass => {
-                    const option = document.createElement('option');
-                    option.value = subclass;
-                    option.textContent = subclass;
-                    
-                    // Maintain selection if it's still valid
-                    if (subclass === currentSubclass) {
-                        option.selected = true;
-                    }
-                    
-                    subclassSelect.appendChild(option);
-                });
-            })
-            .catch(error => {
-                console.error('Error loading subclasses:', error);
-            });
-    }
-    
-    // Update subclasses when class changes
-    if (classSelect && subclassSelect) {
-        classSelect.addEventListener('change', function() {
-            updateSubclasses();
-            // Clear subclass selection when class changes
-            subclassSelect.value = '';
-        });
-        
-        // Initial load - update subclasses for current class selection
-        if (classSelect.value) {
-            updateSubclasses();
-        }
-    }
+    initFilters();
+    initSubclassFilter();
+
     // Sortable columns on each table
     const tables = ['overdueTable', 'upcomingTable', 'scheduledTable'];
     tables.forEach(tableId => makeTableSortable(document.getElementById(tableId)));
@@ -588,7 +526,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Clear all filters
+// Clear all filters. Replaces list_page.js's version so hidden fields (the
+// days-ahead setting) are kept.
 function clearFilters() {
     const form = document.getElementById('filterForm');
     const inputs = form.querySelectorAll('input:not([type="hidden"]), select');

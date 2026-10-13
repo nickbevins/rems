@@ -1,7 +1,8 @@
 // Shared behavior for the Equipment List and Capital Planning pages:
 // filter auto-submit, multi-level column sorting kept in the URL, the cascading
 // subclass filter, double-click to open a row, and drag-to-reorder columns.
-// Needs Sortable.min.js. Each page calls initListPage() with its own options.
+// Each of those pages calls initListPage() and also loads Sortable.min.js.
+// The Compliance Dashboard uses only the filters: initFilters() and initSubclassFilter().
 
 let listColumnManager = null;
 
@@ -20,7 +21,12 @@ function initListPage({ columnOrderKey, detailParams = {} }) {
 function initFilters() {
     const filterForm = document.getElementById('filterForm');
     document.querySelectorAll('.auto-filter').forEach(element => {
-        element.addEventListener('change', () => filterForm.submit());
+        element.addEventListener('change', function() {
+            // A subclass belongs to one class, so a new class drops the old subclass
+            const subclassSelect = document.getElementById('eq_subclass');
+            if (this.id === 'eq_class' && subclassSelect) subclassSelect.value = '';
+            filterForm.submit();
+        });
     });
 
     // Search on Enter
@@ -99,7 +105,8 @@ function initMultiSort() {
     });
 }
 
-// Limit the subclass dropdown to the selected class
+// Limit the subclass dropdown to the selected class. (Changing the class submits
+// the filter form, and initFilters() clears the subclass first.)
 function initSubclassFilter() {
     const classSelect = document.getElementById('eq_class');
     const subclassSelect = document.getElementById('eq_subclass');
@@ -124,10 +131,6 @@ function initSubclassFilter() {
             .catch(error => console.error('Error loading subclasses:', error));
     }
 
-    classSelect.addEventListener('change', function() {
-        updateSubclasses();
-        subclassSelect.value = '';
-    });
     if (classSelect.value) updateSubclasses();
 }
 
