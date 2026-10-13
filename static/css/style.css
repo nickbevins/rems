@@ -424,3 +424,13 @@ footer {
     background: #dee2e6 !important;
     transform: rotate(2deg);
 }
+
+/* Icon-only action buttons in a column that shrinks to fit them on one line */
+.actions-col {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.actions-col form {
+    display: inline;
+}
