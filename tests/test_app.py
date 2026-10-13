@@ -725,7 +725,7 @@ class TestImportRoundTrip:
     def test_new_contact_without_email_warns_instead_of_failing(self, app, client):
         self._login(app, client)
         resp = _post_import(client, 'equipment_class,eq_mod,contact_person\nCT,X,Jane Doe\n')
-        assert b'needs an email' in resp.data
+        assert b'needs a valid email' in resp.data
         eq = Equipment.query.filter_by(eq_mod='X').one()
         assert eq.contact_id is None
 
@@ -882,6 +882,21 @@ class TestOtherImporters:
         client.post('/import-compliance', data={'csv_file': (csv_file, 'c.csv')},
                     content_type='multipart/form-data')
         assert [t.test_type for t in ComplianceTest.query.all()] == ['Annual']
+
+    def test_personnel_import_rejects_invalid_email(self, app, client):
+        self._setup(app, client)
+        resp = self._upload(client, '/import-personnel',
+                            'name,email\nGood Person,good@hospital.org\nBad Person,bad@hospital\n')
+        assert b'Row 3: email &#39;bad@hospital&#39; is not valid' in resp.data
+        assert Personnel.query.filter_by(name='Good Person').count() == 1
+        assert Personnel.query.filter_by(name='Bad Person').count() == 0
+
+    def test_equipment_import_does_not_create_contact_with_invalid_email(self, app, client):
+        self._setup(app, client)
+        resp = self._upload(client, '/import-data', 'eq_id,contact_person,contact_email\n1,Jane Doe,jane@@hospital.org\n',
+                            field='file')
+        assert b'needs a valid email in contact_email' in resp.data
+        assert Personnel.query.filter_by(name='Jane Doe').count() == 0
 
     def test_personnel_phone_is_kept_as_text(self, app, client):
         with app.app_context():

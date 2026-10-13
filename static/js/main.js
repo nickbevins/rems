@@ -71,14 +71,7 @@ function makeTableSortable(table, initial) {
     }
 }
 
-// Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
     // Initialize form validation
     var forms = document.querySelectorAll('.needs-validation');
     Array.prototype.slice.call(forms).forEach(function(form) {
@@ -98,9 +91,4 @@ document.addEventListener('DOMContentLoaded', function() {
             new bootstrap.Alert(alert).close();
         });
     }, 5000);
-});
-
-// Global error handler
-window.addEventListener('error', function(event) {
-    console.error('Global error:', event.error);
 });

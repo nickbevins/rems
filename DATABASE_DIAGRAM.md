@@ -8,7 +8,6 @@ erDiagram
     manufacturers ||--o{ equipment : "manufacturer"
     departments ||--o{ equipment : "owns/stores"
     facilities ||--o{ equipment : "locations"
-    capital_categories ||--o{ equipment : "capital description"
 
     personnel ||--o{ equipment : "contact"
     personnel ||--o{ equipment : "supervisor"

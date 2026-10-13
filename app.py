@@ -20,6 +20,7 @@ import shutil
 import sqlite3
 import tempfile
 import xlsxwriter
+import email_validator
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from collections import defaultdict, deque
@@ -481,6 +482,15 @@ def _read_csv_upload(file):
         rows.append((line, dict(zip(header, cells + [''] * (len(header) - len(cells))))))
     return header, rows
 
+def _email_problem(email):
+    """Why `email` is not a valid address, or None. Checks the format only (no DNS
+    lookups), the same check the personnel form's Email() validator makes."""
+    try:
+        email_validator.validate_email(email, check_deliverability=False)
+    except email_validator.EmailNotValidError as e:
+        return str(e)
+    return None
+
 def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     """Get existing personnel by ID or create new personnel with role assignment"""
     contact = None
@@ -499,8 +509,8 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
             contact = Personnel.query.filter_by(name=contact_name).first()
 
             if not contact:
-                if not contact_email:
-                    return None  # caller reports it; email is required for a new person
+                if not contact_email or _email_problem(contact_email):
+                    return None  # caller reports it; a new person needs a valid email
                 contact = Personnel(
                     name=contact_name,
                     email=contact_email,
@@ -2020,7 +2030,7 @@ def _apply_equipment_row(row, columns):
             setattr(equipment, attr, person.id)
         else:
             warnings.append(f"{role} '{name or person_id}' was not found, and a new person needs "
-                            f"an email in {email_col}; {role} left unchanged")
+                            f"a valid email in {email_col}; {role} left unchanged")
 
     for column in EQUIPMENT_TEXT_COLUMNS:
         if has(column):
@@ -2338,6 +2348,9 @@ def _apply_personnel_row(row, columns):
     name, email = row.get('name', ''), row.get('email', '')
     if not name or not email:
         raise ValueError('name and email are required')
+    problem = _email_problem(email)
+    if problem:
+        raise ValueError(f"email '{email}' is not valid: {problem}")
     person_id = _int_or_none(row.get('id'))
     person = (db.session.get(Personnel, person_id) if person_id else None) \
         or Personnel.query.filter_by(email=email).first()
