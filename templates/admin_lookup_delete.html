@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ table.singular }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{{ icon('trash') }} Delete {{ table.singular }}</h2>
+            <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">
+                {{ icon('arrow-left') }} Back to {{ table.plural }}
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <p class="fs-5 mb-3">
+                    <strong>{{ item.name }}</strong>
+                    {% if item.equipment_class %}<span class="text-muted">({{ item.equipment_class.name }})</span>{% endif %}
+                    {% if not item.is_active %}<span class="badge bg-secondary ms-1">Inactive</span>{% endif %}
+                </p>
+
+                {% if blocker %}
+                    <div class="alert alert-warning">
+                        This {{ table.singular|lower }} can't be deleted because {{ blocker }}.
+                        You can deactivate it instead, which hides it from new entries but keeps existing records as they are.
+                    </div>
+                    <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary">Back</a>
+                {% else %}
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if in_use %}
+                            <p>{{ in_use }} equipment record(s) use this {{ table.singular|lower }}. Choose what happens to them:</p>
+                            {% if targets %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="action" value="move" id="actionMove">
+                                    <label class="form-check-label" for="actionMove">Move them to another {{ table.singular|lower }}</label>
+                                </div>
+                                <select name="target_id" class="form-select mb-3 ms-4" style="max-width: 24rem;"
+                                        onchange="document.getElementById('actionMove').checked = true">
+                                    <option value="">Choose...</option>
+                                    {% for target in targets %}
+                                        <option value="{{ target.id }}">{{ target.name }}{% if not target.is_active %} (inactive){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="action" value="clear" id="actionClear">
+                                <label class="form-check-label" for="actionClear">
+                                    Leave them with no {{ table.singular|lower }}
+                                </label>
+                            </div>
+                        {% else %}
+                            <p>No equipment uses this {{ table.singular|lower }}.</p>
+                        {% endif %}
+                        <p class="text-muted small">Deleting can't be undone.</p>
+                        <button type="submit" class="btn btn-danger">{{ icon('trash') }} Delete {{ table.singular }}</button>
+                        <a href="{{ url_for(table.list_endpoint) }}" class="btn btn-secondary ms-2">Cancel</a>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

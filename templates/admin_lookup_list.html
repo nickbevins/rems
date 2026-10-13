@@ -27,6 +27,7 @@
                                     <th>Name</th>
                                     <th>Status</th>
                                     {% for heading, _ in table.columns %}<th>{{ heading }}</th>{% endfor %}
+                                    {% if table.equipment_column %}<th>Used By</th>{% endif %}
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -46,17 +47,21 @@
                                         {% set value = display(item) %}
                                         <td>{% if value %}{{ value }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
                                     {% endfor %}
+                                    {% if table.equipment_column %}
+                                        {% set count = usage.get(item.id, 0) %}
+                                        <td>{% if count %}{{ count }} equipment{% else %}<span class="text-muted">Unused</span>{% endif %}</td>
+                                    {% endif %}
                                     <td>{{ item.created_at.strftime('%Y-%m-%d') if item.created_at else 'N/A' }}</td>
                                     <td>
                                         <a href="{{ url_for(table.endpoint('edit'), item_id=item.id) }}" class="btn btn-sm btn-outline-primary me-2">
                                             {{ icon('edit') }} Edit
                                         </a>
                                         {% if item.is_active %}
-                                            <form method="POST" action="{{ url_for(table.endpoint('delete'), item_id=item.id) }}"
+                                            <form method="POST" action="{{ url_for(table.endpoint('deactivate'), item_id=item.id) }}"
                                                   style="display: inline;"
                                                   onsubmit="return confirm('Are you sure you want to deactivate this {{ table.singular|lower }}?')">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">
                                                     {{ icon('ban') }} Deactivate
                                                 </button>
                                             </form>
@@ -69,6 +74,9 @@
                                                 </button>
                                             </form>
                                         {% endif %}
+                                        <a href="{{ url_for(table.endpoint('delete'), item_id=item.id) }}" class="btn btn-sm btn-outline-danger ms-2">
+                                            {{ icon('trash') }} Delete
+                                        </a>
                                     </td>
                                 </tr>
                                 {% endfor %}

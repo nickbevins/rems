@@ -1944,11 +1944,23 @@ def _parse_csv_date(value, column=None):
     prefix = f'{column}: ' if column else ''
     raise ValueError(f"{prefix}'{value}' is not a date (use YYYY-MM-DD)")
 
+# CSV values in lookup columns (subclass, manufacturer, ...) that mean "none"
+LOOKUP_PLACEHOLDERS = {'n/a', 'na', 'null', '-'}
+
+def _lookup_name(value):
+    """A lookup name from a CSV cell: stripped, and '' for a placeholder meaning none."""
+    value = (value or '').strip()
+    return '' if value.lower() in LOOKUP_PLACEHOLDERS else value
+
+def _find_named(model, name, **attrs):
+    """A lookup row by name, ignoring case and surrounding spaces, plus any extra filters."""
+    return model.query.filter(func.lower(func.trim(model.name)) == name.strip().lower()).filter_by(**attrs).first()
+
 def _get_or_create_named(model, name, **attrs):
     """Find a lookup row by name (plus any extra filters), creating it if missing."""
-    obj = model.query.filter_by(name=name, **attrs).first()
+    obj = _find_named(model, name, **attrs)
     if not obj:
-        obj = model(name=name, **attrs)
+        obj = model(name=name.strip(), **attrs)
         db.session.add(obj)
         db.session.flush()
     return obj
@@ -1967,26 +1979,27 @@ def _apply_equipment_row(row, columns):
     if is_new:
         equipment = Equipment(eq_id=eq_id)
 
-    class_name = row.get('equipment_class', '')
+    class_name = _lookup_name(row.get('equipment_class'))
     if class_name:
         equipment.class_id = _get_or_create_named(EquipmentClass, class_name).id
     elif is_new or has('equipment_class'):
         raise ValueError('equipment_class is required')
 
     if has('equipment_subclass'):
-        name = row['equipment_subclass']
+        name = _lookup_name(row['equipment_subclass'])
         equipment.subclass_id = (_get_or_create_named(EquipmentSubclass, name, class_id=equipment.class_id).id
                                  if name else None)
     for column, model, attr in (('manufacturer', Manufacturer, 'manufacturer_id'),
                                 ('department', Department, 'department_id')):
         if has(column):
-            setattr(equipment, attr, _get_or_create_named(model, row[column]).id if row[column] else None)
+            name = _lookup_name(row[column])
+            setattr(equipment, attr, _get_or_create_named(model, name).id if name else None)
     if has('facility'):
-        name = row['facility']
+        name = _lookup_name(row['facility'])
         if not name:
             equipment.facility_id = None
         else:
-            facility = Facility.query.filter_by(name=name).first()
+            facility = _find_named(Facility, name)
             if not facility:
                 # Full name and address are only used when the import creates the facility
                 facility = Facility(name=name, facility_full=row.get('facility_full', ''),
@@ -2795,7 +2808,8 @@ class LookupField:
 
 class LookupTable:
     def __init__(self, model, slug, singular, plural, icon, name_help='', name_maxlength=100,
-                 fields=(), columns=(), unique_within=(), validate=None, note=''):
+                 fields=(), columns=(), unique_within=(), validate=None, note='',
+                 equipment_column=None, reassignable=True, delete_blocker=None):
         self.model, self.slug, self.icon = model, slug, icon
         self.singular, self.plural = singular, plural
         self.name_help, self.name_maxlength = name_help, name_maxlength
@@ -2804,6 +2818,9 @@ class LookupTable:
         self.unique_within = unique_within    # name is unique only within these fields (e.g. class_id)
         self.validate = validate              # callable(values, item_id) -> error message or None
         self.note = note                      # shown on the add/edit form
+        self.equipment_column = equipment_column  # Equipment foreign key pointing here, if any
+        self.reassignable = reassignable      # equipment using an item may be moved or cleared on delete
+        self.delete_blocker = delete_blocker  # callable(item) -> reason it cannot be deleted, or None
         # Endpoint names match the old per-table routes, e.g. admin_facilities, admin_edit_facility
         self.key = singular.lower().replace(' ', '_')
         self.list_endpoint = 'admin_' + plural.lower().replace(' ', '_')
@@ -2812,8 +2829,23 @@ class LookupTable:
         return f'admin_{action}_{self.key}'
 
     def find_by_name(self, values):
-        filters = {'name': values['name'], **{f: values[f] for f in self.unique_within}}
-        return self.model.query.filter_by(**filters).first()
+        return _find_named(self.model, values['name'], **{f: values[f] for f in self.unique_within})
+
+    def usage_counts(self):
+        """{item id: number of equipment records using it}"""
+        if not self.equipment_column:
+            return {}
+        column = getattr(Equipment, self.equipment_column)
+        return dict(db.session.query(column, func.count()).filter(column.isnot(None)).group_by(column).all())
+
+    def equipment_using(self, item):
+        return Equipment.query.filter(getattr(Equipment, self.equipment_column) == item.id)
+
+    def move_targets(self, item):
+        """Items that equipment using `item` can move to (same parent for subclasses)."""
+        same_parent = {f: getattr(item, f) for f in self.unique_within}
+        return self.model.query.filter(self.model.id != item.id).filter_by(**same_parent) \
+            .order_by(self.model.name).all()
 
 
 def _validate_facility(values, item_id):
@@ -2831,7 +2863,9 @@ def _thousands(value):
     return f'${value * 1000:,}' if value else None
 
 LOOKUP_TABLES = [
-    LookupTable(EquipmentClass, 'equipment-classes', 'Equipment Class', 'Equipment Classes', 'tags'),
+    LookupTable(EquipmentClass, 'equipment-classes', 'Equipment Class', 'Equipment Classes', 'tags',
+                equipment_column='class_id', reassignable=False,
+                delete_blocker=lambda c: f'it has {len(c.subclasses)} subclass(es)' if c.subclasses else None),
     LookupTable(
         EquipmentSubclass, 'equipment-subclasses', 'Equipment Subclass', 'Equipment Subclasses', 'layer-group',
         name_help='Unique within its equipment class',
@@ -2847,8 +2881,9 @@ LOOKUP_TABLES = [
         columns=[('Equipment Class', lambda s: s.equipment_class.name if s.equipment_class else None),
                  ('Est. Capital Cost', lambda s: _thousands(s.estimated_capital_cost)),
                  ('Expected Lifetime', lambda s: f'{s.expected_lifetime} years' if s.expected_lifetime else None)],
-        unique_within=('class_id',)),
-    LookupTable(Department, 'departments', 'Department', 'Departments', 'building'),
+        unique_within=('class_id',), equipment_column='subclass_id'),
+    LookupTable(Department, 'departments', 'Department', 'Departments', 'building',
+                equipment_column='department_id'),
     LookupTable(
         Facility, 'facilities', 'Facility', 'Facilities', 'hospital', name_maxlength=200,
         name_help='Short name shown throughout the app',
@@ -2858,8 +2893,9 @@ LOOKUP_TABLES = [
             LookupField('address', 'Address', 'textarea', maxlength=500, help='Optional facility address'),
         ],
         columns=[('Full Facility', lambda f: f.facility_full), ('Address', lambda f: f.address)],
-        validate=_validate_facility),
-    LookupTable(Manufacturer, 'manufacturers', 'Manufacturer', 'Manufacturers', 'industry'),
+        validate=_validate_facility, equipment_column='facility_id'),
+    LookupTable(Manufacturer, 'manufacturers', 'Manufacturer', 'Manufacturers', 'industry',
+                equipment_column='manufacturer_id'),
     LookupTable(
         CapitalCategory, 'capital-categories', 'Capital Category', 'Capital Categories', 'tags',
         name_maxlength=50, name_help='For example "A", "B", or "Category 1"',
@@ -2919,7 +2955,7 @@ def _register_lookup_routes(table):
 
     def list_view():
         items = table.model.query.order_by(table.model.name).all()
-        return render_template('admin_lookup_list.html', table=table, items=items)
+        return render_template('admin_lookup_list.html', table=table, items=items, usage=table.usage_counts())
 
     def add_view():
         if request.method == 'GET':
@@ -2969,6 +3005,45 @@ def _register_lookup_routes(table):
             flash(f'{table.singular} updated', 'success')
         return redirect(url_for(table.list_endpoint))
 
+    def delete_view(item_id):
+        """Delete for good. Equipment using the item is first moved to another item or,
+        where a blank is allowed, cleared; an item that cannot be reassigned must be unused."""
+        item = db.get_or_404(table.model, item_id)
+        in_use = table.equipment_using(item).count() if table.equipment_column else 0
+        blocker = table.delete_blocker(item) if table.delete_blocker else None
+        if in_use and not table.reassignable:
+            blocker = f'{in_use} equipment record(s) use it'
+        if request.method == 'GET':
+            return render_template('admin_lookup_delete.html', table=table, item=item, in_use=in_use,
+                                   blocker=blocker, targets=table.move_targets(item) if in_use else [])
+        if blocker:
+            flash(f'Cannot delete {table.singular.lower()} "{item.name}": {blocker}. Deactivate it instead.', 'error')
+            return redirect(url_for(table.list_endpoint))
+
+        name, outcome = item.name, ''
+        if in_use:
+            action = request.form.get('action')
+            target = None
+            if action == 'move':
+                target = next((t for t in table.move_targets(item)
+                               if str(t.id) == request.form.get('target_id')), None)
+                if not target:
+                    flash(f'Choose where to move the {in_use} equipment record(s)', 'error')
+                    return redirect(url_for(table.endpoint('delete'), item_id=item.id))
+                outcome = f'; moved {in_use} equipment record(s) to "{target.name}"'
+            elif action == 'clear':
+                outcome = f'; cleared it from {in_use} equipment record(s)'
+            else:
+                flash('Choose what to do with the equipment that uses it', 'error')
+                return redirect(url_for(table.endpoint('delete'), item_id=item.id))
+            table.equipment_using(item).update({table.equipment_column: target.id if target else None},
+                                               synchronize_session=False)
+        db.session.delete(item)
+        db.session.commit()
+        logger.info("ADMIN deleted %s %r%s by %s", table.singular, name, outcome, current_user.username)
+        flash(f'{table.singular} "{name}" deleted{outcome}', 'success')
+        return redirect(url_for(table.list_endpoint))
+
     def set_active_view(item_id, active):
         item = db.get_or_404(table.model, item_id)
         item.is_active = active
@@ -2981,8 +3056,10 @@ def _register_lookup_routes(table):
     app.add_url_rule(f'{base}/add', table.endpoint('add'), guard(add_view), methods=['GET', 'POST'])
     app.add_url_rule(f'{base}/<int:item_id>/edit', table.endpoint('edit'), guard(edit_view),
                      methods=['GET', 'POST'])
-    app.add_url_rule(f'{base}/<int:item_id>/delete', table.endpoint('delete'),
+    app.add_url_rule(f'{base}/<int:item_id>/deactivate', table.endpoint('deactivate'),
                      guard(lambda item_id: set_active_view(item_id, False)), methods=['POST'])
+    app.add_url_rule(f'{base}/<int:item_id>/delete', table.endpoint('delete'), guard(delete_view),
+                     methods=['GET', 'POST'])
     app.add_url_rule(f'{base}/<int:item_id>/activate', table.endpoint('activate'),
                      guard(lambda item_id: set_active_view(item_id, True)), methods=['POST'])
 

@@ -28,7 +28,7 @@ from unittest.mock import MagicMock, patch
 from flask import g
 from sqlalchemy import inspect, text
 
-from app import db, check_and_migrate_db, login_throttle, ComplianceTest, Department, Equipment, EquipmentClass, Facility, Personnel
+from app import db, check_and_migrate_db, login_throttle, ComplianceTest, Department, Equipment, EquipmentClass, Facility, Manufacturer, Personnel
 from conftest import make_user, login
 
 
@@ -1142,7 +1142,7 @@ class TestCSRF:
             db.session.add(Facility(name='Keep'))
             db.session.commit()
         self._login(csrf_client)
-        csrf_client.post('/admin/facilities/1/delete')
+        csrf_client.post('/admin/facilities/1/deactivate')
         assert db.session.get(Facility, 1).is_active is True
 
     def test_post_with_token_is_accepted(self, app, csrf_client):
@@ -1151,7 +1151,7 @@ class TestCSRF:
             db.session.add(Facility(name='Go'))
             db.session.commit()
         token = self._login(csrf_client)
-        csrf_client.post('/admin/facilities/1/delete', data={'csrf_token': token})
+        csrf_client.post('/admin/facilities/1/deactivate', data={'csrf_token': token})
         assert db.session.get(Facility, 1).is_active is False
 
     def test_json_post_without_token_gets_json_error(self, app, csrf_client):
@@ -1503,11 +1503,16 @@ class TestAdminLookupTables:
         client.post(f'{base}/{item.id}/edit', data={'name': 'Beta', **extra})
         assert db.session.get(model, item.id).name == 'Beta'
 
-        client.post(f'{base}/{item.id}/delete')
+        client.post(f'{base}/{item.id}/deactivate')
         assert db.session.get(model, item.id).is_active is False
         assert b'Inactive' in client.get(base).data
         client.post(f'{base}/{item.id}/activate')
         assert db.session.get(model, item.id).is_active is True
+
+        # Unused, so it can be deleted outright
+        assert client.get(f'{base}/{item.id}/delete').status_code == 200
+        client.post(f'{base}/{item.id}/delete')
+        assert db.session.get(model, item.id) is None
 
     def test_duplicate_name_is_rejected_and_input_kept(self, app, client):
         self._login(app, client)
@@ -1520,12 +1525,19 @@ class TestAdminLookupTables:
         self._login(app, client)
         client.post('/admin/facilities/add', data={'name': 'North'})
         fac = Facility.query.one()
-        client.post(f'/admin/facilities/{fac.id}/delete')
+        client.post(f'/admin/facilities/{fac.id}/deactivate')
         resp = client.post('/admin/facilities/add', data={'name': 'North', 'address': 'New Address'},
                            follow_redirects=True)
         assert b'reactivated' in resp.data
         fac = Facility.query.one()
         assert fac.is_active and fac.address == 'New Address'
+
+    def test_duplicate_check_ignores_case_and_spaces(self, app, client):
+        self._login(app, client)
+        client.post('/admin/departments/add', data={'name': 'Radiology'})
+        resp = client.post('/admin/departments/add', data={'name': ' radiology '})
+        assert b'already exists' in resp.data
+        assert Department.query.count() == 1
 
     def test_subclass_names_are_unique_only_within_a_class(self, app, client):
         from app import EquipmentSubclass
@@ -1567,5 +1579,83 @@ class TestAdminLookupTables:
             db.session.commit()
         login(client, 'phys', 'pw')
         assert client.get('/admin/departments').status_code == 302
+        client.post('/admin/departments/1/deactivate')
         client.post('/admin/departments/1/delete')
         assert db.session.get(Department, 1).is_active is True
+
+
+class TestLookupDelete:
+    """Deleting lookup items: equipment using them is moved or cleared first."""
+
+    def _setup(self, app, client):
+        from app import EquipmentSubclass
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            dxa, ct = EquipmentClass(name='DXA'), EquipmentClass(name='CT')
+            db.session.add_all([dxa, ct, Manufacturer(name='GE')])
+            db.session.commit()
+            db.session.add_all([EquipmentSubclass(name='None', class_id=dxa.id),   # id 1
+                                EquipmentSubclass(name='none', class_id=dxa.id),   # id 2
+                                EquipmentSubclass(name='Head', class_id=ct.id)])   # id 3
+            db.session.commit()
+            db.session.add_all([Equipment(class_id=dxa.id, subclass_id=2, manufacturer_id=1, eq_mod='A'),
+                                Equipment(class_id=dxa.id, subclass_id=2, eq_mod='B'),
+                                Equipment(class_id=dxa.id, subclass_id=1, eq_mod='C')])
+            db.session.commit()
+        login(client, 'admin', 'pw')
+
+    def test_list_shows_usage(self, app, client):
+        self._setup(app, client)
+        page = client.get('/admin/equipment-subclasses').data.decode()
+        assert '2 equipment' in page and 'Unused' in page
+
+    def test_merge_duplicate_subclass_into_another(self, app, client):
+        from app import EquipmentSubclass
+        self._setup(app, client)
+        page = client.get('/admin/equipment-subclasses/2/delete').data.decode()
+        assert '2 equipment record(s)' in page
+        assert '>None<' in page and 'Head' not in page  # only subclasses of the same class
+        resp = client.post('/admin/equipment-subclasses/2/delete', data={'action': 'move', 'target_id': '1'},
+                           follow_redirects=True)
+        assert b'moved 2 equipment record(s) to &#34;None&#34;' in resp.data
+        assert db.session.get(EquipmentSubclass, 2) is None
+        assert [e.subclass_id for e in Equipment.query.order_by(Equipment.eq_id)] == [1, 1, 1]
+
+    def test_move_to_subclass_of_another_class_is_refused(self, app, client):
+        from app import EquipmentSubclass
+        self._setup(app, client)
+        client.post('/admin/equipment-subclasses/2/delete', data={'action': 'move', 'target_id': '3'})
+        assert db.session.get(EquipmentSubclass, 2) is not None
+
+    def test_clear_from_equipment(self, app, client):
+        self._setup(app, client)
+        client.post('/admin/manufacturers/1/delete', data={'action': 'clear'})
+        assert db.session.get(Manufacturer, 1) is None
+        assert Equipment.query.filter_by(eq_mod='A').one().manufacturer_id is None
+
+    def test_in_use_item_needs_a_choice(self, app, client):
+        self._setup(app, client)
+        client.post('/admin/manufacturers/1/delete', data={})
+        assert db.session.get(Manufacturer, 1) is not None
+
+    def test_class_in_use_or_with_subclasses_cannot_be_deleted(self, app, client):
+        self._setup(app, client)
+        page = client.get('/admin/equipment-classes/1/delete').data.decode()
+        assert "can't be deleted" in page and 'equipment record(s) use it' in page
+        client.post('/admin/equipment-classes/1/delete', data={'action': 'clear'})
+        client.post('/admin/equipment-classes/2/delete')  # CT: unused but has a subclass
+        assert EquipmentClass.query.count() == 2
+        with app.app_context():
+            db.session.add(EquipmentClass(name='Unused'))
+            db.session.commit()
+        client.post('/admin/equipment-classes/3/delete')
+        assert EquipmentClass.query.count() == 2
+
+    def test_import_matches_names_ignoring_case_and_reads_placeholders_as_blank(self, app, client):
+        from app import EquipmentSubclass
+        self._setup(app, client)
+        _post_import(client, 'eq_id,equipment_subclass,manufacturer\n3,NONE, ge \n2,N/A,-\n')
+        c, b = db.session.get(Equipment, 3), db.session.get(Equipment, 2)
+        assert (c.subclass_id, c.manufacturer_id) == (1, 1)
+        assert (b.subclass_id, b.manufacturer_id) == (None, None)
+        assert EquipmentSubclass.query.count() == 3 and Manufacturer.query.count() == 1
