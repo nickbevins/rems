@@ -451,26 +451,6 @@
         </div>
     </div>
 </div>
-
-<style>
-.sortable {
-    cursor: pointer;
-    user-select: none;
-}
-.sortable:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-.sortable .icon {
-    margin-left: 5px;
-    opacity: 0.3;
-}
-.sortable.asc .icon,
-.sortable.desc .icon {
-    opacity: 1;
-}
-
-/* Bootstrap table-hover handles row hover effects automatically */
-</style>
 {% endblock %}
 
 {% block scripts %}
@@ -542,87 +522,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSubclasses();
         }
     }
-    // Add sorting functionality to all tables
+    // Sortable columns on each table
     const tables = ['overdueTable', 'upcomingTable', 'scheduledTable'];
-    
-    tables.forEach(tableId => {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        
-        const sortableHeaders = table.querySelectorAll('.sortable');
-        let currentSort = { column: '', direction: 'asc', table: tableId };
-        
-        sortableHeaders.forEach(header => {
-            header.addEventListener('click', function() {
-                const column = this.dataset.column;
-                let direction = 'asc';
-                
-                // Toggle direction if clicking the same column
-                if (currentSort.column === column && currentSort.table === tableId) {
-                    direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-                }
-                
-                currentSort = { column, direction, table: tableId };
-                sortTable(tableId, column, direction);
-                updateSortIcons(table, this, direction);
-            });
-        });
-    });
-    
-    function sortTable(tableId, column, direction) {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        
-        rows.sort((a, b) => {
-            // Convert snake_case to camelCase for dataset API
-            const datasetKey = column.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
-            let aValue = a.dataset[datasetKey] || '';
-            let bValue = b.dataset[datasetKey] || '';
-            
-            // Handle numeric sorting for days
-            if (column.includes('days') || column === 'days_overdue' || column === 'days_until') {
-                aValue = parseInt(aValue) || 0;
-                bValue = parseInt(bValue) || 0;
-            }
-            // Handle date sorting
-            else if (column.includes('date') || column === 'last_tested') {
-                aValue = new Date(aValue || '1900-01-01');
-                bValue = new Date(bValue || '1900-01-01');
-            }
-            // Handle text sorting
-            else {
-                aValue = aValue.toLowerCase();
-                bValue = bValue.toLowerCase();
-            }
-            
-            if (direction === 'asc') {
-                return aValue > bValue ? 1 : -1;
-            } else {
-                return aValue < bValue ? 1 : -1;
-            }
-        });
-        
-        // Clear and re-append sorted rows
-        tbody.innerHTML = '';
-        rows.forEach(row => tbody.appendChild(row));
-    }
-    
-    function updateSortIcons(table, activeHeader, direction) {
-        // Reset all icons in this table
-        const allHeaders = table.querySelectorAll('.sortable');
-        allHeaders.forEach(header => {
-            const icon = header.querySelector('.icon');
-            setIcon(icon, 'sort');
-        });
-        
-        // Set active icon
-        const activeIcon = activeHeader.querySelector('.icon');
-        setIcon(activeIcon, direction === 'asc' ? 'sort-up' : 'sort-down');
-    }
-    
+    tables.forEach(tableId => makeTableSortable(document.getElementById(tableId)));
+
     // Add double-click functionality to table rows
     tables.forEach(tableId => {
         const table = document.getElementById(tableId);

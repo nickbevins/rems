@@ -79,9 +79,16 @@ A comprehensive web-based application for managing radiology imaging equipment, 
 
 ## Production Deployment
 
-For on-premise installation with automatic startup, backups, and SSL, see [PRODUCTION_DEPLOYMENT_GUIDE.md](PRODUCTION_DEPLOYMENT_GUIDE.md).
+REMS runs on Render. The `Procfile` starts Gunicorn, `runtime.txt` pins Python, and the database
+is SQLite on Render's persistent disk at `/var/data/physdb.db`. Set `SECRET_KEY` in the Render
+environment; secure cookies and proxy handling turn on automatically. Schema changes apply on
+startup (`check_and_migrate_db()`), so a deploy needs no manual migration step. Download a backup from
+the Admin page before deploying a change that alters the database.
 
-**Note**: The application is fully compatible with air-gapped (offline) deployments. All necessary assets (Bootstrap, Font Awesome, D3.js) are included locally in `static/vendor/` and require no internet connectivity during runtime.
+An on-site VM install was planned and is on hold. Its server request and step-by-step guide
+(systemd, NGINX, SSL, cron backups, air-gapped install) are in [docs/on-prem/](docs/on-prem/).
+The app needs no internet access at runtime: Bootstrap, SortableJS and D3.js are in
+`static/vendor/`, and icons are inline SVG.
 
 ## Usage
 
@@ -193,7 +200,7 @@ sqlite3 instance/physdb.db ".backup physdb_backup_$(date +%Y%m%d).db"
 
 **Restoring:** stop the service first, and delete any existing `physdb.db-wal` and `physdb.db-shm`
 alongside the target — a stale WAL paired with a restored database file is a corruption path. See
-`PRODUCTION_DEPLOYMENT_GUIDE.md` for the full procedure.
+[docs/on-prem/deployment-guide.md](docs/on-prem/deployment-guide.md) for the full procedure.
 
 ### Log Files
 - Application logs stored in `physdb.log`
@@ -294,7 +301,7 @@ Copyright (c) 2026 Nick Bevins. All rights reserved.
 ## Running Tests
 
 ```bash
-pip install pytest
+pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 

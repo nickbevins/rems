@@ -710,6 +710,18 @@ class TestImportRoundTrip:
         assert b'Row 3: equipment_class is required' in resp.data
         assert sorted(e.eq_mod for e in Equipment.query.filter(Equipment.eq_mod.isnot(None))) == ['Good1', 'Good2']
 
+    def test_blank_lines_skipped_and_row_numbers_match_the_file(self, app, client):
+        self._login(app, client)
+        resp = _post_import(client, 'equipment_class,eq_mod\nCT,A\n\n,NoClass\nCT,B,\n')
+        assert b'Row 4: equipment_class is required' in resp.data
+        assert b'Imported 2 new' in resp.data  # trailing empty cell on the last row is fine
+
+    def test_row_with_extra_filled_cells_rejects_the_file(self, app, client):
+        self._login(app, client)
+        resp = _post_import(client, 'equipment_class,eq_mod\nCT,A\nCT,B,extra\n')
+        assert b'row 3 has more cells than the header' in resp.data
+        assert Equipment.query.filter_by(eq_mod='A').count() == 0
+
     def test_new_contact_without_email_warns_instead_of_failing(self, app, client):
         self._login(app, client)
         resp = _post_import(client, 'equipment_class,eq_mod,contact_person\nCT,X,Jane Doe\n')

@@ -20,6 +20,57 @@ function setIcon(svg, name) {
     svg.querySelector('use').setAttribute('href', '#i-' + name);
 }
 
+// Click-to-sort for a table whose headers have class "sortable" and data-column="some_name".
+// A row's value comes from its data-some-name attribute, or else the text of that
+// column's cell. Numbers compare as numbers; everything else (ISO dates included) as
+// text. `initial` marks a sort the server already applied, e.g. {column, direction}.
+function makeTableSortable(table, initial) {
+    if (!table) return;
+    const headers = table.querySelectorAll('.sortable');
+    let current = initial || { column: null, direction: null };
+
+    function cellValue(row, header) {
+        const key = header.dataset.column.replace(/_([a-z])/g, (m, c) => c.toUpperCase());
+        const cell = row.children[header.cellIndex];
+        const value = (key in row.dataset ? row.dataset[key] : (cell ? cell.textContent : '')).trim();
+        return value === '-' || value === 'N/A' ? '' : value;
+    }
+
+    function compare(a, b) {
+        const isNumber = v => /^-?\d+(\.\d+)?$/.test(v);
+        if (isNumber(a) && isNumber(b)) return Number(a) - Number(b);
+        return a.localeCompare(b, undefined, { sensitivity: 'base' });
+    }
+
+    function showDirection(active, direction) {
+        headers.forEach(h => {
+            h.classList.remove('asc', 'desc');
+            setIcon(h.querySelector('.icon'), 'sort');
+        });
+        active.classList.add(direction);
+        setIcon(active.querySelector('.icon'), direction === 'asc' ? 'sort-up' : 'sort-down');
+    }
+
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.column;
+            const direction = current.column === column && current.direction === 'asc' ? 'desc' : 'asc';
+            current = { column, direction };
+            const tbody = table.querySelector('tbody');
+            const sign = direction === 'asc' ? 1 : -1;
+            Array.from(tbody.rows)
+                .sort((a, b) => sign * compare(cellValue(a, this), cellValue(b, this)))
+                .forEach(row => tbody.appendChild(row));
+            showDirection(this, direction);
+        });
+    });
+
+    if (initial) {
+        const header = table.querySelector(`.sortable[data-column="${initial.column}"]`);
+        if (header) showDirection(header, initial.direction);
+    }
+}
+
 // Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap tooltips

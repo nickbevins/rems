@@ -1,9 +1,13 @@
 # Production Installation Guide for REMS
 
+> **Status: on hold.** REMS currently runs on Render (see the main [README](../../README.md)).
+> This guide is kept for if an on-site VM is pursued again; see also the
+> [server request](server-request.md). Last checked against the application in October 2026.
+
 ## Overview
 This guide provides step-by-step instructions for deploying the Radiation Equipment Management System (REMS) in a production environment with automatic startup, failure recovery, and automated backup capabilities.
 
-The examples here are written for an on-premise Linux VM, which is the primary planned deployment target, but the same principles apply to any Linux-based environment — including cloud VMs (AWS EC2, Azure VM, etc.) or bare-metal servers. Windows Server deployment notes are included where relevant.
+The examples here are written for an on-premise Linux VM, but the same principles apply to any Linux-based environment — including cloud VMs (AWS EC2, Azure VM, etc.) or bare-metal servers. Windows Server deployment notes are included where relevant.
 
 ## Pre-Installation Requirements
 
@@ -13,7 +17,7 @@ The examples here are written for an on-premise Linux VM, which is the primary p
 - 50GB storage minimum (OS + app + backups; expand as needed)
 - Static internal IP address or stable internal DNS hostname (e.g., `rems.yourdomain.local`)
 - Firewall: ports 80 and 443 open inbound; port 22 (SSH) for admin access
-- **Network Connectivity**: Internet access required during initial setup for package installation (`apt`, `pip`). **No internet connectivity required during runtime** — all frontend assets (Bootstrap, Font Awesome, D3.js) are included locally in `static/vendor/`
+- **Network Connectivity**: Internet access required during initial setup for package installation (`apt`, `pip`). **No internet connectivity required during runtime** — all frontend assets (Bootstrap, SortableJS, D3.js) are included locally in `static/vendor/`, and icons are inline SVG in `templates/_icons.svg`
 
 ## Step 1: System Dependencies Installation
 
@@ -85,7 +89,8 @@ cd /opt/rems
 python3.11 -m venv venv
 source venv/bin/activate
 
-# Install all Python dependencies (including gunicorn)
+# Install all Python dependencies (including gunicorn).
+# requirements-dev.txt (pytest, openpyxl) is only for running tests and is not needed here.
 pip install -r requirements.txt
 
 # Create production environment configuration
@@ -220,7 +225,9 @@ server {
     add_header X-Content-Type-Options nosniff;          # Prevent MIME sniffing
     add_header X-XSS-Protection "1; mode=block";        # XSS protection
 
-    # Serve static files directly (CSS, JS, images) for better performance
+    # Serve static files directly (CSS, JS, images) for better performance.
+    # The app links them as /static/file?v=<modified time>, so a long cache is safe:
+    # an updated file gets a new URL.
     location /static {
         alias /opt/rems/static;
         expires 1y;                                      # Cache static files for 1 year

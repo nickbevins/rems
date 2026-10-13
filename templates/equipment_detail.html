@@ -591,73 +591,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Add sorting functionality to compliance tests table
-    const sortableHeaders = document.querySelectorAll('.sortable');
-    let currentSort = { column: 'test_date', direction: 'desc' }; // Default sort by test date descending
-    
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', function() {
-            const column = this.dataset.column;
-            let direction = 'asc';
-            
-            // Toggle direction if clicking the same column
-            if (currentSort.column === column) {
-                direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-            }
-            
-            currentSort = { column, direction };
-            sortTable(column, direction);
-            updateSortIcons(this, direction);
-        });
-    });
-    
-    // Set initial sort icon to show current backend sorting (test_date desc)
-    const testDateHeader = document.querySelector('[data-column="test_date"]');
+    // Sortable compliance test history; the server sends it newest first
+    const testDateHeader = document.querySelector('.sortable[data-column="test_date"]');
     if (testDateHeader) {
-        updateSortIcons(testDateHeader, 'desc');
-    }
-    
-    function sortTable(column, direction) {
-        const tbody = document.querySelector('.table-striped tbody');
-        if (!tbody) return;
-        
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-        
-        rows.sort((a, b) => {
-            let aValue = a.dataset[column.replace('_', '-')] || '';
-            let bValue = b.dataset[column.replace('_', '-')] || '';
-            
-            // Handle date sorting
-            if (column === 'test_date' || column === 'report_date') {
-                aValue = new Date(aValue || '1900-01-01');
-                bValue = new Date(bValue || '1900-01-01');
-            } else {
-                aValue = aValue.toLowerCase();
-                bValue = bValue.toLowerCase();
-            }
-            
-            if (direction === 'asc') {
-                return aValue > bValue ? 1 : -1;
-            } else {
-                return aValue > bValue ? -1 : 1;
-            }
-        });
-        
-        // Clear and re-append sorted rows
-        tbody.innerHTML = '';
-        rows.forEach(row => tbody.appendChild(row));
-    }
-    
-    function updateSortIcons(activeHeader, direction) {
-        // Reset all icons
-        sortableHeaders.forEach(header => {
-            const icon = header.querySelector('.icon');
-            setIcon(icon, 'sort');
-        });
-        
-        // Set active icon
-        const activeIcon = activeHeader.querySelector('.icon');
-        setIcon(activeIcon, direction === 'asc' ? 'sort-up' : 'sort-down');
+        makeTableSortable(testDateHeader.closest('table'), { column: 'test_date', direction: 'desc' });
     }
 });
 

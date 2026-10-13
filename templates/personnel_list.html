@@ -173,41 +173,6 @@
     </div>
 </div>
 
-<style>
-.sortable {
-    cursor: pointer;
-    user-select: none;
-}
-.sortable:hover {
-    background-color: #f8f9fa;
-    color: #212529;
-}
-.sortable .icon {
-    margin-left: 5px;
-    opacity: 0.3;
-}
-.sortable.asc .icon,
-.sortable.desc .icon {
-    opacity: 1;
-}
-.personnel-row {
-    cursor: pointer;
-}
-.btn-icon {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    line-height: 1;
-    min-width: 2rem;
-}
-/* Normalize table row heights */
-#personnelTable tbody tr {
-    height: 60px;
-}
-#personnelTable tbody td {
-    vertical-align: middle;
-}
-</style>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Double-click functionality for personnel rows
@@ -224,62 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Table sorting functionality
-    const table = document.getElementById('personnelTable');
-    const headers = table.querySelectorAll('.sortable');
-    
-    headers.forEach(header => {
-        header.addEventListener('click', function() {
-            const column = this.dataset.column;
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            // Determine sort direction
-            const isAsc = this.classList.contains('asc');
-            
-            // Reset all headers
-            headers.forEach(h => {
-                h.classList.remove('asc', 'desc');
-                setIcon(h.querySelector('.icon'), 'sort');
-            });
-            
-            // Set current header direction
-            this.classList.add(isAsc ? 'desc' : 'asc');
-            setIcon(this.querySelector('.icon'), isAsc ? 'sort-down' : 'sort-up');
-            
-            // Sort rows
-            rows.sort((a, b) => {
-                let aVal = '';
-                let bVal = '';
-                
-                if (column === 'name') {
-                    aVal = a.querySelector('td:nth-child(1)').textContent.trim();
-                    bVal = b.querySelector('td:nth-child(1)').textContent.trim();
-                } else if (column === 'email') {
-                    aVal = a.querySelector('td:nth-child(2)').textContent.trim();
-                    bVal = b.querySelector('td:nth-child(2)').textContent.trim();
-                } else if (column === 'phone') {
-                    aVal = a.querySelector('td:nth-child(3)').textContent.trim();
-                    bVal = b.querySelector('td:nth-child(3)').textContent.trim();
-                } else if (column === 'roles') {
-                    aVal = a.querySelector('td:nth-child(4)').textContent.trim();
-                    bVal = b.querySelector('td:nth-child(4)').textContent.trim();
-                } else if (column === 'login_status') {
-                    aVal = a.querySelector('td:nth-child(5)').textContent.trim();
-                    bVal = b.querySelector('td:nth-child(5)').textContent.trim();
-                }
-                
-                if (aVal === '-') aVal = '';
-                if (bVal === '-') bVal = '';
-                
-                const comparison = aVal.localeCompare(bVal);
-                return isAsc ? -comparison : comparison;
-            });
-            
-            // Re-append sorted rows
-            rows.forEach(row => tbody.appendChild(row));
-        });
-    });
+    makeTableSortable(document.getElementById('personnelTable'));
 });
 </script>
 {% endblock %}

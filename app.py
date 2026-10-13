@@ -11,7 +11,6 @@ from wtforms import StringField, IntegerField, DateField, SelectField, BooleanFi
 from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo, NumberRange
 from datetime import date, datetime, timedelta, timezone
 import os
-import pandas as pd
 from dotenv import load_dotenv
 from dateutil.relativedelta import relativedelta
 import calendar
@@ -99,8 +98,6 @@ class MockPagination:
         """Return a single-page MockPagination containing all items."""
         obj = cls(items, page=1, pages=1)
         obj.total = len(items)
-        obj.has_next = False
-        obj.iter_pages = lambda *a, **k: [1]
         return obj
 
     @classmethod
@@ -109,7 +106,6 @@ class MockPagination:
         pages = max(1, (total + per_page - 1) // per_page)
         obj = cls(items, page=page, pages=pages)
         obj.total = total
-        obj.iter_pages = lambda *a, **k: range(max(1, page - 2), min(pages + 1, page + 3))
         return obj
 
 
@@ -141,7 +137,7 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Let browsers cache static assets (CSS, JS, icon fonts) for a year instead of
+# Let browsers cache static assets (CSS, JS) for a year instead of
 # revalidating them on every page load. url_for('static', ...) appends ?v=<mtime>
 # so an edited file gets a new URL and is fetched fresh.
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
@@ -450,7 +446,7 @@ def _csv_download(name, headers, rows, timestamped=True):
 
 def _csv_str(val):
     """Stripped string for a CSV cell; '' for blanks. Undoes _csv_safe's quote."""
-    if val is None or (not isinstance(val, str) and pd.isna(val)):
+    if val is None:
         return ''
     cell = str(val).strip()
     if len(cell) > 1 and cell[0] == "'" and cell[1] in '=+-@':
@@ -458,31 +454,40 @@ def _csv_str(val):
     return cell
 
 def _read_csv_upload(file):
-    """Read an uploaded CSV with every cell as a stripped string ('' when blank).
+    """Read an uploaded CSV into (header, [(line, row dict), ...]).
 
-    Reading as text keeps values like room '101' and serial '00123' intact (pandas
-    would otherwise guess numbers and store 101.0 / 123.0). utf-8-sig drops the
-    byte-order mark Excel adds, which would otherwise rename the first column.
+    Every cell is a stripped string ('' when blank), so values like room '101' and
+    serial '00123' stay intact. utf-8-sig drops the byte-order mark Excel adds, which
+    would otherwise rename the first column. Blank lines are skipped; `line` is the
+    spreadsheet row number for messages. Raises ValueError for a row with more
+    filled cells than the header.
     """
-    df = pd.read_csv(file, dtype=str, keep_default_na=False, encoding='utf-8-sig')
-    df.columns = [str(c).strip() for c in df.columns]
-    return df.apply(lambda col: col.map(_csv_str))
+    reader = csv.reader(io.StringIO(file.read().decode('utf-8-sig'), newline=''))
+    header = [h.strip() for h in next(reader, [])]
+    rows = []
+    for line, cells in enumerate(reader, start=2):
+        if not cells:
+            continue
+        if any(c.strip() for c in cells[len(header):]):
+            raise ValueError(f'row {line} has more cells than the header')
+        cells = [_csv_str(c) for c in cells[:len(header)]]
+        rows.append((line, dict(zip(header, cells + [''] * (len(header) - len(cells))))))
+    return header, rows
 
 def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     """Get existing personnel by ID or create new personnel with role assignment"""
     contact = None
 
-    if contact_id and str(contact_id).strip() and not pd.isna(contact_id):
+    if contact_id and str(contact_id).strip():
         try:
             contact = db.session.get(Personnel, int(contact_id))
         except (ValueError, TypeError):
             pass
 
-    # Check for NaN before converting to string to avoid creating "nan" personnel
-    if not contact and contact_name and not pd.isna(contact_name):
+    if not contact and contact_name:
         contact_name = str(contact_name).strip()
         if contact_name:  # Ensure it's not an empty string after stripping
-            contact_email = str(contact_email).strip() if (contact_email and not pd.isna(contact_email)) else None
+            contact_email = str(contact_email).strip() if contact_email else None
 
             contact = Personnel.query.filter_by(name=contact_name).first()
 
@@ -809,18 +814,6 @@ class Personnel(UserMixin, db.Model):
         """Check if user can create/edit/delete personnel records"""
         return self.is_admin or self.has_role('physicist') or self.has_role('physics_assistant')
 
-    def can_view_equipment(self):
-        """Check if user can view equipment"""
-        return True  # All authenticated users can view equipment
-
-    def can_view_personnel(self):
-        """Check if user can view personnel records"""
-        return True  # All authenticated users can view personnel
-
-    def can_view_compliance(self):
-        """Check if user can view compliance tests"""
-        return True  # All authenticated users can view compliance tests
-
 class ComplianceTest(db.Model):
     __tablename__ = 'compliance_tests'
 
@@ -843,13 +836,6 @@ class ComplianceTest(db.Model):
     # Relationships
     performed_by = db.relationship('Personnel', foreign_keys=[performed_by_id], backref='tests_performed')
     reviewed_by = db.relationship('Personnel', foreign_keys=[reviewed_by_id], backref='tests_reviewed')
-
-    def get_status(self):
-        """Calculate status based on test date"""
-        if self.test_date > datetime.now().date():
-            return 'Scheduled'
-        else:
-            return 'Completed'
 
     def __repr__(self):
         return f'<ComplianceTest {self.test_id}: {self.test_type} for Equipment {self.eq_id}>'
@@ -2100,15 +2086,15 @@ def _run_csv_import(file, apply_row, noun, required=(), known=None):
         flash('Please select a CSV file', 'error')
         return False
     try:
-        df = _read_csv_upload(file)
-    except (ValueError, UnicodeDecodeError, pd.errors.ParserError) as e:
+        header, rows = _read_csv_upload(file)
+    except (ValueError, UnicodeDecodeError, csv.Error) as e:
         flash(f'Could not read the CSV file: {e}', 'error')
         return False
-    if len(df) > MAX_CSV_ROWS:
-        flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(df)} rows found). '
+    if len(rows) > MAX_CSV_ROWS:
+        flash(f'CSV exceeds the maximum of {MAX_CSV_ROWS} rows ({len(rows)} rows found). '
               'Split the file and import in batches.', 'error')
         return False
-    columns = set(df.columns)
+    columns = set(header)
     missing = [c for c in required if c not in columns]
     if missing:
         flash(f'Missing required columns: {", ".join(missing)}', 'error')
@@ -2118,9 +2104,8 @@ def _run_csv_import(file, apply_row, noun, required=(), known=None):
 
     created = updated = skipped = 0
     errors, warnings = [], []
-    for index, row in df.iterrows():
-        line = index + 2  # spreadsheet row number: 1-based, after the header
-        if not any(row.values):
+    for line, row in rows:
+        if not any(row.values()):
             skipped += 1
             continue
         try:
@@ -3008,7 +2993,7 @@ except sa_exc.SQLAlchemyError as e:
 if __name__ == '__main__':
     # Tables and migrations were already applied at import time (above).
     # host='127.0.0.1' binds only loopback for local dev; production traffic
-    # is served through gunicorn (see PRODUCTION_DEPLOYMENT_GUIDE.md).
+    # is served through gunicorn (see Procfile).
     debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
     port = int(os.environ.get('PORT', 5000))
     app.run(host='127.0.0.1', port=port, debug=debug_mode)
