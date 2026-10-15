@@ -9,4 +9,4 @@ python-dotenv==1.1.1
 XlsxWriter>=3.2.0  # admin Excel workbook export (pure Python, no transitive deps)
 email-validator==2.2.0
 python-dateutil==2.9.0.post0
-gunicorn>=23.0.0  # production server (Procfile); it cannot run on Windows, so use python app.py locally
+gunicorn>=23.0.0  # production server; it cannot run on Windows, so use python app.py locally

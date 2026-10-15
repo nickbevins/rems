@@ -1,8 +1,8 @@
 # Server Build Request — Radiation Equipment Management System (REMS)
 
-> **Status: on hold.** REMS currently runs on Render. This request and the
-> [deployment guide](deployment-guide.md) are kept for if an on-site VM is pursued again.
-> Both were last checked against the application in October 2026.
+> **Template.** Use this as a starting point when your IT department has to provision a server for
+> REMS. Edit the user count, hostname, and support level to fit your organization, and delete this
+> note. The install itself is covered in the [self-hosting guide](self-hosting.md).
 
 ## Application Overview
 
@@ -13,15 +13,15 @@ The Radiation Equipment Management System (REMS) is an internal web application 
 - **Equipment inventory**: the full lifecycle from planning and installation to retirement, including serial and asset numbers, location (facility, department, room), ACR site/unit codes, state facility registrations, and capital planning.
 - **Compliance testing**: test history with who performed and reviewed each test, scheduled tests, and a dashboard of overdue and upcoming tests. Due dates follow each machine's audit frequencies (Quarterly, Semiannual, Annual - ACR, Annual - TJC, Annual - ME).
 - **Personnel**: a contact list with roles (contact, supervisor, physician, physicist, physics assistant, QA technologist), linked to equipment as contact, supervisor, and physician.
-- **Data management**: CSV import and export for equipment, personnel, compliance tests, and facilities; a restorable database backup and an Excel workbook export for admins.
+- **Data management**: CSV import and export for equipment, personnel, compliance tests, scheduled tests, and facilities; a restorable database backup and an Excel workbook export for admins.
 
 ### Security
 
 - Username/password sign-in with no default credentials; the first admin is created with `flask create-admin`
 - Repeated failed sign-ins are throttled; sign-ins, failures, and sign-outs are logged with username and IP address
 - Permission checks on every route that changes data (equipment, compliance, personnel)
+- Admins can require users to change their password before doing anything else
 - CSRF protection on every form and in-page request
-- Users can be forced to change their password before doing anything else
 - Sign-in redirects are checked so they cannot send users to another site
 - The app refuses to start without a `SECRET_KEY`
 - CSV imports are capped at 500 rows, and personnel imports never create sign-in accounts
@@ -29,15 +29,15 @@ The Radiation Equipment Management System (REMS) is an internal web application 
 
 ## User Base
 
-- Approximately 5 internal users (medical physicists, physics assistants, administrative staff)
-- Rarely more than 1-2 concurrent users
+- Approximately [N] internal users (medical physicists, physics assistants, administrative staff)
+- Rarely more than a few concurrent users
 - Internal access only — not exposed to the internet
 
 ## Application Stack
 
 | Component | Technology |
 |---|---|
-| Web framework | Python 3.11 / Flask |
+| Web framework | Python 3.11+ / Flask |
 | WSGI server | Gunicorn |
 | Reverse proxy | NGINX |
 | Database | SQLite (file-based, no separate database server required) |
@@ -62,7 +62,7 @@ No separate Apps or Data drive is required. The application uses a file-based SQ
 - **Outbound internet access**:
   - **Initial setup only**: Required for OS package installation (`apt update`, `apt upgrade`, `apt install`) and Python package installation (`pip install`)
   - **Runtime**: **No outbound internet access required** — application functions entirely offline once deployed
-  - **Air-gapped deployment**: Fully supported with pre-downloaded packages and offline installation procedures (see the [deployment guide](deployment-guide.md))
+  - **Air-gapped deployment**: Fully supported with pre-downloaded packages and offline installation procedures (see the [self-hosting guide](self-hosting.md))
 
 ## SSL Certificate
 

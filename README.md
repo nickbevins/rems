@@ -1,247 +1,213 @@
 # REMS - Radiation Equipment Management System
 
-A comprehensive web-based application for managing radiology imaging equipment, compliance testing, personnel, and maintenance records.
+A web application for medical physics groups to track radiology imaging equipment, compliance
+testing, capital replacement planning, and the people involved. It is a single Flask app with a
+SQLite database, so you can run it on a laptop, a small Linux server, or a hosting platform such
+as Render.
 
 ## Features
 
-### Equipment Management
-- **Equipment Database**: Complete inventory of radiology equipment with detailed specifications
-- **Asset Tracking**: Serial numbers, asset IDs, installation dates, and lifecycle information
-- **Location Management**: Track equipment across multiple facilities, departments, and rooms
-- **Contact Information**: Maintain contact details for equipment managers, supervisors, and physicians
-- **Reference Data**: Manage facilities, departments, manufacturers, and equipment classes
-
-### Personnel Management
-- **User Accounts**: Role-based access control with secure authentication
-- **Active vs. Login Access**: Active means the person is still around (inactive people cannot log in and are left out of new equipment and test dropdowns, though existing assignments are kept); Requires Login Access means they have an account at all
-- **Role Management**: Admin, physicist, supervisor, contact person, and other specialized roles
-- **Password Management**: Secure password reset and change functionality
-- **Import/Export**: Bulk personnel management with CSV files
+### Equipment
+- **Inventory**: equipment class and subclass, manufacturer, model, serial and asset numbers, and manufacture, install, end-of-life, and retirement dates
+- **Location**: facility, department, and room
+- **Regulatory IDs**: ACR site/unit codes and state facility/registration numbers
+- **Contacts**: a contact person, supervisor, and physician for each unit
+- **Planned, retired, and non-covered units**: kept in the database and hidden from lists unless you turn on the matching filter
+- **Search and filters**: by class, subclass, manufacturer, department, facility, and free text; exports use the same filters
 
 ### Compliance Testing
-- **Test Scheduling**: Automated scheduling based on equipment audit frequencies
-- **Compliance Dashboard**: View overdue and upcoming tests at a glance
-- **Test Recording**: Detailed test result documentation with personnel tracking
-- **Personnel Integration**: Track who performed and reviewed each test
+- **Test history**: Acceptance, Annual, Audit, QC Review, Shielding Design, Submission, Retire, and Other entries, with test, report, and submission dates and who performed and reviewed each one
+- **Due dates**: calculated from each unit's audit frequencies (Quarterly, Semiannual, Annual - ACR, Annual - TJC, Annual - ME) and its last Acceptance or Annual test
+- **Compliance dashboard**: lists overdue units, units due within 90 days, and scheduled tests; the home page shows the same counts
+- **Scheduling**: you schedule tests yourself, one date at a time, from the equipment list or compliance dashboard. REMS does not create schedules or send email; the dashboards show what is due
+
+### Capital Planning
+- **Replacement list**: end-of-life date (entered, or estimated from the subclass's expected lifetime), replacement cost, year, and funding status
+- **Cost categories**: units grouped into the capital categories you define by cost range
+- **Bubble chart**: replacement cost by year and equipment class
+
+### Personnel
+- **Contact list with roles**: contact, supervisor, physician, physicist, physics assistant, QA technologist
+- **Login accounts**: optional per person, with an admin flag for full access
+- **Active vs. login access**: inactive people cannot log in and are left out of new equipment and test dropdowns, though existing assignments are kept; login access controls whether a person has an account at all
+- **Passwords**: users change their own; admins set or reset them in the Personnel pages and can require a new password at next login
 
 ### Data Management
-- **CSV Import/Export**: Bulk operations for equipment, personnel, compliance tests, and facilities
-- **Search & Filter**: Advanced filtering by equipment class, manufacturer, department, facility
-- **Data Validation**: Ensure data integrity with built-in validation
-- **Relationship Management**: Proper handling of equipment-personnel-facility relationships
+- **CSV import and export** for equipment, personnel, compliance tests, scheduled tests, and facilities. Exports re-import cleanly, so bulk editing is export, edit, import
+- **Database backup**: admins download a restorable `.sqlite3` copy from the Admin page
+- **Excel workbook**: one worksheet per table, for analysis in Excel
+- **Reference data**: admins manage equipment classes and subclasses, facilities, departments, manufacturers, and capital categories
 
-### User Interface
-- **Modern Web Interface**: Responsive design works on desktop and mobile devices
-- **Dashboard**: Real-time overview of equipment status and compliance
-- **Admin Interface**: Comprehensive management of reference data
-- **Advanced Search**: Find equipment quickly with multiple filter options
+The app needs no internet access while running. Bootstrap, SortableJS, and D3.js are bundled in
+`static/vendor/`, and icons are inline SVG.
 
-## Installation
+## Quick Start (Local)
 
-### Prerequisites
-- Python 3.11 or higher
-- pip package manager
+Requires Python 3.11 or newer (tested on 3.13) and Git.
 
-### Setup Instructions
-
-1. **Clone or Download the Project**
+1. **Get the code**
    ```bash
-   cd /path/to/physdb
+   git clone <repository-url> rems
+   cd rems
    ```
 
-2. **Create Virtual Environment**
+2. **Create a virtual environment and install dependencies**
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**
-   ```bash
+   source venv/bin/activate        # Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-4. **Configure Environment**
+3. **Create your `.env` file**
    ```bash
-   # Create a .env file with the following (SECRET_KEY is mandatory — app will not start without it):
-   SECRET_KEY=your_secure_secret_key_here
-   # Set FLASK_DEBUG=1 for local development only. Never set in production.
-   FLASK_DEBUG=1
+   cp .env.example .env            # Windows: copy .env.example .env
+   python -c "import secrets; print(secrets.token_hex(32))"
    ```
+   Paste the printed value into `.env` as `SECRET_KEY`. The app will not start without one.
+   `.env.example` also sets `FLASK_DEBUG=1`, which is fine on your own machine and must never be
+   used on a server.
 
-5. **Create the Admin Account**
+4. **Create the first admin account**
    ```bash
    flask create-admin
    ```
-   Interactive prompt creates the first admin user. Aborts safely if an admin already exists.
+   This prompts for a name, email, username, and password, and creates the database
+   (`instance/physdb.db`) if it does not exist yet. There are no default credentials. It stops if
+   an admin already exists.
 
-6. **Access the Application**
-   - Navigate to `http://localhost:5000`
-
-## Production Deployment
-
-REMS runs on Render. The `Procfile` starts Gunicorn, `runtime.txt` pins Python, and the database
-is SQLite on Render's persistent disk at `/var/data/physdb.db`. Set `SECRET_KEY` in the Render
-environment; secure cookies and proxy handling turn on automatically. Schema changes apply on
-startup (`check_and_migrate_db()`), so a deploy needs no manual migration step. Download a backup from
-the Admin page before deploying a change that alters the database.
-
-An on-site VM install was planned and is on hold. Its server request and step-by-step guide
-(systemd, NGINX, SSL, cron backups, air-gapped install) are in [docs/on-prem/](docs/on-prem/).
-The app needs no internet access at runtime: Bootstrap, SortableJS and D3.js are in
-`static/vendor/`, and icons are inline SVG.
-
-## Usage
-
-### Starting the Application (Local)
-```bash
-python app.py
-```
-
-Access the application at `http://localhost:5000`
-
-### Data Import/Export
-1. **Facilities**: Import reference data first via Admin → Facilities
-2. **Personnel**: Import users via Personnel → Import Personnel
-3. **Equipment**: Import equipment data via Equipment → Import Data
-4. **Compliance Tests**: Import test records via Compliance → Import Tests
-5. **Export**: Download CSV files from any list view
-
-### Equipment Management
-- **Add Equipment**: Use the "Add New Equipment" form
-- **Edit Equipment**: Click edit button on any equipment record
-- **View Details**: Click on equipment ID to see complete information
-- **Search**: Use filters to find specific equipment
-
-### Compliance Testing
-- **Add Tests**: From equipment detail page, click "Add Test"
-- **View Dashboard**: Check compliance status across all equipment
-- **Track Overdue**: Monitor equipment requiring immediate attention
-- **Schedule Tests**: Set up recurring test schedules
-
-## Database Schema
-
-### Equipment Table
-- Basic information (class, manufacturer, model)
-- Location details (facility, department, room)
-- Asset tracking (serial numbers, IDs, dates)
-- Contact information (operators, supervisors, physicians)
-- Technical specifications
-- Compliance requirements
-
-### Compliance Tests Table
-- Test records linked to equipment
-- Test types and frequencies
-- Results and documentation
-- Scheduling and notifications
+5. **Start the app**
+   ```bash
+   python app.py
+   ```
+   Open `http://localhost:5000` and log in. The development server only listens on
+   `127.0.0.1`, so other computers cannot reach it.
 
 ## Configuration
 
-### Environment Variables
-- `SECRET_KEY`: Flask secret key for session security (**required** — app refuses to start without it)
-- `DATABASE_URL`: Database connection string (defaults to `instance/physdb.db` SQLite)
-- `FLASK_DEBUG`: Set to `1` for local development only; omit or set to `0` in production (`FLASK_ENV` is deprecated in Flask 2.x)
-- `ITEMS_PER_PAGE`: Number of items displayed per page
-- `SESSION_COOKIE_SECURE`: Set to `1` behind HTTPS so the session cookie is only sent over HTTPS (automatic on Render)
-- `TRUSTED_PROXY_COUNT`: Number of reverse proxies in front of the app, e.g. `1` for NGINX (automatic `1` on Render). Leave unset when nothing sits in front, or clients could spoof their IP address
+Settings are read from environment variables, or from `.env` in the app directory.
 
-### Database Options
-- **SQLite** (default): File-based database, no separate server required. Suitable for most deployments.
-- **MySQL/PostgreSQL**: Supported for larger deployments by setting the `DATABASE_URL` environment variable (e.g. `mysql+pymysql://user:pass@localhost/physdb` or a PostgreSQL connection string). If using MySQL, also add `PyMySQL` to `requirements.txt`.
-
-## Security Features
-- CSRF protection on every POST (forms send `csrf_token`; in-page requests send the `X-CSRFToken` header)
-- Input validation and sanitization
-- Secure session management with forced password change on first login; session cookie is HttpOnly, SameSite=Lax, and Secure over HTTPS
-- Failed logins throttled per client IP (10 per 15 minutes); logout requires POST
-- Passwords must be at least 12 characters (existing shorter passwords keep working until changed)
-- Deactivating someone or turning off their login access ends any session they already have open
-- Database error details go to the server log, not the page; import errors name the row and the conflicting field
-- Only admins can grant admin rights, set usernames or passwords, change active status, or edit/delete admin accounts; nobody can demote, deactivate, or delete their own account
-- SQL injection prevention via SQLAlchemy ORM
-- XSS protection: Jinja autoescaping, plus `escapeHtml()` (static/js/main.js) for HTML built in JavaScript
-- Spreadsheet formula injection prevention: CSV exports prefix formula-like text with `'` (removed again on import); the Excel workbook writes all text literally
-- Open redirect prevention on login `next` parameter
-- Role-based access control with route-level enforcement decorators
-- Security audit logging for login success, failure, and logout events
-- `SECRET_KEY` required at startup — no insecure fallback
-- Service credentials (`eq_servlogin`/`eq_servpwd`) removed from database; automatic migration drops columns on startup
-- CSV import row limit (500 rows) to prevent resource exhaustion
-- Safe date parsing with `strptime('%Y-%m-%d')` — rejects arbitrary date strings
-- Bulk personnel import creates contact records only — no login credentials are set during import; access must be granted individually through the UI
-- Local dev server binds to `127.0.0.1` only; production traffic served via Gunicorn + NGINX
-
-## Maintenance
-
-### Database Export and Backup
-
-Admins can download the whole database from **Admin Dashboard → Database Export**, in two formats:
-
-| Format | Use it for | Notes |
+| Variable | Default | Purpose |
 |---|---|---|
-| `.sqlite3` backup | Restoring the application | Complete and restorable. Contains user accounts and password hashes — store it securely. |
-| `.xlsx` workbook | Analysis in Excel | One worksheet per table, each formatted as a named Excel Table. Opens natively — no drivers, add-ins, or ODBC setup. Password hashes are excluded. |
+| `SECRET_KEY` | none (required) | Signs session cookies. Use a long random value and keep it secret. Changing it logs everyone out. |
+| `DATABASE_URL` | `sqlite:///instance/physdb.db` | Database location (see [Database](#database)) |
+| `FLASK_DEBUG` | off | `1` turns on the debugger and auto-reload for local development. Never set it on a server. |
+| `SESSION_COOKIE_SECURE` | off | `1` sends the session cookie only over HTTPS. Set it whenever the site is served over HTTPS. |
+| `TRUSTED_PROXY_COUNT` | `0` | Number of reverse proxies in front of the app (e.g. `1` for NGINX). REMS then takes the client IP and scheme from their `X-Forwarded-*` headers. Leave it at `0` when nothing sits in front, or clients could fake their IP address. |
+| `PORT` | `5000` | Port for `python app.py`. Hosting platforms set this for you. |
 
-The workbook is a point-in-time snapshot, not a live connection; download it again to refresh. To
-query across tables in Excel, use **Data → Get Data → From File → From Workbook**, select the sheets
-you need, then Merge Queries on the ID columns (e.g. `equipment.class_id` → `equipment_classes.id`).
+**On Render**, REMS detects the `RENDER` environment variable that Render sets. It then sets
+`SESSION_COOKIE_SECURE` and `TRUSTED_PROXY_COUNT=1` on its own and keeps the database on the
+persistent disk at `/var/data`. On any other host, set these yourself.
 
-The backup button uses SQLite's `VACUUM INTO`, which produces a transactionally consistent,
-defragmented single file. Prefer it over copying `physdb.db` directly: a plain copy of a database in
-WAL mode can capture a torn read and silently omit committed transactions that have not yet been
-checkpointed. It is only available on SQLite; on another backend the button is disabled and you
-should use that server's own backup tooling.
+### Database
 
-Scripted alternative for automated/offsite backups:
+SQLite is the supported and tested database. It is a single file, needs no database server, and
+easily handles a group of a few dozen users. Tables are created on first start, and schema changes
+from new versions are applied automatically at startup, so upgrading needs no manual migration step.
+
+`DATABASE_URL` can point to another database that SQLAlchemy supports, but that is untested. You
+would need to add its driver (e.g. `psycopg` or `PyMySQL`) to `requirements.txt`, some startup
+migrations may need adjusting, and the Admin backup button only works on SQLite.
+
+## Deploying
+
+Any host that can run a Python web app and keep one file on persistent storage will work. Run
+the app with Gunicorn (included in `requirements.txt`, Linux and macOS only):
 
 ```bash
-# Consistent snapshot from the CLI (do NOT use plain cp on a running app)
-sqlite3 instance/physdb.db ".backup physdb_backup_$(date +%Y%m%d).db"
+gunicorn app:app
 ```
 
-**Restoring:** stop the service first, and delete any existing `physdb.db-wal` and `physdb.db-shm`
-alongside the target — a stale WAL paired with a restored database file is a corruption path. See
-[docs/on-prem/deployment-guide.md](docs/on-prem/deployment-guide.md) for the full procedure.
+Gunicorn listens on `0.0.0.0:$PORT` when the `PORT` environment variable is set, as it is on most
+hosting platforms. Otherwise it listens on `127.0.0.1:8000`; add `--bind` to choose another address.
 
-### Log Files
-- Application logs stored in `physdb.log`
-- Error tracking and debugging information
-- Performance monitoring data
+Gunicorn starts one worker by default. Keep it at one: the failed-login throttle is kept in memory
+per worker, so more workers would allow more attempts.
 
-## Troubleshooting
+On every server deployment:
+- Set a unique `SECRET_KEY`, and do not set `FLASK_DEBUG`
+- Serve the site over HTTPS
+- Keep the database on storage that survives restarts and redeploys
+- Run `flask create-admin` once, on the server, after the first deploy
 
-### Common Issues
-1. **Database Connection**: Check DATABASE_URL in .env file
-2. **Import Errors**: Verify CSV format matches template
-3. **Permission Issues**: Ensure proper file permissions
-4. **Performance**: Consider database indexing for large datasets
+### Option A: Render
 
-### Support
-- Check log files for detailed error messages
-- Verify all dependencies are installed
-- Ensure database is properly initialized
-- Contact system administrator for technical support
+1. Push the code to your own GitHub or GitLab repository.
+2. In Render, create a **Web Service** from that repository, runtime **Python**:
+   - **Build command**: `pip install -r requirements.txt`
+   - **Start command**: `gunicorn app:app`
+   - **Instance type**: a paid instance type, because persistent disks are not available on the free type
+3. Under **Environment**, add `SECRET_KEY` (a long random value). Render uses its current default
+   Python unless you pin one with a `PYTHON_VERSION` variable (e.g. `3.13.4`).
+4. Under **Disks**, add a persistent disk mounted at exactly **`/var/data`**. 1 GB is plenty.
+   REMS stores `physdb.db` there.
+   > Without the disk, REMS falls back to `/tmp/physdb.db` and **all data is lost on every deploy
+   > or restart**. The log warns about this at startup.
+5. Deploy. When the service is live, open its **Shell** tab and run `flask create-admin`.
+6. Log in at your `onrender.com` URL, or add a custom domain in Render.
 
-## Data Format
+Render handles HTTPS. REMS turns on secure cookies and proxy handling itself, so you set no other
+variables. Before deploying a change that alters the database, download a backup from the Admin page.
 
-### Equipment CSV Import
-Column names match the equipment export, so the way to edit in bulk is: export from the Equipment List (filters apply), edit the file, and import it.
+### Option B: Your Own Linux Server
+
+The [self-hosting guide](docs/self-hosting.md) covers a full install on Ubuntu or another Linux
+server, with or without internet access: Gunicorn under systemd, NGINX with HTTPS, scheduled
+backups, health checks, and restore. If your IT department has to provision the server,
+[docs/server-request-template.md](docs/server-request-template.md) is a starting point for the request.
+
+## Using REMS
+
+### Loading Your Data
+Import in this order, so equipment can refer to people and facilities that already exist:
+
+1. **Facilities**: **Admin → Facilities**, then add them one at a time or use **Import CSV**
+2. **Personnel**: **Personnel → Import Personnel**
+3. **Equipment**: **Equipment → Import Data**. Unknown manufacturers, departments, facilities, and contacts are created as needed
+4. **Compliance tests** and **scheduled tests**: **Compliance → Import Tests**, and the import at the bottom of the compliance dashboard
+
+Every list view has a CSV export. See [CSV Formats](#csv-formats) for the columns.
+
+### Day-to-Day
+- **Add or edit equipment** from the Equipment list. Click a unit to see its details, where most fields can be edited in place
+- **Record a test** with **Add Test** on the unit's detail page, the equipment list, or the compliance dashboard. Acceptance and Annual tests restart the due-date clock
+- **Schedule a test** with **Schedule Test** in the same places. Each entry is a single planned date
+- **Check what is due** on the home page and compliance dashboard: overdue units, units due within 90 days, and upcoming scheduled tests
+- **Plan replacements** on the Capital Planning page and its bubble chart
+
+### Recovering a Locked-Out Account
+If no admin can log in, run this on the server from the app directory:
+
+```bash
+python scripts/reset_password.py <username>
+```
+
+## CSV Formats
+
+General rules for every import:
+- Up to 500 rows per file
+- Each row is saved on its own; problem rows are reported by row number and the rest still import
+- Dates: `YYYY-MM-DD`, or `M/D/YYYY` as Excel re-saves them
+- Booleans: `TRUE`/`FALSE`, `1`/`0`, or `YES`/`Y` (any case)
+- Excel's UTF-8 BOM is handled
+
+### Equipment
+Column names match the equipment export, so to edit in bulk you export from the Equipment List (filters apply), edit the file, and import it.
 
 - Rows whose `eq_id` exists update that record; a blank `eq_id` creates new equipment (`equipment_class` required)
 - Only the columns present in the file change; a blank cell clears that field
-- Each row is saved on its own; problem rows are reported with their row number and the rest still import
 - Every cell is read as text, so values like room `101` or serial `00123` are kept exactly
-- Dates: `YYYY-MM-DD`, or `M/D/YYYY` as Excel re-saves them
 - Unrecognized column names are reported and ignored
 - Export-only calculated columns (`eq_statefacreg`, `eq_eeoldate`, `eq_capecst`, `eq_capcat`) are ignored on import
 
 | Field | Description |
 |---|---|
 | `eq_id` | Equipment ID (blank for new equipment) |
-| `equipment_class` | Equipment class (CT, MRI, X-ray, etc.) — **required** for new equipment |
+| `equipment_class` | Equipment class (CT, MRI, X-ray, etc.). **Required** for new equipment |
 | `equipment_subclass` | Subclass, matched within the class |
 | `manufacturer`, `department` | Lookup names (created if new) |
 | `facility` | Facility name; `facility_full` and `facility_address` are used only when the import creates the facility |
-| `contact_id`, `contact_person`, `contact_email` | Contact, matched by ID then name; a new person needs an email. Same pattern for `supervisor*` and `physician*` |
+| `contact_id`, `contact_person`, `contact_email` | Contact, matched by ID then name; a new person needs a valid email. Same pattern for `supervisor*` and `physician*` |
 | `eq_mod`, `eq_rm`, `eq_phone`, `eq_assetid`, `eq_sn`, `eq_statefac`, `eq_statereg`, `eq_manid`, `eq_acrsite`, `eq_acrunit`, `eq_notes` | Text fields |
 | `eq_mandt`, `eq_rfrbdt`, `eq_instdt`, `eq_eoldate`, `eq_retdate` | Manufacture, refurbish, install, end-of-life, and retirement dates |
 | `eq_retired`, `eq_planned`, `eq_physcov` | TRUE/FALSE (blank: not retired, not planned, physics covered) |
@@ -249,10 +215,11 @@ Column names match the equipment export, so the way to edit in bulk is: export f
 | `eq_radcap`, `eq_capfund` | Radiology owned / replacement funded: 1, 0, or blank |
 | `eq_capcst`, `eq_capyr`, `eq_captype`, `eq_capnote` | Capital cost (thousands), year, Replacement/Upgrade, notes |
 
-### Personnel CSV Import
+### Personnel
 Required: `name`, `email`
 
-Bulk import creates or updates **contact records only**. Login access (username, password, `login_required`) is configured per user through the personnel UI, not via CSV.
+Imports create or update **contact records only**. Login access (username, password, login
+required) is set per person in the Personnel pages, never by CSV.
 
 | Field | Description |
 |---|---|
@@ -260,45 +227,108 @@ Bulk import creates or updates **contact records only**. Login access (username,
 | `name` | Full name |
 | `email` | Email address |
 | `phone` | Phone number |
-| `roles` | Comma-separated roles: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist` |
+| `roles` | Comma-separated: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist` |
 
-### Compliance Tests CSV Import
+### Compliance Tests
 Required: `eq_id`, `test_type`, `test_date`
 
 | Field | Description |
 |---|---|
 | `test_id` | Test ID (for updating existing records) |
 | `eq_id` | Equipment ID |
-| `test_type` | `acceptance`, `annual`, `audit`, `qc_review`, `shielding_design`, `submission`, `retire`, `other` |
-| `test_date` | Test date |
-| `report_date` | Report date |
-| `submission_date` | Submission date |
-| `performed_by_id` | Performer personnel ID |
-| `reviewed_by_id` | Reviewer personnel ID |
+| `test_type` | `Acceptance`, `Annual`, `Audit`, `QC Review`, `Shielding Design`, `Submission`, `Retire`, or `Other` |
+| `test_date`, `report_date`, `submission_date` | Dates |
+| `performed_by_id`, `reviewed_by_id` | Personnel IDs |
 | `notes` | Notes |
 
-### Facilities CSV Import
+### Scheduled Tests
+Required: `eq_id`, `scheduled_date`, `scheduling_date`
+
+| Field | Description |
+|---|---|
+| `schedule_id` | Schedule ID (for updating existing records) |
+| `eq_id` | Equipment ID |
+| `scheduled_date` | Date the test is planned for |
+| `scheduling_date` | Date it was scheduled |
+| `notes` | Notes |
+
+The export also includes `created_by`, `created_at`, `modified_by`, and `updated_at`, which are ignored on import.
+
+### Facilities
 Required: `name`
 
 | Field | Description |
 |---|---|
 | `id` | Facility ID (for updating existing records) |
-| `name` | Facility name |
-| `facility_full` | Full Facility name (shown on equipment details; column omitted = existing values kept) |
+| `name` | Short facility name shown throughout the app |
+| `facility_full` | Full facility name shown on equipment details (if the column is left out, existing values are kept) |
 | `address` | Address |
-| `is_active` | Active status (TRUE/FALSE) |
+| `is_active` | TRUE/FALSE |
 
-### Date Format
-All dates must be in `YYYY-MM-DD` format.
+## Backup and Restore
 
-### Boolean Fields
-Use `TRUE`/`FALSE` (also accepts `1`/`0`, `YES`/`Y`, case-insensitive).
+Admins can download the whole database from **Admin Dashboard → Database Export**:
 
-## License
+| Format | Use it for | Notes |
+|---|---|---|
+| `.sqlite3` backup | Restoring the application | Complete and restorable. Contains user accounts and password hashes, so store it securely. |
+| `.xlsx` workbook | Analysis in Excel | One worksheet per table, each a named Excel Table. Opens natively with no drivers or add-ins. Password hashes are excluded. Not restorable. |
 
-Copyright (c) 2026 Nick Bevins. All rights reserved.
+The backup uses SQLite's `VACUUM INTO`, which writes a consistent, compact copy. Do not copy
+`physdb.db` with `cp` while the app is running: SQLite runs in WAL mode, and a plain copy can miss
+recent changes. For scheduled backups from the command line, use SQLite's own backup command:
 
-## Running Tests
+```bash
+sqlite3 instance/physdb.db ".backup physdb_backup_$(date +%Y%m%d).db"
+```
+
+The workbook is a snapshot; download it again to refresh. To combine tables in Excel, use
+**Data → Get Data → From File → From Workbook**, select the sheets, then Merge Queries on the ID
+columns (e.g. `equipment.class_id` → `equipment_classes.id`).
+
+**To restore**:
+1. Stop the app.
+2. Delete any `physdb.db-wal` and `physdb.db-shm` files next to the database. A leftover WAL file paired with a restored database can corrupt it.
+3. Replace `physdb.db` with the backup file, renamed to `physdb.db`.
+4. Start the app.
+
+On Render, the database is `/var/data/physdb.db`; use the service's Shell or SSH access to do
+steps 2 and 3, then restart the service. The
+[self-hosting guide](docs/self-hosting.md#restoring-from-a-backup) has the full procedure for a Linux server.
+
+## Security
+
+- Username and password login with no default credentials; passwords must be at least 12 characters
+- Failed logins throttled per client IP (10 per 15 minutes); login, failure, and logout events are logged with username and IP
+- Admins can require a password change at next login; until the user picks a new password, every other page is blocked
+- Role-based permissions checked on every route that changes data. Only admins can grant admin rights, set usernames or passwords, change active status, or edit/delete admin accounts; nobody can demote, deactivate, or delete their own account
+- Deactivating someone or turning off their login access ends any session they have open
+- CSRF protection on every POST (forms send `csrf_token`; in-page requests send the `X-CSRFToken` header)
+- Session cookie is HttpOnly, SameSite=Lax, and Secure over HTTPS; logout requires POST
+- XSS protection through Jinja autoescaping, plus `escapeHtml()` (static/js/main.js) for HTML built in JavaScript
+- SQL injection prevention through the SQLAlchemy ORM
+- Login redirects only go to pages within REMS
+- Spreadsheet formula injection prevention: CSV exports prefix formula-like text with `'` (removed again on import); the Excel workbook writes all text literally
+- Database error details go to the server log, not the page
+- Personnel imports never create login accounts
+- The app refuses to start without a `SECRET_KEY`
+
+## Logs
+
+REMS logs to standard output. Under systemd, read it with `journalctl -u rems`. On Render, use the
+service's **Logs** tab. Running `python app.py` locally prints it to the terminal.
+
+## Troubleshooting
+
+| Problem | Check |
+|---|---|
+| `RuntimeError: SECRET_KEY environment variable is not set` | `.env` is missing, not in the app directory, or has no `SECRET_KEY` |
+| Data disappears after a deploy (Render) | No persistent disk, or it is not mounted at `/var/data`; the startup log warns about this |
+| Login succeeds but returns to the login page | `SESSION_COOKIE_SECURE=1` on a plain-HTTP site; serve over HTTPS or unset it |
+| Import rows rejected | The import summary names each row and field; compare the columns with [CSV Formats](#csv-formats) or start from an export |
+| `sqlite3.OperationalError: unable to open database file` | The account running the app cannot write to the database directory |
+
+## Development
 
 ```bash
 pip install -r requirements-dev.txt
@@ -307,38 +337,9 @@ pytest tests/ -v
 
 Tests cover: authentication and login throttling, open redirect rejection, role and personnel-permission enforcement, CSRF, output escaping, `must_change_password` enforcement, CSV import/export round trips, shared equipment filters, startup migrations, and date arithmetic. See `tests/test_app.py`.
 
-## Version History
+The data model is drawn in [DATABASE_DIAGRAM.md](DATABASE_DIAGRAM.md). Release notes are in
+[CHANGELOG.md](CHANGELOG.md).
 
-### v1.3.1
-- **Personnel**: equipment and compliance test dropdowns list active people and lookup values only, plus whatever the record already has assigned (marked "(inactive)"), so saving never clears an existing assignment; turning off login access now ends an open session; login access requires a username and password; admins cannot turn off their own login access; personnel list and details show one status (Inactive, Login Enabled, Login Required (Not Configured), or Contact Only)
-- **Messages**: only green success confirmations close on their own; help boxes on the import and admin pages, import summaries, and info, warning, and error messages stay until closed
-- **Security**: minimum password length raised from 6 to 12; raw database error text no longer shown in the backup and import messages
+## License
 
-### v1.3.0
-- **Full Facility**: new `facilities.facility_full` for the formal facility name, set in admin, shown on the equipment details page, and exported/imported as `facility_full`
-- **Security**: CSRF protection on every form; personnel permissions (only admins manage logins, admin rights, and admin accounts; the `admin` role is gone — `is_admin` is the only source of admin rights); XSS fixes on the equipment details inline editor and the capital bubble chart; formula-injection-safe exports; secure session cookie and proxy headers on Render; failed-login throttling; POST-only logout
-- **Import**: bulk edit merged into the equipment import (update by `eq_id`, only listed columns change); cells read as text; per-row errors instead of failing the whole file; Excel BOM and `M/D/YYYY` dates handled; compliance test types validated; legacy column-name aliases removed
-- **Bugs**: compliance dashboard/export crash when combining a filter with search; exports now match the page's filters (list or capital planning); inline retire sets the retirement date; capital category overlap check at open-ended boundaries; bad query parameters no longer cause errors
-- **Cleanup**: the six admin lookup tables share one set of routes and two templates (`LOOKUP_TABLES` in app.py); all CSV imports share one row-by-row runner and all CSV exports one download helper; compliance export now includes `performed_by_id`/`reviewed_by_id` so it re-imports cleanly; one shared equipment filter query for the list, capital, compliance, and export pages; dashboard, compliance, list, and export pages use a fixed number of queries instead of several per row; startup migration drops unused columns (`eq_address`, `eq_eeoldate`, `eq_capcat`, `eq_capecst`) and renames old lowercase test types; unused `/api/equipment`, `/api/equipment/search`, and `/api/facility/<id>/address` routes removed
-
-### v1.2.0
-- Bulk personnel import no longer creates login credentials; contact records only — login access granted individually via UI
-- `FLASK_ENV` deprecated; replaced with `FLASK_DEBUG`; local dev server binds `127.0.0.1` only
-- Duplicate `eq_statefacreg` generation extracted to `_generate_statefacreg()` utility function
-- `MockPagination` dynamic `type()` pattern replaced with a proper module-level class
-- Redundant in-function `import re` statements removed (now top-level); missing `import logging` added
-- Unused `today` variable removed from `get_last_tested_date()`
-
-### v1.1.0
-- Security hardening: removed default credentials, hardened SECRET_KEY handling, open redirect fix, audit logging, role enforcement, CSV row limits, safe date parsing
-- Removed `eq_servlogin`/`eq_servpwd` from database and UI; automatic migration on startup via `check_and_migrate_db()`
-- Integration test scaffold (`tests/`)
-
-### v1.0.0
-- Initial release
-- Equipment database management
-- Compliance testing system
-- CSV import functionality
-- Web-based interface
-- Search and filtering capabilities
-
+Copyright (c) 2026 Nick Bevins. All rights reserved.

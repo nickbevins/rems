@@ -859,6 +859,31 @@ class TestOtherImporters:
         fac = Facility.query.filter_by(name='Closed').one()
         assert fac.is_active is False and fac.address == '1 Main St'
 
+    def test_facility_export_round_trip_keeps_inactive(self, app, client):
+        self._setup(app, client)
+        with app.app_context():
+            db.session.add(Facility(name='Closed', is_active=False, address='1 Main St'))
+            db.session.commit()
+        exported = client.get('/export-facilities').data.decode()
+        assert 'Closed' in exported
+        self._upload(client, '/import-facilities', exported.replace('1 Main St', '2 Main St'))
+        fac = Facility.query.filter_by(name='Closed').one()
+        assert fac.is_active is False and fac.address == '2 Main St'
+
+    def test_facility_import_matches_name_ignoring_case(self, app, client):
+        self._setup(app, client)
+        with app.app_context():
+            db.session.add(Facility(name='Main Campus'))
+            db.session.commit()
+        self._upload(client, '/import-facilities', 'name,address\nmain campus,9 Elm St\n')
+        fac = Facility.query.one()
+        assert fac.address == '9 Elm St'
+
+    def test_facilities_admin_page_links_csv_import_and_export(self, app, client):
+        self._setup(app, client)
+        page = client.get('/admin/facilities').data
+        assert b'/export-facilities' in page and b'/import-facilities' in page
+
     def test_personnel_export_round_trip_keeps_roles(self, app, client):
         self._setup(app, client)
         with app.app_context():
@@ -1030,6 +1055,28 @@ class TestPersonnelPermissions:
                     data=_personnel_form(other, is_admin='y', is_active='y', login_required='y', username='other'))
         assert db.session.get(Personnel, other_id).is_admin is True
 
+
+    def test_admin_can_require_password_change(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            other = make_user(username='other', password='pw', roles='physicist')
+            other_id = other.id
+        login(client, 'admin', 'pw')
+        form = _personnel_form(other, is_active='y', login_required='y', username='other')
+        client.post(f'/personnel/{other_id}/edit', data={**form, 'must_change_password': 'y'})
+        assert db.session.get(Personnel, other_id).must_change_password is True
+        client.post(f'/personnel/{other_id}/edit', data=form)
+        assert db.session.get(Personnel, other_id).must_change_password is False
+
+    def test_non_admin_cannot_set_password_change(self, app, client):
+        with app.app_context():
+            make_user(username='phys', password='pw', roles='physicist')
+            other = make_user(username='other', password='pw', roles='contact')
+            other_id = other.id
+        login(client, 'phys', 'pw')
+        client.post(f'/personnel/{other_id}/edit',
+                    data={**_personnel_form(other), 'must_change_password': 'y'})
+        assert not db.session.get(Personnel, other_id).must_change_password
 
 class TestActiveAndLoginAccess:
     def _deactivate(self, user_id, **changes):

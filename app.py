@@ -1056,6 +1056,7 @@ class PersonnelForm(FlaskForm):
     login_required = BooleanField('Requires Login Access', default=False)
     username = StringField('Username', validators=[Optional(), Length(max=80)])
     password = PasswordField('Password', validators=[Optional(), Length(min=MIN_PASSWORD_LENGTH)])
+    must_change_password = BooleanField('Require Password Change at Next Login')
     is_admin = BooleanField('Admin User')
     is_active = BooleanField('Active', default=True)
 
@@ -2243,6 +2244,7 @@ def _apply_personnel_form(personnel, form):
         personnel.is_admin = form.is_admin.data
         personnel.is_active = form.is_active.data
         personnel.login_required = form.login_required.data
+        personnel.must_change_password = form.must_change_password.data
         if form.password.data:
             personnel.set_password(form.password.data)
     return None
@@ -2520,8 +2522,9 @@ def import_scheduled_tests():
 @login_required
 @admin_required
 def export_facilities():
+    # Inactive facilities too, so is_active round-trips through an edit and re-import
     rows = ([f.id, f.name, f.facility_full, f.address, f.is_active]
-            for f in Facility.query.filter_by(is_active=True).all())
+            for f in Facility.query.order_by(Facility.name).all())
     return _csv_download('facilities_export', ['id', 'name', 'facility_full', 'address', 'is_active'], rows)
 
 def _apply_facility_row(row, columns):
@@ -2531,7 +2534,7 @@ def _apply_facility_row(row, columns):
         raise ValueError('name is required')
     facility_id = _int_or_none(row.get('id'))
     facility = (db.session.get(Facility, facility_id) if facility_id else None) \
-        or Facility.query.filter_by(name=name).first()
+        or _find_named(Facility, name)
     is_new = facility is None
     if is_new:
         facility = Facility(id=facility_id or None, is_active=True)
@@ -2822,7 +2825,8 @@ class LookupField:
 class LookupTable:
     def __init__(self, model, slug, singular, plural, icon, name_help='', name_maxlength=100,
                  fields=(), columns=(), unique_within=(), validate=None, note='',
-                 equipment_column=None, reassignable=True, delete_blocker=None):
+                 equipment_column=None, reassignable=True, delete_blocker=None,
+                 csv_export=None, csv_import=None):
         self.model, self.slug, self.icon = model, slug, icon
         self.singular, self.plural = singular, plural
         self.name_help, self.name_maxlength = name_help, name_maxlength
@@ -2834,6 +2838,7 @@ class LookupTable:
         self.equipment_column = equipment_column  # Equipment foreign key pointing here, if any
         self.reassignable = reassignable      # equipment using an item may be moved or cleared on delete
         self.delete_blocker = delete_blocker  # callable(item) -> reason it cannot be deleted, or None
+        self.csv_export, self.csv_import = csv_export, csv_import  # bulk CSV endpoints, if any
         # Endpoint names match the old per-table routes, e.g. admin_facilities, admin_edit_facility
         self.key = singular.lower().replace(' ', '_')
         self.list_endpoint = 'admin_' + plural.lower().replace(' ', '_')
@@ -2906,7 +2911,8 @@ LOOKUP_TABLES = [
             LookupField('address', 'Address', 'textarea', maxlength=500, help='Optional facility address'),
         ],
         columns=[('Full Facility', lambda f: f.facility_full), ('Address', lambda f: f.address)],
-        validate=_validate_facility, equipment_column='facility_id'),
+        validate=_validate_facility, equipment_column='facility_id',
+        csv_export='export_facilities', csv_import='import_facilities'),
     LookupTable(Manufacturer, 'manufacturers', 'Manufacturer', 'Manufacturers', 'industry',
                 equipment_column='manufacturer_id'),
     LookupTable(
@@ -3090,7 +3096,7 @@ except sa_exc.SQLAlchemyError as e:
 if __name__ == '__main__':
     # Tables and migrations were already applied at import time (above).
     # host='127.0.0.1' binds only loopback for local dev; production traffic
-    # is served through gunicorn (see Procfile).
+    # is served through gunicorn (see Deploying in README.md).
     debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
     port = int(os.environ.get('PORT', 5000))
     app.run(host='127.0.0.1', port=port, debug=debug_mode)

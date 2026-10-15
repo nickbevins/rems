@@ -14,6 +14,16 @@
                 <a href="{{ url_for(table.endpoint('add')) }}" class="btn btn-primary">
                     {{ icon('plus') }} Add {{ table.singular }}
                 </a>
+                {% if table.csv_export %}
+                    <a href="{{ url_for(table.csv_export) }}" class="btn btn-success">
+                        {{ icon('download') }} Export CSV
+                    </a>
+                {% endif %}
+                {% if table.csv_import %}
+                    <a href="{{ url_for(table.csv_import) }}" class="btn btn-info">
+                        {{ icon('upload') }} Import CSV
+                    </a>
+                {% endif %}
             </div>
         </div>
 

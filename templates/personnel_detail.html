@@ -44,7 +44,12 @@
                             </tr>
                             <tr>
                                 <th>Status:</th>
-                                <td>{{ status_badge(personnel) }}</td>
+                                <td>
+                                    {{ status_badge(personnel) }}
+                                    {% if personnel.can_log_in and personnel.must_change_password %}
+                                        <span class="badge bg-warning text-dark">Password Change Required</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr>
                                 <th>Phone:</th>

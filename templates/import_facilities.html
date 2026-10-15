@@ -35,8 +35,10 @@
                         <ul class="mb-0">
                             <li><strong>Required columns:</strong> name</li>
                             <li><strong>Optional columns:</strong> id, facility_full, address, is_active</li>
-                            <li><strong>Boolean values:</strong> TRUE/FALSE for is_active (defaults to TRUE)</li>
-                            <li><strong>Duplicate handling:</strong> Existing facilities will be updated</li>
+                            <li><strong>Matching:</strong> rows update the facility with the same id, or else the same name (ignoring case); other rows add a new facility</li>
+                            <li><strong>Missing columns:</strong> a column left out of the file keeps its existing values</li>
+                            <li><strong>Boolean values:</strong> TRUE/FALSE for is_active (new facilities default to TRUE)</li>
+                            <li><strong>Bulk editing:</strong> export, edit the file, and import it again</li>
                         </ul>
                     </div>
                     
