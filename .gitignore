@@ -40,7 +40,8 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Helper scripts (keep local only)
-scripts/
+# Helper scripts (keep local only), except the documented admin recovery script
+scripts/*
+!scripts/reset_password.py
 reset_passwords.py
 list_users.py
