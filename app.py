@@ -189,6 +189,8 @@ if _proxy_count:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=_proxy_count, x_proto=1)
 
 MAX_CSV_ROWS = 500  # Maximum rows allowed per CSV import
+# Uploads are CSV imports only; 500 rows is well under this, so anything larger is rejected unread
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 # Columns omitted from the Excel workbook export. The .sqlite3 backup keeps
 # everything -- a backup you cannot restore logins from is not a backup.
@@ -517,7 +519,7 @@ def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
         if contact_name:  # Ensure it's not an empty string after stripping
             contact_email = str(contact_email).strip() if contact_email else None
 
-            contact = Personnel.query.filter_by(name=contact_name).first()
+            contact = _find_named(Personnel, contact_name) or (contact_email and _person_with_email(contact_email))
 
             if not contact:
                 if not contact_email or _email_problem(contact_email):
@@ -1024,7 +1026,6 @@ class EquipmentForm(FlaskForm):
     eq_sn = StringField('Serial Number', validators=[Optional(), Length(max=200)])
     eq_statefac = StringField('State Facility', validators=[Optional(), Length(max=100)])
     eq_statereg = StringField('State Registration', validators=[Optional(), Length(max=100)])
-    eq_statefacreg = StringField('State Facility Registration', validators=[Optional(), Length(max=100)])
     eq_manid = StringField('Manufacturer ID', validators=[Optional(), Length(max=100)])
     eq_mandt = DateField('Manufacture Date', validators=[Optional()])
     eq_rfrbdt = DateField('Refurbish Date', validators=[Optional()])
@@ -1167,6 +1168,13 @@ def _is_safe_redirect(target):
     ref = urlparse(request.host_url)
     test = urlparse(urljoin(request.host_url, target))
     return test.scheme in ('http', 'https') and ref.netloc == test.netloc
+
+@app.errorhandler(413)
+def handle_upload_too_large(e):
+    flash(f'The file is too large (limit {app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)} MB). '
+          f'Imports take up to {MAX_CSV_ROWS} rows.', 'error')
+    back = request.referrer if _is_safe_redirect(request.referrer) else url_for('index')
+    return redirect(back)
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):
@@ -1709,6 +1717,7 @@ def compliance_dashboard():
         days_ahead = int(request.args.get('days', 90))
         if days_ahead < 1:
             days_ahead = 90
+        days_ahead = min(days_ahead, 3650)  # larger values overflow the date math
     except (ValueError, TypeError):
         days_ahead = 90
 
@@ -1722,7 +1731,7 @@ def compliance_dashboard():
     subclasses = []
     if eq_class:
         subclasses = db.session.query(EquipmentSubclass.name).join(Equipment).join(EquipmentClass).filter(
-            EquipmentClass.name.ilike(f'%{eq_class}%'),
+            EquipmentClass.name == eq_class,
             EquipmentSubclass.is_active == True
         ).distinct().order_by(EquipmentSubclass.name).all()
         subclasses = [s[0] for s in subclasses if s[0]]
@@ -2432,7 +2441,11 @@ def _apply_personnel_row(row, columns):
         roles = None
     if roles is not None:
         # Admin rights come only from is_admin (set in the UI), never from import
-        person.set_roles_list([r for r in roles if r.lower() != 'admin'])
+        roles = [r.lower() for r in roles if r.lower() != 'admin']
+        unknown = [r for r in roles if r not in PERSONNEL_ROLES]
+        if unknown:
+            raise ValueError(f"unknown role(s) {', '.join(unknown)}; use: {', '.join(PERSONNEL_ROLES)}")
+        person.set_roles_list(roles)
     return person, is_new, []
 
 @app.route('/import-personnel', methods=['GET', 'POST'])

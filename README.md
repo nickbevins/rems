@@ -187,7 +187,7 @@ python scripts/reset_password.py <username>
 General rules for every import:
 - Up to 500 rows per file
 - Each row is saved on its own; problem rows are reported by row number and the rest still import
-- Dates: `YYYY-MM-DD`, or `M/D/YYYY` as Excel re-saves them
+- Dates: `YYYY-MM-DD`, or `M/D/YYYY` or `M/D/YY` as Excel re-saves them
 - Booleans: `TRUE`/`FALSE`, `1`/`0`, or `YES`/`Y` (any case)
 - Excel's UTF-8 BOM is handled
 
@@ -227,7 +227,10 @@ required) is set per person in the Personnel pages, never by CSV.
 | `name` | Full name |
 | `email` | Email address |
 | `phone` | Phone number |
-| `roles` | Comma-separated: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist` |
+| `roles` | Comma-separated: `contact`, `supervisor`, `physician`, `physicist`, `physics_assistant`, `qa_technologist`. An unknown role rejects the row. |
+| `contact`, `supervisor`, … `qa_technologist` | One TRUE/FALSE column per role, as the export writes them; used when `roles` is blank |
+
+Rows without an `id` match an existing person by email (ignoring case).
 
 ### Compliance Tests
 Required: `eq_id`, `test_type`, `test_date`
@@ -275,8 +278,8 @@ Admins can download the whole database from **Admin Dashboard → Database Expor
 | `.xlsx` workbook | Analysis in Excel | One worksheet per table, each a named Excel Table. Opens natively with no drivers or add-ins. Password hashes are excluded. Not restorable. |
 
 The backup uses SQLite's `VACUUM INTO`, which writes a consistent, compact copy. Do not copy
-`physdb.db` with `cp` while the app is running: SQLite runs in WAL mode, and a plain copy can miss
-recent changes. For scheduled backups from the command line, use SQLite's own backup command:
+`physdb.db` with `cp` while the app is running: a copy taken in the middle of a write can be
+inconsistent. For scheduled backups from the command line, use SQLite's own backup command:
 
 ```bash
 sqlite3 instance/physdb.db ".backup physdb_backup_$(date +%Y%m%d).db"

@@ -1,9 +1,10 @@
 # Changelog
 
 ## v1.3.2
-- **Security**: changing or resetting a password (your own, by an admin, or with `scripts/reset_password.py`) ends every other open session for that account, so everyone is logged out once after this update; on Render the login throttle and logs now see each visitor's real IP (`TRUSTED_PROXY_COUNT` defaults to `2` there)
+- **Security**: changing or resetting a password (your own, by an admin, or with `scripts/reset_password.py`) ends every other open session for that account, so everyone is logged out once after this update; on Render the login throttle and logs now see each visitor's real IP (`TRUSTED_PROXY_COUNT` defaults to `2` there); uploads over 2 MB are rejected before being read; the password reset script requires 12 characters like the app
 - **Personnel**: people still listed on equipment, compliance tests, or scheduled tests can't be deleted (deactivate them instead), so their records are never left pointing at a missing or reused ID; emails are stored lowercase however they're entered (existing ones are converted on startup), so `Jane@…` no longer creates a second Jane
-- **Import**: compliance test types match ignoring case and still accept the old codes (`qc_review`, …); the import page lists the current names
+- **Import**: compliance test types match ignoring case and still accept the old codes (`qc_review`, …); the import page lists the current names; the personnel import rejects unknown role names; the equipment import matches contacts by name ignoring case, then by email, instead of creating a duplicate; docs cover the personnel `id` and per-role columns and `M/D/YY` dates
+- **Compliance dashboard**: the subclass dropdown lists only the selected class's subclasses (choosing `CT` no longer lists `PET/CT`'s); a very large `days=` no longer causes an error
 - **Admin**: activating a capital category checks it against the active categories' cost ranges, as add and edit already did
 
 ## v1.3.1

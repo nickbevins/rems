@@ -855,6 +855,30 @@ class TestOtherImporters:
         assert Personnel.query.count() == 1
         assert db.session.get(Personnel, admin_id).email == 'admin@example.com'  # stored lowercase
 
+    def test_personnel_import_rejects_unknown_roles(self, app, client):
+        self._setup(app, client)
+        resp = self._upload(client, '/import-personnel',
+                            'name,email,roles\nA,a@example.com,"Physicist, contact"\nB,b@example.com,physcist\n')
+        assert b'unknown role(s) physcist' in resp.data
+        assert [p.roles for p in Personnel.query.filter_by(name='A')] == ['physicist, contact']
+        assert Personnel.query.filter_by(name='B').count() == 0
+
+    def test_upload_over_size_limit_is_rejected(self, app, client):
+        self._setup(app, client)
+        resp = self._upload(client, '/import-personnel', 'name,email\n' + 'x' * (3 * 1024 * 1024))
+        assert b'The file is too large' in resp.data
+
+    def test_equipment_import_matches_contact_ignoring_case_then_by_email(self, app, client):
+        self._setup(app, client)
+        jane = Personnel(name='Jane Doe', email='jane@example.com', roles='contact')
+        db.session.add(jane)
+        db.session.commit()
+        _post_import(client, 'eq_id,contact_person,contact_email,supervisor,supervisor_email\n'
+                             '1,jane doe,,J. Doe,JANE@example.com\n')
+        eq = db.session.get(Equipment, 1)
+        assert (eq.contact_id, eq.supervisor_id) == (jane.id, jane.id)
+        assert Personnel.query.count() == 2
+
     def test_personnel_form_rejects_email_differing_only_in_case(self, app, client):
         self._setup(app, client)
         resp = client.post('/personnel/new', data={'name': 'Other, Person', 'email': 'Admin@Example.com',
@@ -1500,6 +1524,31 @@ class TestBadParameters:
                     '/equipment?sort=days_until_due&page=-3&per_page=0',
                     '/capital?page=-1&per_page=-5', '/api/subclasses?class_id=abc'):
             assert client.get(url).status_code == 200, url
+
+    def test_huge_days_on_compliance_dashboard_does_not_crash(self, app, client):
+        with app.app_context():
+            make_user(username='v', password='pw')
+            _seed_equipment()
+        login(client, 'v', 'pw')
+        resp = client.get('/compliance?days=99999999999')
+        assert resp.status_code == 200 and b'Due within 3650 days' in resp.data
+
+    def test_compliance_subclass_dropdown_matches_class_exactly(self, app, client):
+        from app import EquipmentSubclass
+        with app.app_context():
+            make_user(username='v', password='pw')
+            ct, petct = EquipmentClass(name='CT'), EquipmentClass(name='PET/CT')
+            db.session.add_all([ct, petct])
+            db.session.commit()
+            head, wholebody = EquipmentSubclass(name='Head CT', class_id=ct.id),                 EquipmentSubclass(name='Whole Body', class_id=petct.id)
+            db.session.add_all([head, wholebody])
+            db.session.commit()
+            db.session.add_all([Equipment(class_id=ct.id, subclass_id=head.id),
+                                Equipment(class_id=petct.id, subclass_id=wholebody.id)])
+            db.session.commit()
+        login(client, 'v', 'pw')
+        page = client.get('/compliance?eq_class=CT').data
+        assert b'Head CT' in page and b'Whole Body' not in page
 
     def test_eq_id_in_query_string_does_not_break_redirect(self, app, client):
         with app.app_context():

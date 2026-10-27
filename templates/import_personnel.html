@@ -14,8 +14,9 @@
                     <h6>CSV Format Requirements:</h6>
                     <ul class="mb-0">
                         <li><strong>Required columns:</strong> name, email</li>
-                        <li><strong>Optional columns:</strong> phone, roles</li>
-                        <li><strong>Roles:</strong> Comma-separated list (contact, supervisor, physician, physicist, physics_assistant, qa_technologist)</li>
+                        <li><strong>Optional columns:</strong> id (to update an existing person; otherwise matched by email), phone, roles</li>
+                        <li><strong>Roles:</strong> Comma-separated list (contact, supervisor, physician, physicist, physics_assistant, qa_technologist). An unknown role rejects the row.</li>
+                        <li><strong>Or one column per role</strong> with TRUE/FALSE, as the export writes them (used when <code>roles</code> is blank)</li>
                         <li><strong>Example:</strong> "John Doe","john@example.com","555-1234","contact, physicist"</li>
                     </ul>
                 </div>
