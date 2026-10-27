@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.3.3
+- **Database**: startup adds any column an older database is missing, with its default filled in for existing rows, so a database from any earlier version upgrades (renames and drops still have their own steps)
+
 ## v1.3.2
 - **Security**: changing or resetting a password (your own, by an admin, or with `scripts/reset_password.py`) ends every other open session for that account, so everyone is logged out once after this update; on Render the login throttle and logs now see each visitor's real IP (`TRUSTED_PROXY_COUNT` defaults to `2` there); uploads over 2 MB are rejected before being read; the password reset script requires 12 characters like the app
 - **Personnel**: deleting a person opens a page like the admin lookup tables' that shows where they're used, and moves their equipment assignments (contact, supervisor, physician) to another person or clears them, so no record is left pointing at a missing or reused ID; people on compliance or scheduled-test records can only be deactivated, so that history keeps saying who did the work; the personnel list has a sortable Used By column; emails are stored lowercase however they're entered (existing ones are converted on startup), so `Jane@…` no longer creates a second Jane

@@ -545,13 +545,46 @@ LEGACY_TEST_TYPES = {
     'submission': 'Submission',
 }
 
+def _sql_default(column):
+    """The column's plain Python default as a SQL literal, or None. Existing rows get this
+    value when the column is added (e.g. eq_physcov is True for equipment that predates it)."""
+    default = column.default
+    if default is None or not default.is_scalar or default.arg is None:
+        return None
+    value = default.arg
+    if isinstance(value, bool):
+        return '1' if value else '0'
+    if isinstance(value, (int, float)):
+        return str(value)
+    return "'" + str(value).replace("'", "''") + "'"
+
+def _add_missing_columns(conn):
+    """Add any model column an existing table lacks, so a database from any older version
+    upgrades without a hand-written step per column. Renames and drops still need one."""
+    inspector = inspect(conn)
+    for table in db.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue  # create_all makes whole new tables
+        existing = {c['name'] for c in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            default = _sql_default(column)
+            if column.primary_key or column.unique or (not column.nullable and default is None):
+                # SQLite cannot add these to a table that has rows; write a migration by hand
+                logger.error("Migration: cannot add column %s.%s automatically", table.name, column.name)
+                continue
+            ddl = f'ALTER TABLE {table.name} ADD COLUMN {column.name} {column.type.compile(db.engine.dialect)}'
+            if default is not None:
+                ddl += f' DEFAULT {default}'
+            conn.execute(text(ddl))
+            logger.info("Migration: added column %s.%s", table.name, column.name)
+
 def check_and_migrate_db():
     """Apply incremental schema migrations to existing databases."""
     inspector = inspect(db.engine)
 
     equipment_cols = {c['name'] for c in inspector.get_columns('equipment')}
-    personnel_cols = {c['name'] for c in inspector.get_columns('personnel')}
-    facility_cols = {c['name'] for c in inspector.get_columns('facilities')}
 
     with db.engine.begin() as conn:
         # Drop eq_servlogin and eq_servpwd — service credentials must not be stored in the app DB.
@@ -569,20 +602,8 @@ def check_and_migrate_db():
                 conn.execute(text(f'ALTER TABLE equipment RENAME COLUMN {old} TO {new}'))
                 logger.info("Migration: renamed column equipment.%s to %s", old, new)
 
-        # Add must_change_password to personnel (added in v1.1.0)
-        if 'must_change_password' not in personnel_cols:
-            conn.execute(text('ALTER TABLE personnel ADD COLUMN must_change_password BOOLEAN DEFAULT 0'))
-            logger.info("Migration: added column personnel.must_change_password")
-
-        # Add last_login to personnel (added in v1.1.0)
-        if 'last_login' not in personnel_cols:
-            conn.execute(text('ALTER TABLE personnel ADD COLUMN last_login DATETIME'))
-            logger.info("Migration: added column personnel.last_login")
-
-        # Add facility_full to facilities — full name for reports; name stays the short display name
-        if 'facility_full' not in facility_cols:
-            conn.execute(text('ALTER TABLE facilities ADD COLUMN facility_full VARCHAR(300)'))
-            logger.info("Migration: added column facilities.facility_full")
+        # After the renames, so a renamed column keeps its data instead of being added empty
+        _add_missing_columns(conn)
 
         # Normalize test types from the old lowercase codes to the names the form uses
         for old, new in LEGACY_TEST_TYPES.items():

@@ -493,6 +493,29 @@ class TestLegacyMigration:
         db.session.expire_all()
         assert sorted(p.email for p in Personnel.query) == ['bob@example.com', 'jane@example.com']
 
+    def test_columns_missing_from_an_old_database_are_added_with_defaults(self, app):
+        cls = EquipmentClass(name='CT')
+        db.session.add(cls)
+        db.session.commit()
+        db.session.add(Equipment(class_id=cls.id, eq_mod='Old'))
+        db.session.commit()
+        missing = {'equipment': ('eq_phone', 'eq_rfrbdt', 'eq_physcov', 'eq_planned', 'eq_capfund', 'eq_capyr',
+                                 'eq_captype', 'eq_capnote'),
+                   'personnel': ('login_required', 'must_change_password', 'last_login'),
+                   'compliance_tests': ('submission_date',), 'facilities': ('facility_full',),
+                   'equipment_subclasses': ('estimated_capital_cost', 'expected_lifetime')}
+        with db.engine.begin() as conn:
+            for table, cols in missing.items():
+                for col in cols:
+                    conn.execute(text(f'ALTER TABLE {table} DROP COLUMN {col}'))
+        check_and_migrate_db()
+        check_and_migrate_db()  # a second run finds nothing to add
+        for table, cols in missing.items():
+            assert set(cols) <= {c['name'] for c in inspect(db.engine).get_columns(table)}, table
+        db.session.expire_all()
+        eq = Equipment.query.one()
+        assert (eq.eq_mod, eq.eq_physcov, eq.eq_planned, eq.eq_captype, eq.eq_phone) ==             ('Old', True, False, 'Replacement', None)
+
     def test_unused_equipment_columns_are_dropped(self, app):
         with db.engine.begin() as conn:
             for col, kind in (('eq_address', 'TEXT'), ('eq_eeoldate', 'DATE'),
