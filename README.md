@@ -92,11 +92,11 @@ Settings are read from environment variables, or from `.env` in the app director
 | `DATABASE_URL` | `sqlite:///instance/physdb.db` | Database location (see [Database](#database)) |
 | `FLASK_DEBUG` | off | `1` turns on the debugger and auto-reload for local development. Never set it on a server. |
 | `SESSION_COOKIE_SECURE` | off | `1` sends the session cookie only over HTTPS. Set it whenever the site is served over HTTPS. |
-| `TRUSTED_PROXY_COUNT` | `0` | Number of reverse proxies in front of the app (e.g. `1` for NGINX). REMS then takes the client IP and scheme from their `X-Forwarded-*` headers. Leave it at `0` when nothing sits in front, or clients could fake their IP address. |
+| `TRUSTED_PROXY_COUNT` | `0` | Number of reverse proxies in front of the app (e.g. `1` for NGINX, `2` on Render). REMS then takes the client IP from the `X-Forwarded-For` header and the scheme from `X-Forwarded-Proto`. Leave it at `0` when nothing sits in front, or clients could fake their IP address. |
 | `PORT` | `5000` | Port for `python app.py`. Hosting platforms set this for you. |
 
 **On Render**, REMS detects the `RENDER` environment variable that Render sets. It then sets
-`SESSION_COOKIE_SECURE` and `TRUSTED_PROXY_COUNT=1` on its own and keeps the database on the
+`SESSION_COOKIE_SECURE` and `TRUSTED_PROXY_COUNT=2` on its own and keeps the database on the
 persistent disk at `/var/data`. On any other host, set these yourself.
 
 ### Database
@@ -236,7 +236,7 @@ Required: `eq_id`, `test_type`, `test_date`
 |---|---|
 | `test_id` | Test ID (for updating existing records) |
 | `eq_id` | Equipment ID |
-| `test_type` | `Acceptance`, `Annual`, `Audit`, `QC Review`, `Shielding Design`, `Submission`, `Retire`, or `Other` |
+| `test_type` | `Acceptance`, `Annual`, `Audit`, `QC Review`, `Shielding Design`, `Submission`, `Retire`, or `Other` (capitals don't matter) |
 | `test_date`, `report_date`, `submission_date` | Dates |
 | `performed_by_id`, `reviewed_by_id` | Personnel IDs |
 | `notes` | Notes |

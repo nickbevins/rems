@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from urllib.parse import urlparse, urljoin
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_, desc, event, exc as sa_exc, func, inspect, or_, text
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, validates
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
@@ -11,6 +11,8 @@ from wtforms import StringField, IntegerField, DateField, SelectField, BooleanFi
 from wtforms.validators import DataRequired, Optional, Length, Email, EqualTo, NumberRange
 from datetime import date, datetime, timedelta, timezone
 import os
+import hashlib
+import hmac
 from dotenv import load_dotenv
 from dateutil.relativedelta import relativedelta
 import calendar
@@ -177,12 +179,14 @@ app.config['SESSION_COOKIE_SECURE'] = (
 )
 
 # Behind a reverse proxy (Render's load balancer, or nginx on-prem) the client IP
-# and scheme arrive in X-Forwarded-* headers. Trust exactly that many hops so the
-# real IP reaches logs and login throttling; never trust them with no proxy in front,
-# or clients could spoof their address.
-_proxy_count = int(os.environ.get('TRUSTED_PROXY_COUNT', '1' if 'RENDER' in os.environ else '0'))
+# and scheme arrive in X-Forwarded-* headers. Trust exactly that many X-Forwarded-For
+# entries so the real IP reaches logs and login throttling; never trust them with no
+# proxy in front, or clients could spoof their address. Render appends two entries
+# (checked in production). X-Forwarded-Proto is set, not appended, by the nearest
+# proxy, so only its last value is trusted.
+_proxy_count = int(os.environ.get('TRUSTED_PROXY_COUNT', '2' if 'RENDER' in os.environ else '0'))
 if _proxy_count:
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=_proxy_count, x_proto=_proxy_count)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=_proxy_count, x_proto=1)
 
 MAX_CSV_ROWS = 500  # Maximum rows allowed per CSV import
 
@@ -491,6 +495,13 @@ def _email_problem(email):
         return str(e)
     return None
 
+def _person_with_email(email, exclude_id=None):
+    """The person with this email, ignoring case (emails are stored lowercase)."""
+    query = Personnel.query.filter(Personnel.email == email.strip().lower())
+    if exclude_id:
+        query = query.filter(Personnel.id != exclude_id)
+    return query.first()
+
 def get_or_create_personnel(contact_id, contact_name, contact_email, role_name):
     """Get existing personnel by ID or create new personnel with role assignment"""
     contact = None
@@ -578,6 +589,12 @@ def check_and_migrate_db():
             if result.rowcount:
                 logger.info("Migration: renamed %d compliance tests from %r to %r", result.rowcount, old, new)
 
+        # Emails are stored lowercase (Personnel._lowercase_email); convert older records
+        result = conn.execute(text('UPDATE personnel SET email = lower(trim(email)) '
+                                   'WHERE email != lower(trim(email))'))
+        if result.rowcount:
+            logger.info("Migration: lowercased %d personnel emails", result.rowcount)
+
         # 'admin' is no longer a role; admin rights come only from personnel.is_admin
         rows = conn.execute(text("SELECT id, roles FROM personnel WHERE roles LIKE '%admin%'")).all()
         for person_id, roles in rows:
@@ -596,10 +613,15 @@ login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Checked on every request, so deactivating someone or turning off their login
-    # access also ends any session they already have open.
-    user = db.session.get(Personnel, int(user_id))
-    return user if user and user.can_log_in else None
+    # Checked on every request, so deactivating someone, turning off their login
+    # access, or changing their password also ends any session they already have open.
+    person_id, _, fingerprint = user_id.partition(':')
+    if not person_id.isdigit():
+        return None
+    user = db.session.get(Personnel, int(person_id))
+    if not user or not user.can_log_in:
+        return None
+    return user if hmac.compare_digest(fingerprint, user.password_fingerprint) else None
 
 # Database Models
 
@@ -785,6 +807,11 @@ class Personnel(UserMixin, db.Model):
     def __repr__(self):
         return f'<Personnel {self.id}: {self.name}>'
 
+    @validates('email')
+    def _lowercase_email(self, key, value):
+        # Every path that sets an email (form, imports, create-admin) stores it lowercase
+        return value.strip().lower() if value else value
+
     def get_roles_list(self):
         """Return roles as a list"""
         if self.roles and self.roles.strip():
@@ -809,6 +836,15 @@ class Personnel(UserMixin, db.Model):
         if self.password_hash:
             return check_password_hash(self.password_hash, password)
         return False
+
+    @property
+    def password_fingerprint(self):
+        """Changes whenever the password is set, even to the same value (the hash is salted)."""
+        return hashlib.sha256((self.password_hash or '').encode()).hexdigest()[:16]
+
+    def get_id(self):
+        # Stored in the session, so a password change invalidates sessions opened before it
+        return f'{self.id}:{self.password_fingerprint}'
 
     @property
     def can_log_in(self):
@@ -1023,6 +1059,8 @@ class EquipmentForm(FlaskForm):
 
 COMPLIANCE_TEST_TYPES = ['Acceptance', 'Annual', 'Audit', 'Other', 'QC Review', 'Retire',
                          'Shielding Design', 'Submission']
+# Imports match test types ignoring case, and still accept the old lowercase codes
+TEST_TYPE_LOOKUP = {**LEGACY_TEST_TYPES, **{t.lower(): t for t in COMPLIANCE_TEST_TYPES}}
 
 class ComplianceTestForm(FlaskForm):
     test_type = SelectField('Test/Result/Event Type', choices=[(t, t) for t in COMPLIANCE_TEST_TYPES],
@@ -1206,7 +1244,6 @@ def login():
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             logger.info("AUTH login_success user=%s ip=%s", user.username, client_ip)
-
             next_page = request.args.get('next')
             if not _is_safe_redirect(next_page):
                 next_page = url_for('index')
@@ -1242,6 +1279,7 @@ def change_password():
 
         try:
             db.session.commit()
+            login_user(current_user._get_current_object())  # keep this session; others now end
             flash('Password changed successfully!', 'success')
             return redirect(url_for('index'))
         except sa_exc.SQLAlchemyError as e:
@@ -2223,6 +2261,9 @@ def _apply_personnel_form(personnel, form):
     roles = list(form.roles.data or [])
     if not roles:
         return 'Select at least one role.'
+    duplicate = _person_with_email(form.email.data, exclude_id=personnel.id)
+    if duplicate:
+        return f'{duplicate.name} already has the email {duplicate.email}.'
 
     if current_user.is_admin:
         if personnel.id == current_user.id and not (form.is_admin.data and form.is_active.data
@@ -2302,6 +2343,8 @@ def edit_personnel(id):
         else:
             try:
                 db.session.commit()
+                if personnel.id == current_user.id:
+                    login_user(personnel)  # an admin setting their own password keeps this session
                 flash('Personnel updated successfully!', 'success')
                 return redirect(url_for('personnel_detail', id=id))
             except sa_exc.SQLAlchemyError as e:
@@ -2321,6 +2364,21 @@ def delete_personnel(id):
         return redirect(url_for('personnel_detail', id=id))
     if not _can_modify_personnel(personnel):
         flash('Only admins can delete admin accounts.', 'error')
+        return redirect(url_for('personnel_detail', id=id))
+    # SQLite does not enforce the foreign keys, and a deleted newest ID is reused by the next
+    # person added, who would silently inherit these assignments. Deactivating keeps the history.
+    references = [(count, label) for count, label in (
+        (Equipment.query.filter(or_(Equipment.contact_id == id, Equipment.supervisor_id == id,
+                                    Equipment.physician_id == id)).count(), 'equipment record(s)'),
+        (ComplianceTest.query.filter(or_(ComplianceTest.performed_by_id == id,
+                                         ComplianceTest.reviewed_by_id == id)).count(), 'compliance test(s)'),
+        (ScheduledTest.query.filter(or_(ScheduledTest.created_by_id == id,
+                                        ScheduledTest.modified_by_id == id)).count(), 'scheduled test(s)'),
+    ) if count]
+    if references:
+        listed = ', '.join(f'{count} {label}' for count, label in references)
+        flash(f'Cannot delete {personnel.name}: they are still listed on {listed}. '
+              'Deactivate them instead, or reassign those records first.', 'error')
         return redirect(url_for('personnel_detail', id=id))
     try:
         db.session.delete(personnel)
@@ -2355,7 +2413,7 @@ def _apply_personnel_row(row, columns):
         raise ValueError(f"email '{email}' is not valid: {problem}")
     person_id = _int_or_none(row.get('id'))
     person = (db.session.get(Personnel, person_id) if person_id else None) \
-        or Personnel.query.filter_by(email=email).first()
+        or _person_with_email(email)
     if person and not _can_modify_personnel(person):
         raise ValueError(f'only admins can change the admin account for {person.name}')
     is_new = person is None
@@ -2435,10 +2493,11 @@ def _apply_compliance_row(row, columns):
     if is_new:
         test = ComplianceTest()
 
-    if row['test_type'] not in COMPLIANCE_TEST_TYPES:
+    test_type = TEST_TYPE_LOOKUP.get(row['test_type'].strip().lower())
+    if not test_type:
         raise ValueError(f"test_type '{row['test_type']}' is not one of: {', '.join(COMPLIANCE_TEST_TYPES)}")
     test.eq_id = _equipment_id_cell(row)
-    test.test_type = row['test_type']
+    test.test_type = test_type
     test.test_date = _required_date_cell(row, 'test_date')
 
     for column in ('report_date', 'submission_date', 'performed_by_id', 'reviewed_by_id', 'notes'):
@@ -2479,7 +2538,7 @@ def import_compliance():
             return redirect(url_for('compliance_dashboard'))
 
     # Personnel IDs for the help text
-    return render_template('import_compliance.html', form=form,
+    return render_template('import_compliance.html', form=form, test_types=COMPLIANCE_TEST_TYPES,
                            performed_by_personnel=_dropdown_options(Personnel, condition=or_(
                                Personnel.roles.ilike('%physics_assistant%'), Personnel.roles.ilike('%physicist%'))),
                            reviewed_by_personnel=_dropdown_options(Personnel, condition=Personnel.roles.ilike('%physicist%')))
@@ -3065,6 +3124,13 @@ def _register_lookup_routes(table):
 
     def set_active_view(item_id, active):
         item = db.get_or_404(table.model, item_id)
+        if active and table.validate:
+            # Inactive items are left out of checks like capital-category overlap, so recheck on the way back
+            values = {'name': item.name, **{f.attr: getattr(item, f.attr) for f in table.fields}}
+            error = table.validate(values, item.id)
+            if error:
+                flash(f'Cannot activate {table.singular.lower()} "{item.name}": {error}', 'error')
+                return redirect(url_for(table.list_endpoint))
         item.is_active = active
         db.session.commit()
         flash(f'{table.singular} {"activated" if active else "deactivated"}', 'success')

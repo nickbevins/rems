@@ -485,6 +485,14 @@ class TestLegacyMigration:
         assert eq.get_last_tested_date() == date(2024, 3, 1)
         assert eq.get_next_due_date() == date(2025, 3, 31)  # 1 year + 30 days
 
+    def test_existing_emails_are_lowercased(self, app):
+        with db.engine.begin() as conn:
+            for name, email in (('A', 'Jane@Example.com'), ('B', 'bob@example.com')):
+                conn.execute(text("INSERT INTO personnel (name, email) VALUES (:n, :e)"), {'n': name, 'e': email})
+        check_and_migrate_db()
+        db.session.expire_all()
+        assert sorted(p.email for p in Personnel.query) == ['bob@example.com', 'jane@example.com']
+
     def test_unused_equipment_columns_are_dropped(self, app):
         with db.engine.begin() as conn:
             for col, kind in (('eq_address', 'TEXT'), ('eq_eeoldate', 'DATE'),
@@ -826,6 +834,34 @@ class TestOtherImporters:
         assert b'Row 3: test_date' in resp.data
         assert [t.test_date for t in ComplianceTest.query.all()] == [date(2024, 3, 1)]
 
+    def test_compliance_import_page_lists_accepted_test_types(self, app, client):
+        self._setup(app, client)
+        page = client.get('/import-compliance').data
+        assert b'QC Review' in page and b'Shielding Design' in page
+        assert b'qc_review' not in page
+
+    def test_compliance_test_type_ignores_case_and_accepts_old_codes(self, app, client):
+        self._setup(app, client)
+        resp = self._upload(client, '/import-compliance',
+                            'eq_id,test_type,test_date\n1,qc review,2024-01-01\n1,shielding_design,2024-01-02\n'
+                            '1,ANNUAL,2024-01-03\n1,yearly,2024-01-04\n')
+        assert b"test_type &#39;yearly&#39;" in resp.data
+        assert [t.test_type for t in ComplianceTest.query.order_by(ComplianceTest.test_date)] ==             ['QC Review', 'Shielding Design', 'Annual']
+
+    def test_personnel_import_matches_email_ignoring_case(self, app, client):
+        admin_id = self._setup(app, client)
+        resp = self._upload(client, '/import-personnel', 'name,email\nTest User,ADMIN@Example.com\n')
+        assert b'updated 1 existing' in resp.data
+        assert Personnel.query.count() == 1
+        assert db.session.get(Personnel, admin_id).email == 'admin@example.com'  # stored lowercase
+
+    def test_personnel_form_rejects_email_differing_only_in_case(self, app, client):
+        self._setup(app, client)
+        resp = client.post('/personnel/new', data={'name': 'Other, Person', 'email': 'Admin@Example.com',
+                                                   'roles': ['contact']}, follow_redirects=True)
+        assert b'Test User already has the email admin@example.com.' in resp.data
+        assert Personnel.query.count() == 1
+
     def test_compliance_export_round_trip_keeps_personnel(self, app, client):
         admin_id = self._setup(app, client)
         self._upload(client, '/import-compliance',
@@ -973,6 +1009,36 @@ def _personnel_form(person, **overrides):
     return data
 
 
+class TestPersonnelDelete:
+    def _setup(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            person = Personnel(name='Gone, Soon', email='gone@example.com', roles='contact')
+            db.session.add(person)
+            db.session.commit()
+            person_id = person.id
+        login(client, 'admin', 'pw')
+        return person_id
+
+    def test_delete_blocked_while_person_is_referenced(self, app, client):
+        person_id = self._setup(app, client)
+        cls = EquipmentClass(name='CT')
+        db.session.add(cls)
+        db.session.commit()
+        db.session.add(Equipment(class_id=cls.id, contact_id=person_id))
+        db.session.add(ComplianceTest(eq_id=1, test_type='Annual', test_date=date(2024, 1, 1),
+                                      reviewed_by_id=person_id))
+        db.session.commit()
+        resp = client.post(f'/personnel/{person_id}/delete', follow_redirects=True)
+        assert b'still listed on 1 equipment record(s), 1 compliance test(s)' in resp.data
+        assert db.session.get(Personnel, person_id) is not None
+
+    def test_unreferenced_person_is_deleted(self, app, client):
+        person_id = self._setup(app, client)
+        client.post(f'/personnel/{person_id}/delete')
+        assert db.session.get(Personnel, person_id) is None
+
+
 class TestPersonnelPermissions:
     def test_physicist_cannot_grant_self_admin(self, app, client):
         with app.app_context():
@@ -1095,6 +1161,50 @@ class TestActiveAndLoginAccess:
         self._deactivate(user_id, **changes)
         resp = client.get('/personnel')
         assert resp.status_code == 302 and '/login' in resp.location
+
+    def _get_as(self, some_client, url):
+        g.pop('_login_user', None)  # the clients share the test app context
+        return some_client.get(url)
+
+    def test_password_change_ends_other_sessions_but_keeps_own(self, app, client):
+        with app.app_context():
+            make_user(username='p', password='old-password', roles='physicist')
+        other = app.test_client()
+        login(other, 'p', 'old-password')
+        g.pop('_login_user', None)
+        login(client, 'p', 'old-password')
+        g.pop('_login_user', None)
+        client.post('/change-password', data={'current_password': 'old-password',
+                                               'new_password': 'new-password-123',
+                                               'confirm_password': 'new-password-123'})
+        assert self._get_as(client, '/personnel').status_code == 200
+        resp = self._get_as(other, '/personnel')
+        assert resp.status_code == 302 and '/login' in resp.location
+
+    def test_admin_password_reset_ends_users_session(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            user = make_user(username='p', password='pw', roles='physicist')
+            user_id, form = user.id, _personnel_form(user, username='p', is_active='y', login_required='y',
+                                                    password='reset-password-123')
+        victim = app.test_client()
+        login(victim, 'p', 'pw')
+        g.pop('_login_user', None)
+        login(client, 'admin', 'pw')
+        g.pop('_login_user', None)
+        client.post(f'/personnel/{user_id}/edit', data=form)
+        resp = self._get_as(victim, '/personnel')
+        assert resp.status_code == 302 and '/login' in resp.location
+
+    def test_admin_setting_own_password_keeps_session(self, app, client):
+        with app.app_context():
+            admin = make_user(username='admin', password='pw', is_admin=True)
+            admin_id, form = admin.id, _personnel_form(admin, username='admin', is_admin='y', is_active='y',
+                                                      login_required='y', password='my-new-password')
+        login(client, 'admin', 'pw')
+        g.pop('_login_user', None)
+        client.post(f'/personnel/{admin_id}/edit', data=form)
+        assert self._get_as(client, '/personnel').status_code == 200
 
     def test_login_access_needs_username(self, app, client):
         with app.app_context():
@@ -1524,6 +1634,20 @@ class TestCapitalCategoryOverlap:
                            data={'name': 'Mid', 'min_cost': '100', 'max_cost': '500'}, follow_redirects=True)
         assert b'overlaps' in resp.data
         assert CapitalCategory.query.count() == 1
+
+    def test_activating_overlapping_category_is_rejected(self, app, client):
+        from app import CapitalCategory
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            db.session.add(CapitalCategory(name='Big', min_cost=500, max_cost=None))
+            old = CapitalCategory(name='Old', min_cost=400, max_cost=900, is_active=False)
+            db.session.add(old)
+            db.session.commit()
+            old_id = old.id
+        login(client, 'admin', 'pw')
+        resp = client.post(f'/admin/capital-categories/{old_id}/activate', follow_redirects=True)
+        assert b'Cannot activate capital category' in resp.data and b'overlaps' in resp.data
+        assert db.session.get(CapitalCategory, old_id).is_active is False
 
 
 class TestAdminLookupTables:

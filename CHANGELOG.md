@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.2
+- **Security**: changing or resetting a password (your own, by an admin, or with `scripts/reset_password.py`) ends every other open session for that account, so everyone is logged out once after this update; on Render the login throttle and logs now see each visitor's real IP (`TRUSTED_PROXY_COUNT` defaults to `2` there)
+- **Personnel**: people still listed on equipment, compliance tests, or scheduled tests can't be deleted (deactivate them instead), so their records are never left pointing at a missing or reused ID; emails are stored lowercase however they're entered (existing ones are converted on startup), so `Jane@…` no longer creates a second Jane
+- **Import**: compliance test types match ignoring case and still accept the old codes (`qc_review`, …); the import page lists the current names
+- **Admin**: activating a capital category checks it against the active categories' cost ranges, as add and edit already did
+
 ## v1.3.1
 - **Personnel**: equipment and compliance test dropdowns list active people and lookup values only, plus whatever the record already has assigned (marked "(inactive)"), so saving never clears an existing assignment; turning off login access now ends an open session; login access requires a username and password; admins cannot turn off their own login access; personnel list and details show one status (Inactive, Login Enabled, Login Required (Not Configured), or Contact Only)
 - **Messages**: only green success confirmations close on their own; help boxes on the import and admin pages, import summaries, and info, warning, and error messages stay until closed
