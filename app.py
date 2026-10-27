@@ -1250,6 +1250,8 @@ class LoginThrottle:
                 self._failures.pop(key, None)
 
 login_throttle = LoginThrottle()
+# Checked against when there is no real hash to check, so unknown usernames take as long as known ones
+_DUMMY_PASSWORD_HASH = generate_password_hash('no-such-user')
 
 # Authentication Routes
 @app.route('/login', methods=['GET', 'POST'])
@@ -1278,6 +1280,8 @@ def login():
                 next_page = url_for('index')
             return redirect(next_page)
         else:
+            if not (user and user.can_log_in):
+                check_password_hash(_DUMMY_PASSWORD_HASH, form.password.data)
             login_throttle.record_failure(client_ip)
             logger.warning("AUTH login_failed username=%s ip=%s", form.username.data, client_ip)
             flash('Invalid username or password.', 'error')

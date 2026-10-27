@@ -1,6 +1,7 @@
 # Changelog
 
 ## v1.3.3
+- **Security**: a failed login takes as long for an unknown username as for a known one, so response time doesn't reveal which usernames exist
 - **Database**: startup adds any column an older database is missing, with its default filled in for existing rows, so a database from any earlier version upgrades (renames and drops still have their own steps)
 
 ## v1.3.2
