@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ personnel.name }} - REMS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>{{ icon('trash') }} Delete Personnel</h2>
+            <a href="{{ url_for('personnel_detail', id=personnel.id) }}" class="btn btn-secondary">
+                {{ icon('arrow-left') }} Back to {{ personnel.name }}
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <p class="fs-5 mb-3">
+                    <strong>{{ personnel.name }}</strong>
+                    <span class="text-muted">{{ personnel.email }}</span>
+                    {% if not personnel.is_active %}<span class="badge bg-secondary ms-1">Inactive</span>{% endif %}
+                </p>
+
+                {% if in_use %}
+                    <p class="mb-1">Listed on equipment as:</p>
+                    <ul>
+                        {% for role, column, count in slots if count %}
+                            <li>{{ role|title }} for {{ count }} equipment record(s)</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if history %}
+                    <div class="alert alert-warning">
+                        {{ personnel.name }} can't be deleted because they are on
+                        {% for count, label in history %}{{ count }} {{ label }}{% if not loop.last %} and {% endif %}{% endfor %}.
+                        Those records keep saying who did the work, so deactivate them instead: they disappear from
+                        new dropdown choices and can't log in, and every existing record stays as it is.
+                    </div>
+                    <a href="{{ url_for('edit_personnel', id=personnel.id) }}" class="btn btn-primary">{{ icon('edit') }} Edit to deactivate</a>
+                    <a href="{{ url_for('personnel_detail', id=personnel.id) }}" class="btn btn-secondary ms-2">Back</a>
+                {% else %}
+                    <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {% if in_use %}
+                            <p>Choose what happens to these assignments:</p>
+                            {% if targets %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="action" value="move" id="actionMove">
+                                    <label class="form-check-label" for="actionMove">Move them to another person</label>
+                                </div>
+                                <select name="target_id" class="form-select mb-1 ms-4" style="max-width: 24rem;"
+                                        onchange="document.getElementById('actionMove').checked = true">
+                                    <option value="">Choose...</option>
+                                    {% for target in targets %}
+                                        <option value="{{ target.id }}">{{ target.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p class="text-muted small ms-4 mb-3">They gain the matching role (contact, supervisor, or physician) if they don't have it.</p>
+                            {% endif %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="action" value="clear" id="actionClear">
+                                <label class="form-check-label" for="actionClear">Leave those slots empty</label>
+                            </div>
+                        {% else %}
+                            <p>No equipment or test records refer to {{ personnel.name }}.</p>
+                        {% endif %}
+                        <p class="text-muted small">Deleting can't be undone.</p>
+                        <button type="submit" class="btn btn-danger">{{ icon('trash') }} Delete Personnel</button>
+                        <a href="{{ url_for('personnel_detail', id=personnel.id) }}" class="btn btn-secondary ms-2">Cancel</a>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

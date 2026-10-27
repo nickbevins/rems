@@ -2254,6 +2254,7 @@ def personnel_list():
 
     return render_template('personnel_list.html',
                          personnel=personnel,
+                         usage=_personnel_equipment_counts([p.id for p in personnel.items]),
                          search=search,
                          role_filter=role_filter,
                          available_roles=sorted(role_set))
@@ -2363,10 +2364,41 @@ def edit_personnel(id):
 
     return render_template('personnel_form.html', form=form, title='Edit Personnel', personnel=personnel, min_password_length=MIN_PASSWORD_LENGTH)
 
-@app.route('/personnel/<int:id>/delete', methods=['POST'])
+# Equipment slots a person can fill, as (role, Equipment column)
+PERSONNEL_EQUIPMENT_SLOTS = (('contact', 'contact_id'), ('supervisor', 'supervisor_id'),
+                             ('physician', 'physician_id'))
+
+def _personnel_equipment_counts(person_ids=None):
+    """{person id: number of equipment records naming them in any slot}"""
+    counts = defaultdict(int)
+    for _, column in PERSONNEL_EQUIPMENT_SLOTS:
+        col = getattr(Equipment, column)
+        query = db.session.query(col, func.count()).filter(col.isnot(None))
+        if person_ids is not None:
+            query = query.filter(col.in_(person_ids))
+        for person_id, count in query.group_by(col):
+            counts[person_id] += count
+    return counts
+
+def _personnel_history(person_id):
+    """Records that say who did something, as [(count, label)]. These are never moved or cleared."""
+    return [(count, label) for count, label in (
+        (ComplianceTest.query.filter(or_(ComplianceTest.performed_by_id == person_id,
+                                         ComplianceTest.reviewed_by_id == person_id)).count(),
+         'compliance test(s) they performed or reviewed'),
+        (ScheduledTest.query.filter(or_(ScheduledTest.created_by_id == person_id,
+                                        ScheduledTest.modified_by_id == person_id)).count(),
+         'scheduled test(s) they created or edited'),
+    ) if count]
+
+@app.route('/personnel/<int:id>/delete', methods=['GET', 'POST'])
 @login_required
 @manage_personnel_required
 def delete_personnel(id):
+    """Delete for good. Equipment naming the person is first moved to someone else or cleared.
+    Anyone on compliance or scheduled-test records can only be deactivated, so that history
+    keeps saying who did the work. (SQLite does not enforce the foreign keys, and the next
+    person added can reuse a deleted newest ID, so nothing may be left pointing at it.)"""
     personnel = db.get_or_404(Personnel, id)
     if personnel.id == current_user.id:
         flash('You cannot delete your own account.', 'error')
@@ -2374,30 +2406,49 @@ def delete_personnel(id):
     if not _can_modify_personnel(personnel):
         flash('Only admins can delete admin accounts.', 'error')
         return redirect(url_for('personnel_detail', id=id))
-    # SQLite does not enforce the foreign keys, and a deleted newest ID is reused by the next
-    # person added, who would silently inherit these assignments. Deactivating keeps the history.
-    references = [(count, label) for count, label in (
-        (Equipment.query.filter(or_(Equipment.contact_id == id, Equipment.supervisor_id == id,
-                                    Equipment.physician_id == id)).count(), 'equipment record(s)'),
-        (ComplianceTest.query.filter(or_(ComplianceTest.performed_by_id == id,
-                                         ComplianceTest.reviewed_by_id == id)).count(), 'compliance test(s)'),
-        (ScheduledTest.query.filter(or_(ScheduledTest.created_by_id == id,
-                                        ScheduledTest.modified_by_id == id)).count(), 'scheduled test(s)'),
-    ) if count]
-    if references:
-        listed = ', '.join(f'{count} {label}' for count, label in references)
-        flash(f'Cannot delete {personnel.name}: they are still listed on {listed}. '
-              'Deactivate them instead, or reassign those records first.', 'error')
+
+    slots = [(role, column, Equipment.query.filter(getattr(Equipment, column) == id).count())
+             for role, column in PERSONNEL_EQUIPMENT_SLOTS]
+    in_use = sum(count for _, _, count in slots)
+    history = _personnel_history(id)
+    targets = Personnel.query.filter(Personnel.id != id, Personnel.is_active == True)         .order_by(Personnel.name).all() if in_use else []
+    if request.method == 'GET':
+        return render_template('personnel_delete.html', personnel=personnel, slots=slots,
+                               in_use=in_use, history=history, targets=targets)
+    if history:
+        flash(f'Cannot delete {personnel.name}: they are on '
+              f'{", ".join(f"{count} {label}" for count, label in history)}. Deactivate them instead.', 'error')
         return redirect(url_for('personnel_detail', id=id))
+
+    name, outcome = personnel.name, ''
+    if in_use:
+        action, target = request.form.get('action'), None
+        if action == 'move':
+            target = next((t for t in targets if str(t.id) == request.form.get('target_id')), None)
+            if not target:
+                flash(f'Choose who takes over the {in_use} equipment assignment(s)', 'error')
+                return redirect(url_for('delete_personnel', id=id))
+            outcome = f'; moved {in_use} equipment assignment(s) to {target.name}'
+        elif action == 'clear':
+            outcome = f'; cleared {in_use} equipment assignment(s)'
+        else:
+            flash('Choose what to do with their equipment assignments', 'error')
+            return redirect(url_for('delete_personnel', id=id))
+        for role, column, count in slots:
+            if count:
+                Equipment.query.filter(getattr(Equipment, column) == id).update(
+                    {column: target.id if target else None}, synchronize_session=False)
+                if target:
+                    ensure_personnel_role(target, role)  # equipment dropdowns list people by role
     try:
         db.session.delete(personnel)
         db.session.commit()
-        flash('Personnel deleted successfully!', 'success')
+        logger.info("ADMIN deleted personnel %r%s by %s", name, outcome, current_user.username)
+        flash(f'{name} deleted{outcome}', 'success')
     except sa_exc.SQLAlchemyError as e:
         db.session.rollback()
         logger.error("Error deleting personnel id=%s: %s", id, e)
         flash('Error deleting personnel.', 'error')
-
     return redirect(url_for('personnel_list'))
 
 

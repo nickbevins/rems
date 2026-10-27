@@ -1035,30 +1035,66 @@ def _personnel_form(person, **overrides):
 
 class TestPersonnelDelete:
     def _setup(self, app, client):
+        """Admin plus 'Gone, Soon', who is contact on equipment 1 and supervisor on equipment 2."""
         with app.app_context():
             make_user(username='admin', password='pw', is_admin=True)
             person = Personnel(name='Gone, Soon', email='gone@example.com', roles='contact')
+            heir = Personnel(name='Heir, Next', email='heir@example.com', roles='physicist')
+            cls = EquipmentClass(name='CT')
+            db.session.add_all([person, heir, cls])
+            db.session.commit()
+            db.session.add_all([Equipment(class_id=cls.id, contact_id=person.id),
+                                Equipment(class_id=cls.id, supervisor_id=person.id)])
+            db.session.commit()
+            ids = person.id, heir.id
+        login(client, 'admin', 'pw')
+        return ids
+
+    def test_page_and_list_show_where_person_is_used(self, app, client):
+        person_id, _ = self._setup(app, client)
+        page = client.get(f'/personnel/{person_id}/delete').data
+        assert b'Contact for 1 equipment record(s)' in page and b'Supervisor for 1 equipment record(s)' in page
+        assert b'data-used-by="2"' in client.get('/personnel').data
+
+    def test_move_reassigns_equipment_and_adds_roles(self, app, client):
+        person_id, heir_id = self._setup(app, client)
+        resp = client.post(f'/personnel/{person_id}/delete', data={'action': 'move', 'target_id': str(heir_id)},
+                           follow_redirects=True)
+        assert b'moved 2 equipment assignment(s) to Heir, Next' in resp.data
+        assert db.session.get(Personnel, person_id) is None
+        assert [(e.contact_id, e.supervisor_id) for e in Equipment.query.order_by(Equipment.eq_id)] ==             [(heir_id, None), (None, heir_id)]
+        assert set(db.session.get(Personnel, heir_id).get_roles_list()) == {'physicist', 'contact', 'supervisor'}
+
+    def test_clear_empties_the_slots(self, app, client):
+        person_id, _ = self._setup(app, client)
+        client.post(f'/personnel/{person_id}/delete', data={'action': 'clear'})
+        assert db.session.get(Personnel, person_id) is None
+        assert [(e.contact_id, e.supervisor_id) for e in Equipment.query] == [(None, None), (None, None)]
+
+    def test_no_choice_deletes_nothing(self, app, client):
+        person_id, _ = self._setup(app, client)
+        client.post(f'/personnel/{person_id}/delete', data={})
+        assert db.session.get(Personnel, person_id) is not None
+
+    def test_person_with_test_history_can_only_be_deactivated(self, app, client):
+        person_id, _ = self._setup(app, client)
+        db.session.add(ComplianceTest(eq_id=1, test_type='Annual', test_date=date(2024, 1, 1),
+                                      performed_by_id=person_id))
+        db.session.commit()
+        assert b'Edit to deactivate' in client.get(f'/personnel/{person_id}/delete').data
+        resp = client.post(f'/personnel/{person_id}/delete', data={'action': 'clear'}, follow_redirects=True)
+        assert b'Deactivate them instead' in resp.data
+        assert db.session.get(Personnel, person_id) is not None
+        assert db.session.get(Equipment, 1).contact_id == person_id
+
+    def test_unreferenced_person_is_deleted(self, app, client):
+        with app.app_context():
+            make_user(username='admin', password='pw', is_admin=True)
+            person = Personnel(name='Unused, Person', email='unused@example.com', roles='contact')
             db.session.add(person)
             db.session.commit()
             person_id = person.id
         login(client, 'admin', 'pw')
-        return person_id
-
-    def test_delete_blocked_while_person_is_referenced(self, app, client):
-        person_id = self._setup(app, client)
-        cls = EquipmentClass(name='CT')
-        db.session.add(cls)
-        db.session.commit()
-        db.session.add(Equipment(class_id=cls.id, contact_id=person_id))
-        db.session.add(ComplianceTest(eq_id=1, test_type='Annual', test_date=date(2024, 1, 1),
-                                      reviewed_by_id=person_id))
-        db.session.commit()
-        resp = client.post(f'/personnel/{person_id}/delete', follow_redirects=True)
-        assert b'still listed on 1 equipment record(s), 1 compliance test(s)' in resp.data
-        assert db.session.get(Personnel, person_id) is not None
-
-    def test_unreferenced_person_is_deleted(self, app, client):
-        person_id = self._setup(app, client)
         client.post(f'/personnel/{person_id}/delete')
         assert db.session.get(Personnel, person_id) is None
 

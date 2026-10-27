@@ -77,12 +77,15 @@
                                     <th class="sortable" data-column="login_status">
                                         Login Status {{ icon('sort') }}
                                     </th>
+                                    <th class="sortable" data-column="used_by">
+                                        Used By {{ icon('sort') }}
+                                    </th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for person in personnel.items %}
-                                <tr class="personnel-row" data-id="{{ person.id }}" style="cursor: pointer;">
+                                <tr class="personnel-row" data-id="{{ person.id }}" data-used-by="{{ usage.get(person.id, 0) }}" style="cursor: pointer;">
                                     <td>{{ person.name }}</td>
                                     <td>{{ person.email }}</td>
                                     <td>{{ person.phone or '-' }}</td>
@@ -98,6 +101,8 @@
                                     <td>
                                         {{ status_badge(person) }}
                                     </td>
+                                    {% set count = usage.get(person.id, 0) %}
+                                    <td class="text-nowrap">{% if count %}{{ count }} equipment{% else %}<span class="text-muted">Unused</span>{% endif %}</td>
                                     <td>
                                         <a href="{{ url_for('personnel_detail', id=person.id) }}" class="btn btn-sm btn-outline-info btn-icon" title="View Details">
                                             {{ icon('eye') }}
@@ -106,12 +111,9 @@
                                             <a href="{{ url_for('edit_personnel', id=person.id) }}" class="btn btn-sm btn-outline-primary btn-icon" title="Edit">
                                                 {{ icon('edit') }}
                                             </a>
-                                            <form method="POST" action="{{ url_for('delete_personnel', id=person.id) }}" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this personnel record?');">
-                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="Delete">
-                                                    {{ icon('trash') }}
-                                                </button>
-                                            </form>
+                                            <a href="{{ url_for('delete_personnel', id=person.id) }}" class="btn btn-sm btn-outline-danger btn-icon" title="Delete">
+                                                {{ icon('trash') }}
+                                            </a>
                                         {% endif %}
                                     </td>
                                 </tr>
